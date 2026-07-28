@@ -1,32 +1,36 @@
-# React + TypeScript + Vite
+# Internal Marks Management System (IMMS) - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This repository houses the **Frontend Application** and **Core Documentation** for the Internal Marks Management System (IMMS).
 
-Currently, two official plugins are available:
+## 📚 Documentation Index
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+All architectural and design documentation for both the frontend and backend is centralized in the `docs/` folder of this repository. Please read them in the following order to understand the system:
 
-## React Compiler
+1. **[01_PRD.md](./docs/01_PRD.md)** - Product Requirements Document (Core vision and scope).
+2. **[02_SRS.md](./docs/02_SRS.md)** - Software Requirements Specification (User workflows and functional requirements).
+3. **[03_ARCHITECTURE.md](./docs/03_ARCHITECTURE.md)** - System Architecture (Frontend vs Backend responsibilities, Tech stack).
+4. **[04_DATABASE_DESIGN.md](./docs/04_DATABASE_DESIGN.md)** - Database Schema and Design (The single source of truth for the data model).
+5. **[05_API_SPECIFICATION.md](./docs/05_API_SPECIFICATION.md)** - API Spec (REST endpoints and data contracts).
+6. **[06_TASK_BREAKDOWN.md](./docs/06_TASK_BREAKDOWN.md)** - Development Epics and Sprints.
+7. **[07_DEPLOYMENT_PLAN.md](./docs/07_DEPLOYMENT_PLAN.md)** - Hosting and Deployment Strategy.
+8. **[HOW_IT_WORKS.md](../HOW_IT_WORKS.md)** - A high-level, human-readable summary of the entire application workflow.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🚀 Tech Stack
 
-## Expanding the Oxlint configuration
+- **Framework:** React 19 + TypeScript + Vite
+- **Styling:** TailwindCSS v4
+- **Routing:** React Router v7
+- **State Management:** Zustand
+- **API Client:** Axios
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## 🛠️ Getting Started
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Set up environment variables (copy `.env.example` to `.env`).
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```

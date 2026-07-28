@@ -14,7 +14,7 @@
 | Routing | React Router v7 |
 | Node Version | 20 LTS |
 | Package Manager | npm |
-| Git Remote | https://github.com/maharsh-tech/imms-frontend-main.git |
+| Git Remote | https://github.com/maharsh-tech/imms-frontend-main.git (branch: main) |
 
 ## Project Structure
 

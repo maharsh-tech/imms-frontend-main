@@ -3,7 +3,7 @@ import PrivateRoute from './routes/PrivateRoute';
 import RoleRoute from './routes/RoleRoute';
 import { Role } from './types';
 import Login from './pages/Login';
-import AuthCallback from './pages/AuthCallback';
+import ForceChangePassword from './pages/ForceChangePassword';
 import CoordinatorDashboard from './pages/coordinator/Dashboard';
 import TeacherDashboard from './pages/teacher/Dashboard';
 import StudentMarksheet from './pages/student/Marksheet';
@@ -14,7 +14,7 @@ export default function App() {
       <Routes>
         {/* Public */}
         <Route path="/login" element={<Login />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/change-password" element={<ForceChangePassword />} />
 
         {/* Authenticated routes */}
         <Route element={<PrivateRoute />}>

@@ -40,6 +40,7 @@ export interface User {
   name: string;
   role: Role;
   profilePic?: string;
+  needsPasswordChange: boolean;
 }
 
 export type StudentState = 'NO_RECORD' | 'UNPUBLISHED' | 'PUBLISHED';

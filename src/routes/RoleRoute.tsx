@@ -1,3 +1,4 @@
+import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import type { Role } from '../types';
@@ -6,17 +7,18 @@ interface RoleRouteProps {
   allowedRoles: Role[];
 }
 
-/**
- * RoleRoute — restricts routes to specific roles.
- * This is a UX convenience, NOT a security boundary.
- * The backend independently enforces RBAC on every endpoint.
- */
-export function RoleRoute({ allowedRoles }: RoleRouteProps) {
-  const user = useAuthStore((state) => state.user);
+const RoleRoute: React.FC<RoleRouteProps> = ({ allowedRoles }) => {
+  const { user } = useAuthStore();
 
   if (!user || !allowedRoles.includes(user.role)) {
-    return <Navigate to="/login" replace />;
+    // If not authorized, redirect to their role's home or default home
+    if (user?.role === 'COORDINATOR') return <Navigate to="/coordinator" replace />;
+    if (user?.role === 'TEACHER') return <Navigate to="/teacher" replace />;
+    if (user?.role === 'STUDENT') return <Navigate to="/student" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <Outlet />;
-}
+};
+
+export default RoleRoute;

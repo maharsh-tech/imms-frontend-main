@@ -48,7 +48,7 @@ For role STUDENT, `studentState` is one of:
 
 **Response 403 (domain blocked):**
 `json
-{ "error": "DOMAIN_BLOCKED", "message": "Only institutional email accounts (@college.ac.in) are permitted" }
+{ "error": "DOMAIN_BLOCKED", "message": "Only institutional email accounts (@charusat.edu.in, @charusat.ac.in) are permitted" }
 `
 
 **Response 403 (not whitelisted):**

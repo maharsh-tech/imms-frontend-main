@@ -241,10 +241,9 @@ model AssessmentSubmission {
   subjectAssignmentId String
   assessmentId        String
 
-  status         SubmissionStatus @default(DRAFT)
-  submittedAt    DateTime?
-  neMarksVisible Boolean          @default(false)
-  publishedAt    DateTime?
+  status      SubmissionStatus @default(DRAFT)
+  submittedAt DateTime?
+  publishedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -265,7 +264,7 @@ model Mark {
   studentId           String
   assessmentId        String
   subjectAssignmentId String
-  marksObtained       Decimal? @db.Decimal(5, 2) // null if AB. NE students still get a mark entered.
+  marksObtained       Decimal? @db.Decimal(5, 2) // null if AB. NE students have marks entered but they are NEVER shown to students — student always sees "NE".
   flag                FlagType @default(NONE)
   enteredById         String? // faculty userId who entered
   createdAt           DateTime @default(now())
@@ -337,10 +336,10 @@ Links a subject to a faculty for a given academic year and semester. This define
 Exam components under a subject, defined by Coordinator with name, date, time, and maxMarks.
 
 ### 3.8 assessment_submissions
-Tracks the state of a specific exam (Assessment) for a specific teacher's class (SubjectAssignment). Tracks `status` (DRAFT, SUBMITTED, PUBLISHED) and `neMarksVisible` (controls visibility specifically for NE flagged students).
+Tracks the state of a specific exam (Assessment) for a specific teacher's class (SubjectAssignment). Tracks `status` (DRAFT → SUBMITTED → PUBLISHED). NE student visibility is NOT controlled here — NE marks are permanently hidden from students by design.
 
 ### 3.9 marks
-Core marks record. One row per student per assessment per subject_assignment. The `flag` determines AB/NE/NONE. `marksObtained` is null for AB. Editing is governed by the related `assessment_submissions` status.
+Core marks record. One row per student per assessment per subject_assignment. The `flag` determines AB/NE/NONE. `marksObtained` is null for AB only. For NE students, the teacher CAN enter a mark (it is stored), but the student's marksheet always shows "NE" regardless — the mark is never revealed. Editing is governed by the related `assessment_submissions` status.
 
 ### 3.10 audit_logs
 Immutable log of all marks-related changes. previousValue and newValue stored as JSON for full diff visibility. Never updated or deleted.

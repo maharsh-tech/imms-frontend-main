@@ -85,8 +85,8 @@ export const deleteAssessment = (subjectId: string, assessmentId: string) =>
 
 export const getFaculty = () => apiClient.get<Faculty[]>('/faculty').then((r) => r.data);
 
-export const getAssignments = () =>
-  apiClient.get<SubjectAssignment[]>('/subject-assignments').then((r) => r.data);
+export const getAssignments = (params?: { academicYear?: string; semester?: number }) =>
+  apiClient.get<SubjectAssignment[]>('/subject-assignments', { params }).then((r) => r.data);
 export const getMyAssignments = () =>
   apiClient.get<SubjectAssignment[]>('/subject-assignments/my').then((r) => r.data);
 export const createAssignment = (data: {

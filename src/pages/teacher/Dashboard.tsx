@@ -5,6 +5,7 @@ import { getMyAssignments } from '../../api/subjects';
 import type { SubjectAssignment } from '../../api/subjects';
 import apiClient from '../../api/client';
 import { LogOut } from 'lucide-react';
+import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge';
 
 export default function TeacherDashboard() {
   const { user, logout } = useAuthStore();
@@ -56,7 +57,7 @@ export default function TeacherDashboard() {
                         className="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded text-sm hover:bg-blue-100"
                       >
                         {ass.name}
-                        {sub && <span className="ml-2 text-xs opacity-70">({sub.status})</span>}
+                        {sub && <SubmissionStatusBadge status={sub.status} />}
                       </Link>
                     );
                   })}

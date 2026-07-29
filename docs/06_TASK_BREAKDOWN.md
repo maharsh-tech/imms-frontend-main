@@ -123,8 +123,8 @@ est new imms-backend) | 1h | Backend |
 
 | Epic | Status | Notes |
 |------|--------|-------|
-| 2.1 Subject Management | ✅ Done | CRUD + assessments nested under subjects |
-| 2.2 Subject Assignment | ✅ Done | Auto-creates assessment submissions on assign |
+| 2.1 Subject Management | ✅ Done | Full CRUD + assessments; edit/delete UI, credit hours, exam schedule, search/filter |
+| 2.2 Subject Assignment | ✅ Done | Semester auto-fill, academic year input, search/filter, status badges |
 | 2.3 Marks Entry | ✅ Done | Grid, bulk save, NE/AB — all validation on backend |
 | 2.4 Submission Workflow | ✅ Done | DRAFT → SUBMITTED → PUBLISHED + unlock + audit |
 
@@ -136,14 +136,31 @@ est new imms-backend) | 1h | Backend |
 
 ### Epic 2.1 — Subject Management
 
+### Status (2026-07-29)
+
+**Epic 2.1: Complete**
+
+| # | Task | Status |
+|---|---|---|
+| 2.1.1 | POST /subjects — create subject | ✅ Done |
+| 2.1.2 | GET /subjects — list with filters | ✅ Done |
+| 2.1.3 | PATCH /subjects/:id — update subject | ✅ Done |
+| 2.1.4 | DELETE /subjects/:id — with marks existence check | ✅ Done |
+| 2.1.5 | POST /subjects/:id/assessments — add assessment | ✅ Done |
+| 2.1.6 | GET /subjects/:id/assessments | ✅ Done |
+| 2.1.7 | Frontend: Subject management CRUD page | ✅ Done |
+| 2.1.8 | Frontend: Assessment configuration per subject | ✅ Done |
+
+> Enhancements shipped: assessment PATCH/DELETE, credit hours, exam date/time, search/filter UI.
+
 | # | Task | Est. Hours | Owner |
 |---|---|---|---|
 | 2.1.1 | POST /subjects — create subject | 1h | Backend |
 | 2.1.2 | GET /subjects — list with filters | 1h | Backend |
 | 2.1.3 | PATCH /subjects/:id — update subject | 0.5h | Backend |
 | 2.1.4 | DELETE /subjects/:id — with marks existence check | 1h | Backend |
-| 2.1.5 | POST /assessments — add assessment to subject | 1h | Backend |
-| 2.1.6 | GET /assessments?subjectId=... | 0.5h | Backend |
+| 2.1.5 | POST /subjects/:id/assessments — add assessment to subject | 1h | Backend |
+| 2.1.6 | GET /subjects/:id/assessments | 0.5h | Backend |
 | 2.1.7 | Frontend: Subject management CRUD page | 3h | Frontend |
 | 2.1.8 | Frontend: Assessment configuration per subject | 2h | Frontend |
 
@@ -152,6 +169,21 @@ est new imms-backend) | 1h | Backend |
 ---
 
 ### Epic 2.2 — Subject Assignment
+
+### Status (2026-07-29)
+
+**Epic 2.2: Complete**
+
+| # | Task | Status |
+|---|---|---|
+| 2.2.1 | POST /subject-assignments — assign faculty to subject | ✅ Done |
+| 2.2.2 | GET /subject-assignments — coordinator view | ✅ Done |
+| 2.2.3 | GET /subject-assignments/my — teacher view (own only) | ✅ Done |
+| 2.2.4 | DELETE /subject-assignments/:id — before entry starts | ✅ Done |
+| 2.2.5 | Frontend: Subject assignment page (coordinator) | ✅ Done |
+| 2.2.6 | Frontend: Teacher subject list (teacher dashboard) | ✅ Done |
+
+> Enhancements shipped: semester auto-fill from subject, academic year input/filter, search/filter UI, submission status badges, error feedback.
 
 | # | Task | Est. Hours | Owner |
 |---|---|---|---|

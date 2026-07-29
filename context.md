@@ -26,6 +26,8 @@
 | Student marksheet display | Renders `display` string from API | Computes NE/AB/numeric rules |
 | Authorization | Route guards (UX redirect only) | JwtAuthGuard + RolesGuard on every endpoint |
 | studentState | Shows NO_RECORD / UNPUBLISHED / PUBLISHED screens | Computed in `GET /auth/me` |
+| Assignment semester | Auto-fills from subject; editable for backlog | Validates + stores on assignment |
+| Duplicate assignment | Shows API error message | ConflictException on unique constraint |
 
 `src/api/` is a **thin HTTP client layer** — no validation, no business rules.
 
@@ -43,7 +45,7 @@ imms-frontend/
 │   │   └── marks.ts
 │   ├── components/
 │   │   ├── AuthBootstrap.tsx
-│   │   └── shared/ExcelImportCard.tsx
+│   │   └── shared/ExcelImportCard.tsx, SubmissionStatusBadge.tsx
 │   ├── pages/
 │   │   ├── Login.tsx
 │   │   ├── ActivateAccount.tsx
@@ -78,8 +80,8 @@ imms-frontend/
 - [x] Epic 1.3 — Authentication (Plan A + cookie session)
 - [x] Epic 1.4 — Allowed User Management UI
 - [x] Epic 1.5 — Excel Import UI
-- [x] Epic 2.1 — Subject & Assessment management UI
-- [x] Epic 2.2 — Subject Assignment UI + Teacher dashboard
+- [x] Epic 2.1 — Subject & Assessment management UI (full CRUD, search/filter)
+- [x] Epic 2.2 — Subject Assignment UI (semester auto-fill, academic year, search/filter, status badges)
 - [x] Epic 2.3 — Marks grid UI (NE / AB / save draft)
 - [x] Epic 2.4 — Submit / unlock / publish buttons (status from API)
 
@@ -91,4 +93,4 @@ imms-frontend/
 
 ## Last Updated
 
-**Milestone 2 — Core Marks System UI complete** (2026-07-29)
+**Epic 2.2 — Subject Assignment enhancements** (2026-07-29)

@@ -377,6 +377,20 @@ GET /subjects/:subjectId/assessments
 Roles: COORDINATOR
 ```
 
+### 7.3 Update Assessment
+```
+PATCH /subjects/:subjectId/assessments/:assessmentId
+Roles: COORDINATOR
+```
+**Body:** Partial `{ name, maxMarks, examDate, examTime }`
+
+### 7.4 Delete Assessment
+```
+DELETE /subjects/:subjectId/assessments/:assessmentId
+Roles: COORDINATOR
+```
+**Response 409:** If marks exist for this assessment.
+
 ---
 
 ## 8. Marks

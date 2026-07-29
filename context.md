@@ -82,8 +82,8 @@ imms-frontend/
 - [x] Epic 1.5 — Excel Import UI
 - [x] Epic 2.1 — Subject & Assessment management UI (full CRUD, search/filter)
 - [x] Epic 2.2 — Subject Assignment UI (semester auto-fill, academic year, search/filter, status badges)
-- [x] Epic 2.3 — Marks grid UI (NE / AB / save draft)
-- [x] Epic 2.4 — Submit / unlock / publish buttons (status from API)
+- [x] Epic 2.3 — Marks grid UI (NE / AB / save draft, search, summary, status badge, read-only banners)
+- [x] Epic 2.4 — Submit / unlock / publish with confirm dialogs + API error feedback
 
 ## Environment Variables
 
@@ -111,6 +111,18 @@ Copy `.env.example` → `.env` and set `VITE_API_BASE_URL=http://localhost:3000/
 
 Database seed runs in **backend only**: `cd imms-backend && npx prisma db seed`
 
+## Marks Grid UX (Epic 2.3/2.4 enhancements)
+
+`MarksGridPage.tsx`:
+- `SubmissionStatusBadge` for workflow status
+- Read-only banner when SUBMITTED/PUBLISHED ("View only" teacher / "Marks are locked" coordinator)
+- NE rows highlighted amber for teachers; NE label shown in name column
+- Client-side search by roll number / name
+- Footer summary: entered · AB · NE · blank counts
+- Confirm dialogs on submit, unlock, publish
+- PUBLISHED coordinator view: info message only, no action buttons
+- All workflow actions show backend error messages via `apiErrorMessage`
+
 ## Last Updated
 
-**Dev run docs + Epic 2.2 UI complete** (2026-07-29)
+**Epic 2.3/2.4 — marks grid UX + workflow confirmations** (2026-07-30)

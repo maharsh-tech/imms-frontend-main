@@ -200,6 +200,26 @@ est new imms-backend) | 1h | Backend |
 
 ### Epic 2.3 — Marks Entry
 
+### Status (2026-07-30)
+
+**Epic 2.3: Complete**
+
+| # | Task | Status |
+|---|---|---|
+| 2.3.1 | GET /marks?subjectAssignmentId=... — fetch marks grid | ✅ Done |
+| 2.3.2 | PUT /marks — upsert single mark with validation | ⏭ Skipped (bulk covers use case) |
+| 2.3.3 | PUT /marks/bulk — batch upsert (atomic) | ✅ Done |
+| 2.3.4 | Validate: marks <= maxMarks; null if AB/NE | ✅ Done |
+| 2.3.5 | Validate: marks locked check | ✅ Done |
+| 2.3.6 | PATCH /marks/flag-ne — NE flagging (coordinator) | ✅ Done |
+| 2.3.7 | Frontend: Marks entry table (editable spreadsheet-like grid) | ✅ Done |
+| 2.3.8 | Frontend: AB flag toggle per cell | ✅ Done |
+| 2.3.9 | Frontend: Real-time validation (marks exceed max) | ⏭ Skipped (backend authoritative) |
+| 2.3.10 | Frontend: Auto-save draft on blur/change | ⏭ Skipped (manual Save Draft sufficient) |
+| 2.3.11 | Frontend: NE flag UI for coordinator | ✅ Done |
+
+> Enhancements shipped: cohort validation on bulk/NE writes, assessment-assignment linkage checks, NE authority (coordinator-only), transactional bulk save, no side-effect on GET grid, search/filter UI, entry summary counts, NE row highlight for teachers, read-only banners, shared status badge.
+
 | # | Task | Est. Hours | Owner |
 |---|---|---|---|
 | 2.3.1 | GET /marks?subjectAssignmentId=... — fetch marks grid | 1.5h | Backend |
@@ -219,6 +239,21 @@ est new imms-backend) | 1h | Backend |
 ---
 
 ### Epic 2.4 — Submission Workflow
+
+### Status (2026-07-30)
+
+**Epic 2.4: Complete**
+
+| # | Task | Status |
+|---|---|---|
+| 2.4.1 | POST /marks/submit/:subjectAssignmentId — lock and submit | ✅ Done |
+| 2.4.2 | PATCH /subject-assignments/:id/unlock — coordinator unlock | ✅ Done |
+| 2.4.3 | Audit log entry on submit and unlock events | ✅ Done |
+| 2.4.4 | Frontend: Submit button with confirmation dialog | ✅ Done |
+| 2.4.5 | Frontend: Submission status badges (Draft/Submitted/Locked) | ✅ Done |
+| 2.4.6 | Frontend: Coordinator unlock button with confirmation | ✅ Done |
+
+> Enhancements shipped: audit log IP + previous/new status on submit/unlock/publish, confirm dialogs on unlock/publish, PUBLISHED info message (no action buttons), API error feedback on all workflow actions.
 
 | # | Task | Est. Hours | Owner |
 |---|---|---|---|

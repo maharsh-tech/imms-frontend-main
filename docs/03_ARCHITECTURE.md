@@ -47,8 +47,7 @@ IMMS follows a **3-tier web architecture** with a clear separation between:
          │
 ┌────────▼────────────────────────────────────────────────────┐
 │                  EXTERNAL SERVICES                          │
-│    Google OAuth 2.0          Supabase Storage (optional)    │
-│    (Authentication)          (PDF/Excel file storage)       │
+│    Supabase PostgreSQL       (optional: Supabase Storage)   │
 └─────────────────────────────────────────────────────────────┘
 `
 
@@ -65,7 +64,7 @@ IMMS follows a **3-tier web architecture** with a clear separation between:
 | Language | TypeScript (full stack) | Type safety, shared types possible |
 | ORM | Prisma | Type-safe DB access, migrations, schema as code |
 | Database | PostgreSQL (Supabase) | Managed Postgres, built-in auth (unused here), storage |
-| Authentication | Google OAuth 2.0 + JWT | Institutional Google accounts, stateless tokens |
+| Authentication | Email/password + activation link (Plan A); JWT in httpOnly cookies |
 | PDF Generation | @react-pdf/renderer or Puppeteer | PDF marksheets and reports |
 | Excel Parsing | xlsx (SheetJS) | Robust .xlsx parsing in Node.js |
 | Deployment | Vercel (FE) + Railway/Render (BE) | Zero-config, free tier viable for this scale |
@@ -79,46 +78,14 @@ src/
 ├── app.module.ts
 ├── auth/
 │   ├── auth.module.ts
-│   ├── auth.controller.ts
+│   ├── auth.controller.ts       # httpOnly cookie sessions
 │   ├── auth.service.ts
-│   ├── strategies/
-│   │   ├── google.strategy.ts        (Passport Google OAuth)
-│   │   └── jwt.strategy.ts           (JWT validation)
-│   └── guards/
-│       ├── jwt-auth.guard.ts
-│       └── roles.guard.ts
-├── users/
-│   ├── users.module.ts
-│   ├── users.controller.ts
-│   └── users.service.ts
-├── students/
-│   ├── students.module.ts
-│   ├── students.controller.ts
-│   └── students.service.ts
-├── faculty/
-│   ├── faculty.module.ts
-│   ├── faculty.controller.ts
-│   └── faculty.service.ts
-├── subjects/
-│   ├── subjects.module.ts
-│   ├── subjects.controller.ts
-│   └── subjects.service.ts
-├── marks/
-│   ├── marks.module.ts
-│   ├── marks.controller.ts
-│   └── marks.service.ts
-├── reports/
-│   ├── reports.module.ts
-│   ├── reports.controller.ts
-│   ├── reports.service.ts
-│   └── pdf-generator.service.ts
-├── import/
-│   ├── import.module.ts
-│   ├── import.controller.ts
-│   └── import.service.ts            (SheetJS parsing)
-├── audit/
-│   ├── audit.module.ts
-│   └── audit.service.ts
+│   └── guards/                  # JwtAuthGuard, RolesGuard, AuthThrottleGuard
+├── allowed-users/
+├── import/                      # SheetJS Excel parsing
+├── subjects/                    # Subject + assessment CRUD
+├── subject-assignments/
+├── marks/                       # Grid, bulk, NE, submit/unlock/publish, marksheet
 └── prisma/
     ├── prisma.module.ts
     └── prisma.service.ts
@@ -128,128 +95,72 @@ src/
 
 ## 4. Frontend Architecture (React + Vite)
 
-`
+**Principle: presentation layer only.** The frontend collects input, calls REST APIs, and renders responses. It does not enforce business rules — route guards are UX convenience; the backend rejects unauthorized or invalid requests.
+
+```
 src/
-├── main.tsx
-├── App.tsx                        (Router setup)
-├── routes/
-│   ├── PrivateRoute.tsx           (Auth guard)
-│   └── RoleRoute.tsx              (Role-based guard)
+├── api/                           # Thin HTTP client — no business logic
+│   ├── client.ts
+│   ├── allowedUsers.ts, import.ts, subjects.ts, marks.ts
 ├── pages/
-│   ├── Login.tsx
-│   ├── coordinator/
-│   │   ├── Dashboard.tsx
-│   │   ├── StudentImport.tsx
-│   │   ├── FacultyImport.tsx
-│   │   ├── SubjectManagement.tsx
-│   │   ├── SubjectAssignment.tsx
-│   │   ├── MarksReview.tsx
-│   │   └── ReportGeneration.tsx
-│   ├── teacher/
-│   │   ├── Dashboard.tsx
-│   │   ├── SubjectList.tsx
-│   │   └── MarksEntry.tsx
-│   └── student/
-│       └── Marksheet.tsx
-├── components/
-│   ├── layout/
-│   │   ├── Header.tsx
-│   │   ├── Sidebar.tsx
-│   │   └── PageWrapper.tsx
-│   ├── shared/
-│   │   ├── DataTable.tsx
-│   │   ├── FileUpload.tsx
-│   │   ├── StatusBadge.tsx         (AB / NE badges)
-│   │   └── PDFDownloadButton.tsx
-│   └── marks/
-│       ├── MarksTable.tsx
-│       └── FlagCell.tsx
-├── hooks/
-│   ├── useAuth.ts
-│   ├── useSubjects.ts
-│   └── useMarks.ts
-├── stores/
-│   └── authStore.ts               (Zustand)
-├── api/
-│   └── client.ts                  (Axios instance with interceptors)
-└── types/
-    └── index.ts                   (Shared TypeScript types)
-`
+│   ├── coordinator/               # Dashboard tabs + marks grid (NE/unlock/publish)
+│   ├── teacher/                   # Assignment list → marks entry
+│   ├── student/Marksheet.tsx      # Renders backend-computed display values
+│   └── shared/MarksGridPage.tsx
+├── routes/                        # UX guards only
+└── stores/authStore.ts            # User profile — no tokens
+```
 
 ---
 
-## 5. Authentication Flow
+## 5. Authentication Flow (Plan A — activation link)
 
 ```
-User clicks "Sign in with Google"
-        |
-        v
-Google OAuth 2.0 Consent Screen
-        |
-        v (authorization code)
-NestJS /auth/google/callback
-        |
-        v
-[GATE 1] Domain Validation
-  Does email end with @ALLOWED_EMAIL_DOMAIN ?
-        |
-  NO ---+--> 403: "Only institutional email accounts are permitted"
-        |
-  YES
-        |
-        v
-[GATE 2] Whitelist Check
-  Is email in AllowedUsers table?
-        |
-  NO ---+--> 403: "Account not registered. Contact the Exam Coordinator."
-        |
-  YES -> assign role (COORDINATOR / TEACHER / STUDENT)
-        |
-        v
-Issue JWT (access 15min) + Refresh Token (7 days)
-        |
-        v
-Frontend stores tokens -> redirect to role dashboard
+Coordinator adds user (POST /allowed-users)
+  → domain validated: staff @charusat.ac.in, students @charusat.edu.in
+  → activation link returned (7-day JWT, one-time use)
+
+College emails student the activation link
+
+Student opens /activate?token=...
+  → POST /auth/activate { token, newPassword }
+  → needsPasswordChange = false
+
+Student signs in (POST /auth/login)
+  → httpOnly cookies set (access 15min + refresh 7d)
+  → NO tokens in JSON or localStorage
+
+Frontend calls GET /auth/me (cookies sent automatically)
+  → redirect to role dashboard
 
         | (if role = STUDENT)
         v
-[GATE 3] Student Record Lookup (by email)
-        |
-  NO RECORD  --> Show: "No student record linked. Contact Coordinator."
-        |
-  FOUND, not published --> Show: "Results not published yet."
-        |
-  FOUND, published --> Show full marksheet
+Student record lookup (by email)
+  NO RECORD  → "Contact Coordinator"
+  FOUND      → marksheet (when published)
 ```
+
+**Security:** helmet, rate limiting on /auth, RBAC on all endpoints, cookies HttpOnly+SameSite=Strict.
 
 ---
 
-## 6. Marks Submission Workflow
+## 6. Marks Submission Workflow (per assessment)
 
-`
-Teacher opens subject → status: DRAFT
+```
+Coordinator flags NE (optional) → status: DRAFT
         │
-Teacher enters marks (validates <= max marks)
+Teacher enters marks + AB flags
         │
-Teacher flags AB students as needed
+Teacher POST /marks/submit → SUBMITTED (audit log)
         │
-Teacher clicks "Submit Marks"
-        │ Confirmation dialog shown
+Coordinator PATCH /marks/unlock → DRAFT (if correction needed)
         │
-        ▼
-Backend sets SubjectAssignment.status = SUBMITTED
-Backend locks all mark records (isLocked = true)
-Audit entry created
+Coordinator PATCH /marks/publish → PUBLISHED
         │
-Coordinator views submission list
-        │ (if correction needed)
-        ▼
-Coordinator clicks "Unlock" for subject
-Backend sets status = DRAFT, isLocked = false
-Audit entry created: UNLOCK event
-        │
-Teacher re-enters → resubmits
-`
+Student GET /marks/my-marksheet → sees display values (NE/AB/number)
+```
+
+All state transitions validated server-side in `MarksService`.
 
 ---
 
@@ -274,7 +185,7 @@ Teacher re-enters → resubmits
 │  Railway / Render                                               │
 │  NestJS Docker Container                                        │
 │  PORT: 3000                                                     │
-│  ENV: DATABASE_URL, JWT_SECRET, GOOGLE_CLIENT_ID/SECRET         │
+│  ENV: DATABASE_URL, JWT_SECRET, REFRESH_TOKEN_SECRET, FRONTEND_URL  │
 └────────────────────────────┬────────────────────────────────────┘
                              │ Prisma connection pool
 ┌────────────────────────────▼────────────────────────────────────┐
@@ -290,17 +201,18 @@ Teacher re-enters → resubmits
 
 | Concern | Implementation |
 |---|---|
-| Authentication | Google OAuth 2.0 only; no password storage |
-| Domain Restriction | Email domain validated against ALLOWED_EMAIL_DOMAIN env var before any other check |
-| Authorization | NestJS RolesGuard + @Roles() decorator on every endpoint |
-| Token Security | JWT signed with HS256 secret; short expiry |
-| IDOR Prevention | All queries scoped to authenticated userId (student sees only their own data) |
-| Student State | Three explicit states: no-record / unpublished / published. Never a blank screen. |
-| Input Validation | class-validator DTOs on all incoming request bodies |
-| SQL Injection | Prisma parameterized queries (no raw SQL) |
-| CORS | Allowlist of frontend origins only |
+| Authentication | Email/password + activation link; JWT in httpOnly cookies |
+| Domain Restriction | `@charusat.ac.in` (staff) / `@charusat.edu.in` (students) — backend validator |
+| Authorization | NestJS RolesGuard + @Roles() on every endpoint |
+| Token Security | httpOnly + SameSite=Strict cookies; no tokens in client JS |
+| Business Logic | **Backend only** — frontend renders API responses, no rule enforcement |
+| IDOR Prevention | All queries scoped to authenticated userId |
+| Student State | `NO_RECORD` / `UNPUBLISHED` / `PUBLISHED` computed in `GET /auth/me` |
+| Input Validation | class-validator DTOs on all request bodies |
+| SQL Injection | Prisma parameterized queries |
+| CORS | Allowlist of frontend origins, credentials enabled |
 | Rate Limiting | @nestjs/throttler on auth endpoints |
-| Secrets | Environment variables; never committed to repo |
+| HTTP Headers | helmet() |
 
 ---
 

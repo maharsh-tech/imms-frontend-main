@@ -46,19 +46,21 @@ IMMS operates in three phases per semester:
 
 ### 3.1 Authentication Module
 
-**FR-AUTH-01:** The system shall support Google OAuth 2.0 as the sole authentication mechanism for all user roles.
+**FR-AUTH-01:** The system shall use **email/password authentication** with **Plan A onboarding**: coordinator registers users, student receives an **activation link**, sets password once, then signs in normally. No Google OAuth.
 
-**FR-AUTH-02 (Domain Restriction):** Before any role check, the system shall validate that the authenticated Google email belongs to the configured institutional domain (set via `ALLOWED_EMAIL_DOMAIN` environment variable, e.g. `college.ac.in`). Any email outside this domain shall be rejected with a 403 error: *"Only institutional email accounts are permitted to access this system."*
+**FR-AUTH-02 (Domain Restriction):** Email domain is enforced by role on the backend:
+- `COORDINATOR` and `TEACHER` → `@charusat.ac.in` only
+- `STUDENT` → `@charusat.edu.in` only
 
-**FR-AUTH-03:** After domain validation, the system shall match the email against the AllowedUser whitelist to determine role assignment.
+**FR-AUTH-03:** Role is assigned when the coordinator adds the user to the AllowedUser whitelist (`POST /allowed-users`).
 
-**FR-AUTH-04:** If an email passes domain check but is not in the whitelist, access shall be denied: *"Your account has not been registered. Contact the Exam Coordinator."*
+**FR-AUTH-04:** Login is blocked until the user completes activation (`needsPasswordChange === false`). Unactivated accounts receive 403: *"Account not activated. Use the activation link from your welcome email."*
 
-**FR-AUTH-05:** The system shall issue a signed JWT (access token, 15-minute expiry) and a refresh token (7-day expiry) upon successful authentication.
+**FR-AUTH-05:** JWT access token (15 min) and refresh token (7 days) are stored in **httpOnly, SameSite=Strict cookies** — never returned in JSON or client storage.
 
-**FR-AUTH-06:** The system shall enforce role-based access control on every API endpoint and UI route.
+**FR-AUTH-06:** Role-based access control on every API endpoint and UI route (backend is authoritative).
 
-**FR-AUTH-07:** The system shall invalidate sessions on logout.
+**FR-AUTH-07:** Logout clears auth cookies via `POST /auth/logout`.
 
 **FR-AUTH-08 (Student Identity Matching):** After a student successfully authenticates, the backend shall look up a Student record by the authenticated email:
 - **Record found, results published:** Show the student's full marksheet.
@@ -74,7 +76,7 @@ IMMS operates in three phases per semester:
 - Required columns: Roll Number, Full Name, Email (Google), Department, Semester, Batch/Year.
 - The system shall validate the file structure before processing.
 - The import process shall act as an 'upsert'. If a Roll Number already exists, it will update their `Semester` and other details. This acts as the semester promotion mechanism.
-- The Excel file may include an optional 'NE Status' column to bulk-flag students as Not Eligible.
+- **NE (Not Eligible) is not imported via Excel.** NE is flagged per exam by the Coordinator before each internal (see FR-COORD-06).
 - Successful import shall display a count of records added/updated.
 
 **FR-COORD-02: Faculty Import**
@@ -95,10 +97,11 @@ IMMS operates in three phases per semester:
 - The Coordinator shall define exams (assessments) for each subject, including Name, Date, Time, and Max Marks.
 - A variable number of exams per subject is supported.
 
-**FR-COORD-06: NE Flagging & Visibility**
-- The Coordinator shall flag individual students as NE for specific subjects.
-- By default, NE students cannot view their marks. The Coordinator shall have a toggle (button/dropdown) to control whether NE students can view their marks.
-- NE-flagged entries shall display "NE" instead of marks when marks are hidden.
+**FR-COORD-06: NE Flagging (per exam, not via import)**
+- NE is **not** uploaded in the student Excel. The Coordinator flags NE from the student list **before each assessment** (Internal 1, Internal 2, etc.) for a given subject.
+- Two supported methods: (1) checkbox per student on the list, or (2) enter a count of not-eligible students (coordinator confirms which students).
+- NE is **per subject + per exam** — a student may be NE for Internal 1 but eligible for Internal 2 of the same subject.
+- Teachers **shall enter marks** for NE-flagged students; the mark is stored but **never shown** on the student marksheet (student always sees "NE"). There is no coordinator toggle to reveal NE marks.
 
 **FR-COORD-07: Marks Lock/Unlock**
 - After a teacher submits, marks for that subject are locked.
@@ -121,10 +124,9 @@ IMMS operates in three phases per semester:
 - No cross-subject or cross-faculty data shall be visible.
 
 **FR-TEACH-02: Marks Entry**
-- The teacher shall enter marks for each student per assessment component.
+- The teacher shall enter marks for each student per assessment component (including NE-flagged students).
 - Marks shall be validated: 0 <= entered marks <= max marks for that assessment.
 - The system shall reject values outside this range with a validation error.
-- Marks entry shall be blocked for NE-flagged students.
 
 **FR-TEACH-03: AB Flagging**
 - The teacher shall mark a student as AB (Absent) for a specific assessment.

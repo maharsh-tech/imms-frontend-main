@@ -10,6 +10,20 @@
 ## Milestone 1 — Foundation
 *Goal: Project setup, authentication, and user/data import working end-to-end*
 
+### Status (2026-07-29)
+
+| Epic | Status | Notes |
+|------|--------|-------|
+| 1.1 Project Scaffolding | ✅ Done | NestJS + React/Vite |
+| 1.2 Database Schema | ✅ Done | Prisma schema + minimal seed (3 dev accounts) |
+| 1.3 Authentication | ✅ Done | Plan A activation link, httpOnly cookies, domain rules |
+| 1.4 Allowed Users | ✅ Done | Coordinator CRUD + activation link copy |
+| 1.5 Excel Import | ✅ Done | Config-driven columns — edit `import-columns.config.ts` to change format |
+
+**Milestone 1: Complete** (pending your testing)
+
+> Auth pivot: Google OAuth tasks replaced by email/password + activation link (see `02_SRS.md`).
+
 ---
 
 ### Epic 1.1 — Project Scaffolding
@@ -104,6 +118,19 @@ est new imms-backend) | 1h | Backend |
 
 ## Milestone 2 — Core Marks System
 *Goal: Subject management, assignment, marks entry, AB/NE flagging, submission workflow*
+
+### Status (2026-07-29)
+
+| Epic | Status | Notes |
+|------|--------|-------|
+| 2.1 Subject Management | ✅ Done | CRUD + assessments nested under subjects |
+| 2.2 Subject Assignment | ✅ Done | Auto-creates assessment submissions on assign |
+| 2.3 Marks Entry | ✅ Done | Grid, bulk save, NE/AB — all validation on backend |
+| 2.4 Submission Workflow | ✅ Done | DRAFT → SUBMITTED → PUBLISHED + unlock + audit |
+
+**Milestone 2: Complete** (pending your testing)
+
+> Frontend is UI/UX only. All business rules enforced in NestJS services.
 
 ---
 

@@ -1,41 +1,25 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { User } from '../types';
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
+  isBootstrapped: boolean;
 
-  setAuth: (user: User, accessToken: string, refreshToken: string) => void;
-  setAccessToken: (accessToken: string) => void;
+  setUser: (user: User) => void;
+  setBootstrapped: (value: boolean) => void;
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      accessToken: null,
-      refreshToken: null,
-      isAuthenticated: false,
+/** Tokens live in httpOnly cookies — never in JS/localStorage (XSS-safe). */
+export const useAuthStore = create<AuthState>()((set) => ({
+  user: null,
+  isAuthenticated: false,
+  isBootstrapped: false,
 
-      setAuth: (user, accessToken, refreshToken) =>
-        set({ user, accessToken, refreshToken, isAuthenticated: true }),
+  setUser: (user) => set({ user, isAuthenticated: true }),
 
-      setAccessToken: (accessToken) => set({ accessToken }),
+  setBootstrapped: (value) => set({ isBootstrapped: value }),
 
-      logout: () =>
-        set({
-          user: null,
-          accessToken: null,
-          refreshToken: null,
-          isAuthenticated: false,
-        }),
-    }),
-    {
-      name: 'imms-auth-storage', // name of the item in the storage (must be unique)
-    }
-  )
-);
+  logout: () => set({ user: null, isAuthenticated: false }),
+}));

@@ -11,7 +11,7 @@ export type Role = (typeof Role)[keyof typeof Role];
 export const SubmissionStatus = {
   DRAFT: 'DRAFT',
   SUBMITTED: 'SUBMITTED',
-  LOCKED: 'LOCKED',
+  PUBLISHED: 'PUBLISHED',
 } as const;
 export type SubmissionStatus = (typeof SubmissionStatus)[keyof typeof SubmissionStatus];
 
@@ -41,6 +41,35 @@ export interface User {
   role: Role;
   profilePic?: string;
   needsPasswordChange: boolean;
+}
+
+export interface AllowedUser {
+  id: string;
+  email: string;
+  role: Role;
+  name?: string | null;
+  createdAt: string;
+}
+
+export interface UserCredentials {
+  email: string;
+  activationLink: string;
+}
+
+export interface CreateAllowedUserResponse extends AllowedUser {
+  credentials: UserCredentials;
+}
+
+export interface ImportRowError {
+  row: number;
+  reason: string;
+}
+
+export interface ImportResult {
+  imported: number;
+  updated: number;
+  skipped: number;
+  errors: ImportRowError[];
 }
 
 export type StudentState = 'NO_RECORD' | 'UNPUBLISHED' | 'PUBLISHED';

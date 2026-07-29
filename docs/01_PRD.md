@@ -34,7 +34,7 @@ Academic institutions currently manage examination marks through disconnected Ex
 - Automate marksheet and report generation (PDF)
 - Provide an audit trail for all marks entries and updates
 - Support Excel-based bulk import for students and faculty
-- Handle AB (Absent) and NE (Not Eligible) flags, with coordinator-controlled visibility for NE students
+- Handle AB (Absent) and NE (Not Eligible) flags — NE marks always hidden from students on marksheet
 - Retain all historical marks while restricting student view to only their current semester
 - Match student Google login to their roll number record; show clear status when record is unlinked
 
@@ -76,12 +76,12 @@ Academic institutions currently manage examination marks through disconnected Ex
 ### 6.1 Authentication and Authorization
 | ID | Requirement | Priority |
 |---|---|---|
-| AUTH-01 | Google OAuth 2.0 login for all three roles | P0 |
-| AUTH-02 | **Domain restriction**: only emails from the configured institutional domain (e.g. `@college.ac.in`) are permitted — all others rejected at login | P0 |
-| AUTH-03 | Role assignment tied to Google account email on first login | P0 |
-| AUTH-04 | Session management with JWT tokens | P0 |
-| AUTH-05 | Role-based route guards (Coordinator / Teacher / Student) | P0 |
-| AUTH-06 | Coordinator can pre-register allowed emails per role | P0 |
+| AUTH-01 | Email/password login with **Plan A activation link** onboarding (no Google OAuth) | P0 |
+| AUTH-02 | **Domain restriction by role**: staff `@charusat.ac.in`, students `@charusat.edu.in` | P0 |
+| AUTH-03 | Role assigned when coordinator pre-registers email in AllowedUser whitelist | P0 |
+| AUTH-04 | Session via **httpOnly JWT cookies** (15min access / 7d refresh) — not in localStorage | P0 |
+| AUTH-05 | Role-based route guards (Coordinator / Teacher / Student) — backend RBAC is authoritative | P0 |
+| AUTH-06 | Coordinator adds users → system returns activation link for welcome email | P0 |
 | AUTH-07 | **Student identity matching**: after login, system looks up student record by email. If no record found → show "Your account is not linked to any student record. Contact the Coordinator." instead of empty dashboard | P0 |
 | AUTH-08 | If results not yet published for student's semester → show "Results have not been published yet" (not a blank page) | P0 |
 
@@ -93,7 +93,7 @@ Academic institutions currently manage examination marks through disconnected Ex
 | COORD-03 | Add, edit, and delete subjects (name + code) | P0 |
 | COORD-04 | Assign teachers for mark entry of specific subjects | P0 |
 | COORD-05 | Define exams per subject (Name, Date, Time, Max Marks) with variable number of exams | P0 |
-| COORD-06 | Flag students as NE (Not Eligible) and toggle visibility of marks for NE students | P0 |
+| COORD-06 | Flag students as NE per exam (checkbox or count); NE marks never visible to student | P0 |
 | COORD-07 | Lock/unlock marks submission per subject | P0 |
 | COORD-08 | Generate semester-wise reports (PDF) | P0 |
 | COORD-09 | Generate subject-wise reports (PDF) | P0 |
@@ -116,7 +116,7 @@ Academic institutions currently manage examination marks through disconnected Ex
 |---|---|---|
 | STU-01 | View personal marksheet for the current semester only | P0 |
 | STU-02 | Download personal marksheet as PDF | P0 |
-| STU-03 | View AB/NE flags (NE marks hidden unless explicitly enabled by Coordinator) | P0 |
+| STU-03 | View AB/NE on marksheet — NE shows "NE", never the entered mark | P0 |
 | STU-04 | View subject-wise and exam-wise marks breakdown | P0 |
 
 ### 6.5 System Cross-Cutting

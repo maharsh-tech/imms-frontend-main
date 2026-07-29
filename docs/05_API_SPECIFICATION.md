@@ -4,118 +4,145 @@
 **Version:** 1.0  
 **Date:** 2026-07-24  
 **Base URL:** https://api.imms.yourdomain.com/api/v1  
-**Authentication:** Bearer JWT token in Authorization header  
-**Content-Type:** pplication/json (unless file upload)
+**Authentication:** httpOnly cookie session (`imms_access_token`, `imms_refresh_token`). Send requests with `credentials: include`. No Bearer token in client JS.
 
 ---
 
 ## 1. Authentication
 
-### 1.1 Initiate Google OAuth
-`
-GET /auth/google
-`
-Redirects user to Google OAuth consent screen.
+### 1.1 Login
+```
+POST /auth/login
+```
+**Body:**
+```json
+{ "email": "teacher@charusat.ac.in", "password": "..." }
+```
 
----
-
-### 1.2 Google OAuth Callback
-`
-GET /auth/google/callback?code={code}&state={state}
-`
-Exchanges authorization code for Google profile. Returns JWT tokens.
-
-**Response 200:**
-`json
+**Response 200:** Sets httpOnly cookies. Body:
+```json
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...",
   "user": {
     "id": "cuid123",
-    "email": "teacher@college.ac.in",
+    "email": "teacher@charusat.ac.in",
     "name": "John Doe",
     "role": "TEACHER",
-    "profilePic": "https://lh3.googleusercontent.com/..."
-  },
-  "studentState": null
+    "needsPasswordChange": false
+  }
 }
-`
+```
 
-For role STUDENT, `studentState` is one of:
-- `"NO_RECORD"` — email not found in Student table (show: contact coordinator)
-- `"UNPUBLISHED"` — record exists but results not published yet
-- `"PUBLISHED"` — results published, show marksheet
-
-**Response 403 (domain blocked):**
-`json
-{ "error": "DOMAIN_BLOCKED", "message": "Only institutional email accounts (@charusat.edu.in, @charusat.ac.in) are permitted" }
-`
-
-**Response 403 (not whitelisted):**
-`json
-{ "error": "ACCESS_DENIED", "message": "Your account has not been registered. Contact the Exam Coordinator." }
-`
+**Response 403 (not activated):**
+```json
+{ "statusCode": 403, "message": "Account not activated. Use the activation link from your welcome email." }
+```
 
 ---
 
-### 1.3 Refresh Token
-`
-POST /auth/refresh
-`
+### 1.2 Activate Account (Plan A — from email link)
+```
+POST /auth/activate
+```
 **Body:**
-`json
-{ "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4..." }
-`
+```json
+{ "token": "<activation-jwt>", "newPassword": "your-new-password" }
+```
 
 **Response 200:**
-`json
-{ "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
-`
+```json
+{ "message": "Account activated. You can now sign in with your new password." }
+```
+
+Activation links are generated when coordinator creates a user: `{FRONTEND_URL}/activate?token=...` (7-day expiry, one-time use).
+
+---
+
+### 1.3 Refresh Session
+```
+POST /auth/refresh
+```
+Uses `imms_refresh_token` cookie. Refreshes `imms_access_token` cookie.
+
+**Response 200:** `{ "message": "Session refreshed" }`
 
 ---
 
 ### 1.4 Logout
-`
+```
 POST /auth/logout
-`
-Invalidates refresh token server-side.
+```
+Clears auth cookies.
 
-**Response 200:** { "message": "Logged out successfully" }
+**Response 200:** `{ "message": "Logged out successfully" }`
 
 ---
 
 ### 1.5 Get Current User
-`
+```
 GET /auth/me
-`
+```
+Requires valid access cookie.
+
 **Response 200:**
-`json
+```json
 {
-  "id": "cuid123",
-  "email": "teacher@institution.edu",
-  "name": "John Doe",
-  "role": "TEACHER"
+  "user": {
+    "id": "cuid123",
+    "email": "teacher@charusat.ac.in",
+    "name": "John Doe",
+    "role": "TEACHER",
+    "needsPasswordChange": false
+  },
+  "studentState": null
 }
-`
+```
+
+For role STUDENT, `studentState` is one of:
+- `"NO_RECORD"` — no student record linked to user account
+- `"UNPUBLISHED"` — student record exists but no published results yet
+- `"PUBLISHED"` — at least one published assessment for student's semester/department
+
+For non-student roles, `studentState` is `null`.
+
+---
+
+### 1.6 Change Password (authenticated)
+```
+POST /auth/change-password
+```
+**Body:** `{ "newPassword": "..." }`
 
 ---
 
 ## 2. Allowed Users (Coordinator Only)
 
 ### 2.1 Add Allowed User
-`
+```
 POST /allowed-users
 Roles: COORDINATOR
-`
+```
 **Body:**
-`json
+```json
 {
-  "email": "student@institution.edu",
-  "role": "STUDENT",
-  "name": "Jane Doe"
+  "email": "student@charusat.edu.in",
+  "role": "STUDENT"
 }
-`
-**Response 201:** { "id": "cuid123", "email": "...", "role": "STUDENT" }
+```
+
+Domain rules: `STUDENT` → `@charusat.edu.in`; `TEACHER`/`COORDINATOR` → `@charusat.ac.in`.
+
+**Response 201:**
+```json
+{
+  "id": "cuid123",
+  "email": "student@charusat.edu.in",
+  "role": "STUDENT",
+  "credentials": {
+    "email": "student@charusat.edu.in",
+    "activationLink": "http://localhost:5173/activate?token=..."
+  }
+}
+```
 
 ---
 
@@ -323,155 +350,140 @@ Returns only assignments for the authenticated teacher.
 
 ---
 
-### 6.4 Unlock Submission
-`
-PATCH /subject-assignments/:id/unlock
+### 6.4 Delete Assignment
+```
+DELETE /subject-assignments/:id
 Roles: COORDINATOR
-`
-**Response 200:** { "message": "Marks unlocked for editing", "status": "DRAFT" }
+```
+Only allowed before marks entry begins.
 
 ---
 
-### 6.5 Publish Results
-`
-PATCH /subject-assignments/:id/publish
-Roles: COORDINATOR
-`
-Makes results visible to students.
-**Response 200:** { "isPublished": true, "publishedAt": "2026-07-24T..." }
-
----
-
-## 7. Assessments
+## 7. Assessments (nested under Subjects)
 
 ### 7.1 Create Assessment
-`
-POST /assessments
+```
+POST /subjects/:subjectId/assessments
 Roles: COORDINATOR
-`
+```
 **Body:**
-`json
-{
-  "subjectId": "cuid_subject",
-  "name": "Internal",
-  "maxMarks": 30
-}
-`
-
----
+```json
+{ "name": "Internal 1", "maxMarks": 50 }
+```
 
 ### 7.2 List Assessments for Subject
-`
-GET /assessments?subjectId=cuid_subject
-Roles: COORDINATOR, TEACHER (assigned subjects only)
-`
+```
+GET /subjects/:subjectId/assessments
+Roles: COORDINATOR
+```
 
 ---
 
 ## 8. Marks
 
-### 8.1 Get Marks for Subject Assignment
-`
-GET /marks?subjectAssignmentId={id}
+### 8.1 Get Marks Grid
+```
+GET /marks/grid?subjectAssignmentId={id}&assessmentId={id}
 Roles: COORDINATOR, TEACHER (assigned only)
-`
-**Response 200:**
-`json
+```
+Returns assignment, assessment, submission status, and student rows with marks/flags.
+
+---
+
+### 8.2 Bulk Upsert Marks
+```
+PUT /marks/bulk
+Roles: TEACHER (assigned only, DRAFT status)
+```
+**Body:**
+```json
 {
-  "subjectAssignment": {
-    "id": "cuid_sa",
-    "subject": { "code": "CS301", "name": "Data Structures" },
-    "status": "DRAFT"
-  },
-  "assessments": [
-    { "id": "cuid_ass1", "name": "Internal", "maxMarks": 30 },
-    { "id": "cuid_ass2", "name": "External", "maxMarks": 70 }
-  ],
+  "subjectAssignmentId": "cuid_sa",
+  "assessmentId": "cuid_ass1",
   "marks": [
+    { "studentId": "cuid1", "marksObtained": 25, "flag": "NONE" },
+    { "studentId": "cuid2", "marksObtained": null, "flag": "AB" }
+  ]
+}
+```
+**Backend validates:** marks ≤ maxMarks; null if AB; NE flags preserved; rejects if not DRAFT.
+
+---
+
+### 8.3 Flag NE Students (Coordinator)
+```
+PATCH /marks/flag-ne
+Roles: COORDINATOR (DRAFT status only)
+```
+**Body:**
+```json
+{
+  "subjectAssignmentId": "cuid_sa",
+  "assessmentId": "cuid_ass1",
+  "neStudentIds": ["cuid_stu1", "cuid_stu2"]
+}
+```
+
+---
+
+### 8.4 Submit Marks
+```
+POST /marks/submit
+Roles: TEACHER
+```
+**Body:** `{ "subjectAssignmentId": "...", "assessmentId": "..." }`  
+Sets submission status to `SUBMITTED`. Audit log created.
+
+---
+
+### 8.5 Unlock Submission
+```
+PATCH /marks/unlock
+Roles: COORDINATOR
+```
+**Body:** `{ "subjectAssignmentId": "...", "assessmentId": "..." }`  
+Returns submission to `DRAFT`. Audit log created.
+
+---
+
+### 8.6 Publish Results
+```
+PATCH /marks/publish
+Roles: COORDINATOR
+```
+**Body:** `{ "subjectAssignmentId": "...", "assessmentId": "..." }`  
+Sets submission status to `PUBLISHED`. Students can now see results.
+
+---
+
+### 8.7 Student Marksheet
+```
+GET /marks/my-marksheet
+Roles: STUDENT
+```
+**Response 200:**
+```json
+{
+  "semester": 5,
+  "studentName": "Dev Student",
+  "rollNumber": "23IT001",
+  "hasPublished": true,
+  "subjects": [
     {
-      "studentId": "cuid_stu1",
-      "rollNumber": "2023CS001",
-      "studentName": "Jane Doe",
-      "entries": [
-        { "assessmentId": "cuid_ass1", "marksObtained": 25, "flag": "NONE" },
-        { "assessmentId": "cuid_ass2", "marksObtained": null, "flag": "AB" }
+      "code": "IT301",
+      "name": "Data Structures",
+      "assessments": [
+        { "name": "Internal 1", "maxMarks": 50, "display": "NE" }
       ]
     }
   ]
 }
-`
+```
+`display` is computed server-side: `"NE"`, `"AB"`, numeric string, or `"-"`.
 
 ---
 
-### 8.2 Upsert Mark
-`
-PUT /marks
-Roles: TEACHER (assigned subjects only)
-`
-**Body:**
-`json
-{
-  "studentId": "cuid_stu1",
-  "assessmentId": "cuid_ass1",
-  "subjectAssignmentId": "cuid_sa",
-  "marksObtained": 25,
-  "flag": "NONE"
-}
-`
-**Validation:** marksObtained must be null if flag is AB or NE; must be <= maxMarks otherwise.
-
-**Response 200:** Updated mark object.  
-**Response 400:** { "error": "MARKS_EXCEED_MAX", "message": "Marks 35 exceed maximum 30" }  
-**Response 403:** { "error": "MARKS_LOCKED", "message": "Submission is locked. Contact coordinator." }
-
----
-
-### 8.3 Bulk Upsert Marks (Batch Save)
-`
-PUT /marks/bulk
-Roles: TEACHER
-`
-**Body:**
-`json
-{
-  "subjectAssignmentId": "cuid_sa",
-  "marks": [
-    { "studentId": "cuid1", "assessmentId": "cuid_ass1", "marksObtained": 25, "flag": "NONE" },
-    { "studentId": "cuid2", "assessmentId": "cuid_ass1", "marksObtained": null, "flag": "AB" }
-  ]
-}
-`
-Atomic — all succeed or all fail.
-
----
-
-### 8.4 Flag NE Student (Coordinator)
-`
-PATCH /marks/flag-ne
-Roles: COORDINATOR
-`
-**Body:**
-`json
-{
-  "studentId": "cuid_stu",
-  "subjectAssignmentId": "cuid_sa"
-}
-`
-
----
-
-### 8.5 Submit Marks
-`
-POST /marks/submit/:subjectAssignmentId
-Roles: TEACHER
-`
-Locks all marks for the subject assignment. Sets status to SUBMITTED.
-
-**Response 200:** { "message": "Marks submitted successfully", "status": "SUBMITTED" }
-
----
-
-## 9. Reports
+## 9. Reports (Milestone 3 — not yet implemented)
 
 ### 9.1 Get Student Marksheet
 `

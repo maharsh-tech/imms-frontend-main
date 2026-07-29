@@ -1,31 +1,29 @@
-import React, { useState } from 'react';
-import { useAuthStore } from '../stores/authStore';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import apiClient from '../api/client';
 import { KeyRound } from 'lucide-react';
 
-export default function ForceChangePassword() {
+const ActivateAccount = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const token = searchParams.get('token') ?? '';
+
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  const { user, setAuth, accessToken, refreshToken } = useAuthStore();
-  const navigate = useNavigate();
 
-  // If user somehow gets here without needing a password change, send them back
-  if (!user || !user.needsPasswordChange) {
-    if (user?.role === 'COORDINATOR') navigate('/coordinator');
-    else if (user?.role === 'TEACHER') navigate('/teacher');
-    else if (user?.role === 'STUDENT') navigate('/student');
-    else navigate('/login');
-    return null;
-  }
+  useEffect(() => {
+    if (!token) {
+      setError('Invalid activation link. Ask your coordinator for a new one.');
+    }
+  }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
+    if (!token) return;
     if (newPassword.length < 6) {
       setError('Password must be at least 6 characters long.');
       return;
@@ -38,16 +36,14 @@ export default function ForceChangePassword() {
     setLoading(true);
 
     try {
-      await apiClient.post('/auth/change-password', { newPassword });
-      
-      // Update local state to reflect that they no longer need to change it
-      setAuth({ ...user, needsPasswordChange: false }, accessToken!, refreshToken!);
-      
-      if (user.role === 'COORDINATOR') navigate('/coordinator');
-      else if (user.role === 'TEACHER') navigate('/teacher');
-      else navigate('/student');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to change password. Please try again.');
+      await apiClient.post('/auth/activate', { token, newPassword });
+      navigate('/login?activated=1', { replace: true });
+    } catch (err: unknown) {
+      const message =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : undefined;
+      setError(message || 'Failed to activate account. The link may have expired.');
     } finally {
       setLoading(false);
     }
@@ -62,10 +58,10 @@ export default function ForceChangePassword() {
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Update Your Password
+          Set Your Password
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          For security reasons, you must change your temporary password before accessing the dashboard.
+          Create a password to activate your IMMS account.
         </p>
       </div>
 
@@ -76,7 +72,7 @@ export default function ForceChangePassword() {
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
-          
+
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
@@ -87,7 +83,9 @@ export default function ForceChangePassword() {
                   id="newPassword"
                   name="newPassword"
                   type="password"
+                  autoComplete="new-password"
                   required
+                  disabled={!token || loading}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
@@ -104,7 +102,9 @@ export default function ForceChangePassword() {
                   id="confirmPassword"
                   name="confirmPassword"
                   type="password"
+                  autoComplete="new-password"
                   required
+                  disabled={!token || loading}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
@@ -115,15 +115,24 @@ export default function ForceChangePassword() {
             <div>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={!token || loading}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors"
               >
-                {loading ? 'Updating...' : 'Update Password'}
+                {loading ? 'Activating...' : 'Activate Account'}
               </button>
             </div>
           </form>
+
+          <p className="mt-4 text-center text-sm text-gray-600">
+            Already activated?{' '}
+            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+              Sign in
+            </Link>
+          </p>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default ActivateAccount;

@@ -359,6 +359,9 @@ The system does not calculate grades, pass/fail status, or percentages, as its s
 
 ## 5. Excel Import Column Mapping
 
+> **Source of truth for code:** `imms-backend/src/import/config/import-columns.config.ts`  
+> Edit `templateHeader` / `headers` arrays there when the college changes format. Templates regenerate automatically.
+
 ### Students Excel Template
 | Column | Field | Required |
 |---|---|---|
@@ -368,7 +371,8 @@ The system does not calculate grades, pass/fail status, or percentages, as its s
 | Department | department | Yes |
 | Semester | semester | Yes |
 | Batch | batch | Yes |
-| NE Status | (creates NE flag) | No |
+
+> **NE is not an import column.** Coordinator flags NE per exam in the marks workflow (Milestone 2). Stored on each `marks` row (`flag = NE`), not on the student profile.
 
 ### Faculty Excel Template
 | Column | Field | Required |

@@ -91,6 +91,26 @@ imms-frontend/
 |---|---|
 | `VITE_API_BASE_URL` | Backend API (`http://localhost:3000/api/v1`) |
 
+## Local Development
+
+Both servers must run:
+
+```powershell
+# Terminal 1 — backend (from imms-backend, NOT frontend)
+cd imms-backend
+npm run start:dev
+
+# Terminal 2 — frontend
+cd imms-frontend
+npm run dev
+```
+
+Open http://localhost:5173 — login fails with "Check credentials" if backend is not running (`ERR_CONNECTION_REFUSED` on port 3000).
+
+Copy `.env.example` → `.env` and set `VITE_API_BASE_URL=http://localhost:3000/api/v1`.
+
+Database seed runs in **backend only**: `cd imms-backend && npx prisma db seed`
+
 ## Last Updated
 
-**Epic 2.2 — Subject Assignment enhancements** (2026-07-29)
+**Dev run docs + Epic 2.2 UI complete** (2026-07-29)

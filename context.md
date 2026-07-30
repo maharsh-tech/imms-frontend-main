@@ -68,7 +68,7 @@ imms-frontend/
 |---|---|---|
 | `/login` | Public | Email/password login |
 | `/activate` | Public | Set password from activation link |
-| `/coordinator` | Coordinator | Tabs: users, import, subjects, assignments |
+| `/coordinator` | Coordinator | Tabs: account invites, import, subjects, assignments |
 | `/coordinator/marks/:assignmentId/:assessmentId` | Coordinator | NE flags, unlock, publish |
 | `/teacher` | Teacher | Assigned subjects → marks entry links |
 | `/teacher/marks/:assignmentId/:assessmentId` | Teacher | Enter marks, AB, submit |
@@ -123,6 +123,10 @@ Database seed runs in **backend only**: `cd imms-backend && npx prisma db seed`
 - PUBLISHED coordinator view: info message only, no action buttons
 - All workflow actions show backend error messages via `apiErrorMessage`
 
+## Coordinator: Account Invites
+
+Replaces the old Allowed Users tab. Bulk paste `23IT001, email@charusat.edu.in` to create accounts, filter by role, copy activation links (sorted by ID). Excel import only works after the account exists.
+
 ## Last Updated
 
-**Epic 2.3/2.4 — marks grid UX + workflow confirmations** (2026-07-30)
+**Account Invites UI + import requires pre-created account** (2026-07-30)

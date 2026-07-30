@@ -3,17 +3,19 @@ import { Download, Upload, FileSpreadsheet } from 'lucide-react';
 import type { ImportResult } from '../../types';
 
 type ExcelImportCardProps = {
-  title: string;
-  description: string;
-  onDownloadTemplate: () => Promise<void>;
-  onImport: (file: File) => Promise<ImportResult>;
-};
+  title: string
+  description: string
+  onDownloadTemplate: () => Promise<void>
+  onImport: (file: File) => Promise<ImportResult>
+  onImportComplete?: () => void
+}
 
 const ExcelImportCard = ({
   title,
   description,
   onDownloadTemplate,
   onImport,
+  onImportComplete,
 }: ExcelImportCardProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
@@ -42,8 +44,11 @@ const ExcelImportCard = ({
     setError('');
     setResult(null);
     try {
-      const importResult = await onImport(file);
-      setResult(importResult);
+      const importResult = await onImport(file)
+      setResult(importResult)
+      if (importResult.imported > 0 || importResult.updated > 0) {
+        onImportComplete?.()
+      }
     } catch (err: unknown) {
       const message =
         err && typeof err === 'object' && 'response' in err

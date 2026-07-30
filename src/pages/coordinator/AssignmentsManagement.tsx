@@ -182,6 +182,9 @@ const AssignmentsManagement = () => {
         <p className="mt-2 text-xs text-gray-500">
           Semester defaults to the subject&apos;s semester — change only for backlog/repeat batches.
         </p>
+        <p className="mt-1 text-xs text-amber-700">
+          To flag NE students: click an exam link below → tick NE column → Save NE Flags (once per exam, no Excel re-upload).
+        </p>
       </div>
 
       <div className="bg-white rounded-lg shadow p-4 border border-gray-200 flex flex-wrap gap-3">
@@ -216,7 +219,7 @@ const AssignmentsManagement = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teacher</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sem</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Year</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assessments</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assessments (NE / Marks)</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>

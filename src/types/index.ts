@@ -43,6 +43,26 @@ export interface User {
   needsPasswordChange: boolean;
 }
 
+export interface AccountInvite {
+  id: string;
+  email: string;
+  role: Role;
+  name?: string | null;
+  identifier?: string | null;
+  createdAt: string;
+  isActivated: boolean;
+  activationLink: string | null;
+  rosterLinked?: boolean | null;
+}
+
+export interface BulkCreateResult {
+  created: number;
+  skipped: number;
+  errors: { identifier: string | null; email: string; reason: string }[];
+  invites: AccountInvite[];
+}
+
+/** @deprecated use AccountInvite */
 export interface AllowedUser {
   id: string;
   email: string;
@@ -56,9 +76,7 @@ export interface UserCredentials {
   activationLink: string;
 }
 
-export interface CreateAllowedUserResponse extends AllowedUser {
-  credentials: UserCredentials;
-}
+export interface CreateAllowedUserResponse extends AccountInvite {}
 
 export interface ImportRowError {
   row: number;

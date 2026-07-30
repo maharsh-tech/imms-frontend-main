@@ -1,19 +1,28 @@
 import apiClient from './client';
-import type { AllowedUser, CreateAllowedUserResponse } from '../types';
+import type { AccountInvite, BulkCreateResult } from '../types';
 
-export const getAllowedUsers = async (): Promise<AllowedUser[]> => {
-  const response = await apiClient.get<AllowedUser[]>('/allowed-users');
+export const getAccountInvites = async (): Promise<AccountInvite[]> => {
+  const response = await apiClient.get<AccountInvite[]>('/allowed-users');
   return response.data;
 };
 
-export const createAllowedUser = async (data: {
-  email: string;
+export const createAccountInvite = async (data: {
+  email?: string;
   role: string;
-}): Promise<CreateAllowedUserResponse> => {
-  const response = await apiClient.post<CreateAllowedUserResponse>('/allowed-users', data);
+  identifier?: string;
+}): Promise<AccountInvite> => {
+  const response = await apiClient.post<AccountInvite>('/allowed-users', data);
   return response.data;
 };
 
-export const deleteAllowedUser = async (id: string): Promise<void> => {
+export const bulkCreateAccountInvites = async (data: {
+  role: string;
+  entries: { identifier?: string; email?: string }[];
+}): Promise<BulkCreateResult> => {
+  const response = await apiClient.post<BulkCreateResult>('/allowed-users/bulk', data);
+  return response.data;
+};
+
+export const deleteAccountInvite = async (id: string): Promise<void> => {
   await apiClient.delete(`/allowed-users/${id}`);
 };

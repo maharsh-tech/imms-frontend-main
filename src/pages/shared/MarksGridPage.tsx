@@ -31,6 +31,8 @@ const apiErrorMessage = (err: unknown, fallback: string): string => {
   return err instanceof Error ? err.message : fallback
 }
 
+type NeFilter = 'all' | 'ne' | 'not-ne'
+
 const MarksGridPage = () => {
   const { assignmentId, assessmentId } = useParams<{ assignmentId: string; assessmentId: string }>()
   const { user } = useAuthStore()
@@ -40,6 +42,7 @@ const MarksGridPage = () => {
   const [grid, setGrid] = useState<MarksGrid | null>(null)
   const [rows, setRows] = useState<RowState[]>([])
   const [search, setSearch] = useState('')
+  const [neFilter, setNeFilter] = useState<NeFilter>('all')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -81,14 +84,15 @@ const MarksGridPage = () => {
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return rows.map((row, index) => ({ row, index }))
     return rows
       .map((row, index) => ({ row, index }))
-      .filter(
-        ({ row }) =>
-          row.rollNumber.toLowerCase().includes(q) || row.name.toLowerCase().includes(q),
-      )
-  }, [rows, search])
+      .filter(({ row }) => {
+        if (neFilter === 'ne' && !row.isNe) return false
+        if (neFilter === 'not-ne' && row.isNe) return false
+        if (!q) return true
+        return row.rollNumber.toLowerCase().includes(q) || row.name.toLowerCase().includes(q)
+      })
+  }, [rows, search, neFilter])
 
   const summary = useMemo(() => {
     let entered = 0
@@ -214,12 +218,39 @@ const MarksGridPage = () => {
           <SubmissionStatusBadge status={status} />
         </p>
 
-        {isLocked && (
+        {isCoordinator && isDraft && (
+          <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <h2 className="text-sm font-semibold text-amber-900">Set NE for this exam</h2>
+            <p className="text-sm text-amber-800 mt-1">
+              Tick NE for students not eligible for <strong>{grid.assessment.name}</strong> only.
+              No Excel re-upload needed — do this once per internal/exam. Then click{' '}
+              <strong>Save NE Flags</strong>.
+            </p>
+          </div>
+        )}
+
+        {isCoordinator && isLocked && (
           <div
             className="mt-4 bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded text-sm"
             role="status"
           >
-            {isCoordinator ? 'Marks are locked' : 'View only'}
+            Marks are locked
+          </div>
+        )}
+
+        {isTeacher && isLocked && (
+          <div
+            className="mt-4 bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded text-sm"
+            role="status"
+          >
+            View only
+          </div>
+        )}
+
+        {isTeacher && isDraft && (
+          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+            Students marked <strong>NE</strong> by the coordinator are flagged but you can still enter marks.
+            Published results will show <strong>NE</strong> for those students.
           </div>
         )}
 
@@ -232,7 +263,7 @@ const MarksGridPage = () => {
         {message && <div className="mt-4 bg-green-50 text-green-700 p-3 rounded text-sm">{message}</div>}
         {error && <div className="mt-4 bg-red-50 text-red-700 p-3 rounded text-sm">{error}</div>}
 
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <input
             type="search"
             value={search}
@@ -241,6 +272,28 @@ const MarksGridPage = () => {
             className="w-full max-w-sm border rounded px-3 py-2 text-sm"
             aria-label="Search students"
           />
+          <div className="flex rounded-md border border-gray-300 overflow-hidden" role="group" aria-label="Filter by NE status">
+            {([
+              ['all', `All (${rows.length})`],
+              ['ne', `NE (${summary.ne})`],
+              ['not-ne', `Not NE (${rows.length - summary.ne})`],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setNeFilter(value)}
+                className={`px-3 py-2 text-xs font-medium ${
+                  neFilter === value
+                    ? value === 'ne'
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="mt-4 bg-white rounded-lg shadow border overflow-x-auto">
@@ -252,14 +305,17 @@ const MarksGridPage = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Name</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Enter Marks</th>
                 {isCoordinator && <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">NE</th>}
+                {isTeacher && <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">NE</th>}
                 {isTeacher && <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">AB</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan={isCoordinator ? 5 : 5} className="px-4 py-6 text-center text-sm text-gray-500">
-                    No students match your search
+                  <td colSpan={6} className="px-4 py-6 text-center text-sm text-gray-500">
+                    {rows.length === 0
+                      ? 'No students in this semester/department — import students first (Import Students tab).'
+                      : 'No students match your search'}
                   </td>
                 </tr>
               ) : (
@@ -269,12 +325,9 @@ const MarksGridPage = () => {
                     <td className="px-4 py-2 text-sm font-mono">{row.rollNumber}</td>
                     <td className="px-4 py-2 text-sm">
                       {row.name}
-                      {row.isNe && isTeacher && (
-                        <span className="ml-2 text-xs font-medium text-amber-700">NE</span>
-                      )}
                     </td>
                     <td className="px-4 py-2">
-                      {isTeacher && isDraft && !row.isNe ? (
+                      {isTeacher && isDraft ? (
                         <input
                           type="number"
                           value={row.isAb ? '' : row.marksObtained}
@@ -285,7 +338,10 @@ const MarksGridPage = () => {
                         />
                       ) : (
                         <span className="text-sm">
-                          {row.isNe ? 'NE' : row.isAb ? 'AB' : row.marksObtained || '—'}
+                          {row.isAb ? 'AB' : row.marksObtained || (row.isNe ? '—' : '—')}
+                          {row.isNe && row.marksObtained && isCoordinator && (
+                            <span className="text-gray-500 text-xs ml-1">(NE flagged)</span>
+                          )}
                         </span>
                       )}
                     </td>
@@ -298,6 +354,17 @@ const MarksGridPage = () => {
                           onChange={(e) => updateRow(index, { isNe: e.target.checked })}
                           aria-label={`NE ${row.name}`}
                         />
+                      </td>
+                    )}
+                    {isTeacher && (
+                      <td className="px-4 py-2 text-center">
+                        {row.isNe ? (
+                          <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
+                            NE
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
                       </td>
                     )}
                     {isTeacher && (

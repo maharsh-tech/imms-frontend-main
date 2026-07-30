@@ -136,7 +136,7 @@ const SubjectsManagement = () => {
         ...(examDate ? { examDate } : {}),
         ...(examTime ? { examTime } : {}),
       });
-      setMessage('Assessment added');
+      setMessage('Assessment added — go to Assignments tab, click the exam link, and set NE students before marks entry.');
       load();
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Failed to add assessment'));

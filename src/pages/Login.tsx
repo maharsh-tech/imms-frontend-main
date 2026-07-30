@@ -6,7 +6,7 @@ import apiClient from '../api/client';
 
 const Login = () => {
   const [searchParams] = useSearchParams();
-  const [email, setEmail] = useState(searchParams.get('email') ?? '');
+  const [loginId, setLoginId] = useState(searchParams.get('email') ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -17,7 +17,7 @@ const Login = () => {
 
   useEffect(() => {
     if (searchParams.get('activated') === '1') {
-      setSuccess('Account activated. Sign in with your email and new password.');
+      setSuccess('Account activated. Sign in with your roll number (students) or email (staff) and password.');
     }
   }, [searchParams]);
 
@@ -36,7 +36,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await apiClient.post('/auth/login', { email, password });
+      const response = await apiClient.post('/auth/login', { loginId, password });
       setUser(response.data.user);
 
       const role = response.data.user.role;
@@ -44,11 +44,17 @@ const Login = () => {
       else if (role === 'TEACHER') navigate('/teacher');
       else navigate('/student');
     } catch (err: unknown) {
-      const message =
+      const response =
         err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-          : undefined;
-      setError(message || 'Failed to login. Check your credentials.');
+          ? (err as { response?: { status?: number; data?: { message?: string } } }).response
+          : undefined
+      const status = response?.status
+      const message = response?.data?.message
+      if (status === 429) {
+        setError('Too many login attempts. Wait a minute and try again.')
+      } else {
+        setError(message || 'Invalid credentials. Check your roll number or email and password.')
+      }
     } finally {
       setLoading(false);
     }
@@ -80,23 +86,24 @@ const Login = () => {
 
           <form className="space-y-6" onSubmit={handleLogin}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
+              <label htmlFor="loginId" className="block text-sm font-medium text-gray-700">
+                Roll number or email
               </label>
               <div className="mt-1">
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
+                  id="loginId"
+                  name="loginId"
+                  type="text"
+                  autoComplete="username"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={loginId}
+                  onChange={(e) => setLoginId(e.target.value)}
+                  placeholder="24IT093 or dev@charusat.ac.in"
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
               </div>
               <p className="mt-1 text-xs text-gray-500">
-                Staff: @charusat.ac.in · Students: @charusat.edu.in
+                Students: roll number only (e.g. 24IT093) · Staff: @charusat.ac.in email
               </p>
             </div>
 

@@ -1,23 +1,18 @@
 import { useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
-import AllowedUsersManagement from './AllowedUsers';
-import ExcelImportCard from '../../components/shared/ExcelImportCard';
-import {
-  downloadStudentTemplate,
-  downloadFacultyTemplate,
-  importStudents,
-  importFaculty,
-} from '../../api/import';
+import AccountInvites from './AccountInvites';
+import StudentsManagement from './StudentsManagement';
+import FacultyManagement from './FacultyManagement';
 import { LogOut, Users, GraduationCap, BookOpen, Layers, Link2 } from 'lucide-react';
 import SubjectsManagement from './SubjectsManagement';
 import AssignmentsManagement from './AssignmentsManagement';
 import apiClient from '../../api/client';
 
-type Tab = 'users' | 'students' | 'faculty' | 'subjects' | 'assignments';
+type Tab = 'invites' | 'students' | 'faculty' | 'subjects' | 'assignments';
 
 export default function CoordinatorDashboard() {
   const { user, logout } = useAuthStore();
-  const [tab, setTab] = useState<Tab>('users');
+  const [tab, setTab] = useState<Tab>('invites');
 
   const handleLogout = async () => {
     try {
@@ -28,9 +23,9 @@ export default function CoordinatorDashboard() {
   };
 
   const tabs: { id: Tab; label: string; icon: typeof Users }[] = [
-    { id: 'users', label: 'Allowed Users', icon: Users },
-    { id: 'students', label: 'Import Students', icon: GraduationCap },
-    { id: 'faculty', label: 'Import Faculty', icon: BookOpen },
+    { id: 'invites', label: 'Account Invites', icon: Users },
+    { id: 'students', label: 'Students', icon: GraduationCap },
+    { id: 'faculty', label: 'Faculty', icon: BookOpen },
     { id: 'subjects', label: 'Subjects & Exams', icon: Layers },
     { id: 'assignments', label: 'Assignments', icon: Link2 },
   ];
@@ -79,23 +74,9 @@ export default function CoordinatorDashboard() {
             ))}
           </div>
 
-          {tab === 'users' && <AllowedUsersManagement />}
-          {tab === 'students' && (
-            <ExcelImportCard
-              title="Student Import"
-              description="Upload .xlsx with Roll Number, Full Name, Email (@charusat.edu.in), Department, Semester, Batch. Re-upload updates existing roll numbers."
-              onDownloadTemplate={downloadStudentTemplate}
-              onImport={importStudents}
-            />
-          )}
-          {tab === 'faculty' && (
-            <ExcelImportCard
-              title="Faculty Import"
-              description="Upload .xlsx with Faculty ID, Full Name, Email (@charusat.ac.in), Department."
-              onDownloadTemplate={downloadFacultyTemplate}
-              onImport={importFaculty}
-            />
-          )}
+          {tab === 'invites' && <AccountInvites />}
+          {tab === 'students' && <StudentsManagement />}
+          {tab === 'faculty' && <FacultyManagement />}
           {tab === 'subjects' && <SubjectsManagement />}
           {tab === 'assignments' && <AssignmentsManagement />}
         </div>

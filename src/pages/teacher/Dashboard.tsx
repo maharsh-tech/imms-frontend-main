@@ -4,7 +4,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { getMyAssignments } from '../../api/subjects';
 import type { SubjectAssignment } from '../../api/subjects';
 import apiClient from '../../api/client';
-import { LogOut } from 'lucide-react';
+import RoleNavBar from '../../components/shared/RoleNavBar';
 import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge';
 
 export default function TeacherDashboard() {
@@ -25,17 +25,11 @@ export default function TeacherDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-blue-600">IMMS Teacher</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-700">{user?.name}</span>
-            <button onClick={handleLogout} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
-              <LogOut className="w-4 h-4 mr-1" /> Logout
-            </button>
-          </div>
-        </div>
-      </nav>
+      <RoleNavBar
+        title="IMMS Teacher"
+        userLabel={user?.name || user?.email}
+        onLogout={handleLogout}
+      />
 
       <main className="max-w-4xl mx-auto py-8 px-4">
         <h2 className="text-lg font-semibold mb-4">My Subjects</h2>

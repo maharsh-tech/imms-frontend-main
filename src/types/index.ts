@@ -55,28 +55,14 @@ export interface AccountInvite {
   rosterLinked?: boolean | null;
 }
 
+
+
 export interface BulkCreateResult {
   created: number;
   skipped: number;
   errors: { identifier: string | null; email: string; reason: string }[];
   invites: AccountInvite[];
 }
-
-/** @deprecated use AccountInvite */
-export interface AllowedUser {
-  id: string;
-  email: string;
-  role: Role;
-  name?: string | null;
-  createdAt: string;
-}
-
-export interface UserCredentials {
-  email: string;
-  activationLink: string;
-}
-
-export interface CreateAllowedUserResponse extends AccountInvite {}
 
 export interface ImportRowError {
   row: number;

@@ -171,7 +171,7 @@ const StudentsManagement = () => {
           {addLoading ? 'Adding…' : 'Add student'}
         </button>
       </form>
-      <p className="text-xs text-gray-500 mt-2">Account invite for this roll must exist (activation not required).</p>
+      <p className="text-xs text-gray-500 mt-2">Account must exist in Account Management (activation not required).</p>
     </div>
   )
 
@@ -213,7 +213,7 @@ const StudentsManagement = () => {
       {showImport && (
         <ExcelImportCard
           title="Student Import"
-          description="Upload .xlsx to add or update roster rows. Account Invites must exist first. Email is auto from roll number."
+          description="Upload .xlsx to add or update roster rows. Account must exist in Account Management first. Email is auto from roll number."
           onDownloadTemplate={downloadStudentTemplate}
           onImport={importStudents}
           onImportComplete={handleImportComplete}
@@ -234,7 +234,7 @@ const StudentsManagement = () => {
           <div className="bg-white shadow rounded-lg p-8 border border-gray-200 text-center">
             <p className="text-gray-600">No students yet.</p>
             <p className="text-sm text-gray-500 mt-2">
-              Add Account Invites, then add a student above or import Excel.
+              Create accounts in Account Management, then add a student above or import Excel.
             </p>
           </div>
         </div>

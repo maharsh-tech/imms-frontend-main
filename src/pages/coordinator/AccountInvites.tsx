@@ -8,7 +8,7 @@ import {
 import type { AccountInvite, BulkCreateResult } from '../../types'
 import { normalizeTeacherCodeInput } from '../../utils/identifier-patterns'
 import { createStudent } from '../../api/students'
-import { Trash2, UserPlus, Copy, Check, Mail, X } from 'lucide-react'
+import { Trash2, UserPlus, Copy, Check, X } from 'lucide-react'
 
 type RoleFilter = 'ALL' | 'STUDENT' | 'TEACHER' | 'COORDINATOR'
 
@@ -42,6 +42,7 @@ const parseBulkLines = (
   return entries
 }
 
+
 const apiErrorMessage = (err: unknown, fallback: string): string => {
   if (err && typeof err === 'object' && 'response' in err) {
     const message = (err as { response?: { data?: { message?: string | string[] } } }).response?.data
@@ -73,6 +74,7 @@ const AccountInvites = () => {
   const [rosterBatch, setRosterBatch] = useState('2023-2027')
   const [rosterLoading, setRosterLoading] = useState(false)
 
+
   const previewEmail = useMemo(
     () => (addRole === 'COORDINATOR' ? email : buildPreviewEmail(identifier, addRole)),
     [identifier, addRole, email],
@@ -87,7 +89,7 @@ const AccountInvites = () => {
         err && typeof err === 'object' && 'response' in err
           ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
           : undefined
-      setError(message || 'Failed to load account invites')
+      setError(message || 'Failed to load accounts')
     } finally {
       setLoading(false)
     }
@@ -115,6 +117,8 @@ const AccountInvites = () => {
       }),
     )
   }, [invites, roleFilter])
+
+
 
   const handleCopy = async (value: string, key: string) => {
     await navigator.clipboard.writeText(value)
@@ -192,7 +196,7 @@ const AccountInvites = () => {
   }
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Revoke this account invite? They will not be able to activate.')) return
+    if (!window.confirm('Revoke this account? They will not be able to activate.')) return
     try {
       await deleteAccountInvite(id)
       fetchInvites()
@@ -249,9 +253,8 @@ const AccountInvites = () => {
     <div className="bg-white shadow rounded-lg p-6">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Mail className="w-6 h-6 text-blue-600" />
-            Account Invites
+          <h2 className="text-2xl font-bold text-gray-800">
+            Account Management
           </h2>
           <p className="text-sm text-gray-600 mt-1">
             Students sign in with roll number (<span className="font-mono">24IT093</span>). Teachers
@@ -259,24 +262,28 @@ const AccountInvites = () => {
             <span className="font-mono">abc@charusat.ac.in</span> for login.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleCopyAllPending}
-          className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100"
-        >
-          {copiedKey === 'all-pending' ? (
-            <>
-              <Check className="w-4 h-4 mr-2" />
-              Copied all pending links
-            </>
-          ) : (
-            <>
-              <Copy className="w-4 h-4 mr-2" />
-              Copy all pending links
-            </>
-          )}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={handleCopyAllPending}
+            className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100"
+          >
+            {copiedKey === 'all-pending' ? (
+              <>
+                <Check className="w-4 h-4 mr-2" />
+                Copied all pending links
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4 mr-2" />
+                Copy all pending links
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
+
 
       {pendingRosterCount > 0 && (
         <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6">
@@ -295,11 +302,13 @@ const AccountInvites = () => {
       )}
 
       <div className="bg-gray-50 p-4 rounded-md mb-6 border border-gray-200">
-        <h3 className="text-lg font-medium text-gray-700 mb-3">Bulk invite (paste IDs for email blast)</h3>
+        <h3 className="text-lg font-medium text-gray-700 mb-3">Bulk invite (paste student IDs)</h3>
         <p className="text-xs text-gray-500 mb-2">
           {bulkRole === 'COORDINATOR'
             ? 'One coordinator email per line'
-            : 'One ID per line — email is generated automatically'}
+            : bulkRole === 'STUDENT'
+              ? 'One roll number per line — college email is generated automatically'
+              : 'One ID per line — email is generated automatically'}
         </p>
         <textarea
           value={bulkText}
@@ -313,7 +322,7 @@ const AccountInvites = () => {
                 : '24IT093\n24IT094\n24IT095'
           }
           className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm font-mono focus:ring-blue-500 focus:border-blue-500 outline-none"
-          aria-label="Bulk account invites"
+          aria-label="Bulk account creation"
         />
         <div className="flex flex-wrap gap-3 mt-3">
           <select
@@ -430,7 +439,8 @@ const AccountInvites = () => {
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Roster</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Account</th>
+
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>

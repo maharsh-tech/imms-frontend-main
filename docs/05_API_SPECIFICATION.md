@@ -16,15 +16,17 @@ POST /auth/login
 ```
 **Body:**
 ```json
-{ "email": "teacher@charusat.ac.in", "password": "..." }
+{ "loginId": "dev@charusat.ac.in", "password": "..." }
 ```
+
+Students use roll number: `{ "loginId": "24IT093", "password": "..." }`
 
 **Response 200:** Sets httpOnly cookies. Body:
 ```json
 {
   "user": {
     "id": "cuid123",
-    "email": "teacher@charusat.ac.in",
+    "email": "dev@charusat.ac.in",
     "name": "John Doe",
     "role": "TEACHER",
     "needsPasswordChange": false
@@ -88,7 +90,7 @@ Requires valid access cookie.
 {
   "user": {
     "id": "cuid123",
-    "email": "teacher@charusat.ac.in",
+    "email": "dev@charusat.ac.in",
     "name": "John Doe",
     "role": "TEACHER",
     "needsPasswordChange": false

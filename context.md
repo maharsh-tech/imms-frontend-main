@@ -68,7 +68,7 @@ imms-frontend/
 |---|---|---|
 | `/login` | Public | Email/password login |
 | `/activate` | Public | Set password from activation link |
-| `/coordinator` | Coordinator | Tabs: account invites, import, subjects, assignments |
+| `/coordinator` | Coordinator | Tabs: account management, students, faculty, subjects, assignments |
 | `/coordinator/marks/:assignmentId/:assessmentId` | Coordinator | NE flags, unlock, publish |
 | `/teacher` | Teacher | Assigned subjects → marks entry links |
 | `/teacher/marks/:assignmentId/:assessmentId` | Teacher | Enter marks, AB, submit |
@@ -123,10 +123,18 @@ Database seed runs in **backend only**: `cd imms-backend && npx prisma db seed`
 - PUBLISHED coordinator view: info message only, no action buttons
 - All workflow actions show backend error messages via `apiErrorMessage`
 
-## Coordinator: Account Invites
+## Coordinator: Account Management
 
-Replaces the old Allowed Users tab. Bulk paste `23IT001, email@charusat.edu.in` to create accounts, filter by role, copy activation links (sorted by ID). Excel import only works after the account exists.
+Create student/teacher/coordinator accounts, bulk paste IDs, filter by role, copy activation links (manual delivery — no automated email UI). Roster import/add requires account first (activation not required).
+
+## Dev logins (after seed)
+
+| Role | Login | Password |
+|------|-------|----------|
+| Coordinator | coordinator@charusat.ac.in | password123 |
+| Teacher | dev@charusat.ac.in | password123 |
+| Student | 23IT001 | password123 |
 
 ## Last Updated
 
-**Account Invites UI + import requires pre-created account** (2026-07-30)
+**Account Management rename, manual activation links, RoleNavBar logout, DEV teacher mock** (2026-07-30)

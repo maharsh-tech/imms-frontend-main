@@ -151,8 +151,8 @@ const FacultyManagement = () => {
       </form>
       {previewEmail && (
         <p className="text-xs text-gray-500 mt-2">
-          Login email: <span className="font-mono text-gray-800">{previewEmail}</span> · invite must
-          exist first
+          Login email: <span className="font-mono text-gray-800">{previewEmail}</span> · account must
+          exist in Account Management first
         </p>
       )}
     </div>
@@ -196,7 +196,7 @@ const FacultyManagement = () => {
       {showImport && (
         <ExcelImportCard
           title="Faculty Import"
-          description="Upload .xlsx — Teacher Code column (3 letters). Account Invites must exist first."
+          description="Upload .xlsx — Teacher Code column (3 letters). Account must exist in Account Management first."
           onDownloadTemplate={downloadFacultyTemplate}
           onImport={importFaculty}
           onImportComplete={loadFaculty}
@@ -217,7 +217,7 @@ const FacultyManagement = () => {
           <div className="bg-white shadow rounded-lg p-8 border border-gray-200 text-center">
             <p className="text-gray-600">No teachers yet.</p>
             <p className="text-sm text-gray-500 mt-2">
-              Add Account Invites with 3-letter codes, then add a teacher above or import Excel.
+              Create accounts in Account Management with 3-letter codes, then add a teacher above or import Excel.
             </p>
           </div>
         </div>

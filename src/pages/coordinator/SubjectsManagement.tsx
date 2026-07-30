@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   createSubject,
   createAssessment,
@@ -7,8 +7,15 @@ import {
   updateAssessment,
   deleteAssessment,
   getSubjects,
+  getSubjectEnrollments,
+  bulkEnrollStudents,
+  importSubjectEnrollments,
+  downloadEnrollmentTemplate,
+  removeSubjectEnrollment,
 } from '../../api/subjects';
-import type { Assessment, Subject } from '../../api/subjects';
+import type { Assessment, Subject, SubjectEnrollment } from '../../api/subjects';
+import type { ImportResult } from '../../types';
+import ExcelImportCard from '../../components/shared/ExcelImportCard';
 
 const apiErrorMessage = (err: unknown, fallback: string): string => {
   if (err && typeof err === 'object' && 'response' in err) {
@@ -35,7 +42,14 @@ const SubjectsManagement = () => {
   const [name, setName] = useState('');
   const [department, setDepartment] = useState('IT');
   const [semester, setSemester] = useState(5);
-  const [creditHours, setCreditHours] = useState('');
+  const [isElective, setIsElective] = useState(false);
+
+  const [rosterSubject, setRosterSubject] = useState<Subject | null>(null);
+  const [enrollments, setEnrollments] = useState<SubjectEnrollment[]>([]);
+  const [rosterPaste, setRosterPaste] = useState('');
+  const [rosterLoading, setRosterLoading] = useState(false);
+  const [rosterResult, setRosterResult] = useState<ImportResult | null>(null);
+  const rosterPasteRef = useRef<HTMLTextAreaElement>(null);
 
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
   const [assessmentName, setAssessmentName] = useState('Internal 1');
@@ -47,7 +61,6 @@ const SubjectsManagement = () => {
   const [editName, setEditName] = useState('');
   const [editDepartment, setEditDepartment] = useState('');
   const [editSemester, setEditSemester] = useState(5);
-  const [editCreditHours, setEditCreditHours] = useState('');
 
   const [editingAssessment, setEditingAssessment] = useState<{
     subjectId: string;
@@ -98,24 +111,93 @@ const SubjectsManagement = () => {
     });
   }, [subjects, search, filterDepartment, filterSemester]);
 
+  const loadEnrollments = async (subjectId: string) => {
+    const rows = await getSubjectEnrollments(subjectId);
+    setEnrollments(rows);
+  };
+
+  const handleOpenRoster = async (subject: Subject) => {
+    setRosterSubject(subject);
+    setRosterPaste('');
+    setRosterResult(null);
+    setRosterLoading(true);
+    try {
+      await loadEnrollments(subject.id);
+    } catch {
+      setError('Failed to load elective roster');
+    } finally {
+      setRosterLoading(false);
+    }
+  };
+
+  const handleCloseRoster = () => {
+    setRosterSubject(null);
+    setEnrollments([]);
+    setRosterPaste('');
+    setRosterResult(null);
+    load();
+  };
+
+  const handlePasteEnroll = async () => {
+    if (!rosterSubject) return;
+    const rollNumbers = rosterPaste
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (!rollNumbers.length) return;
+    setRosterLoading(true);
+    setRosterResult(null);
+    try {
+      const result = await bulkEnrollStudents(rosterSubject.id, rollNumbers);
+      setRosterResult(result);
+      setRosterPaste('');
+      await loadEnrollments(rosterSubject.id);
+      setMessage(`Enrolled ${result.imported} student(s) in ${rosterSubject.code}`);
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, 'Failed to enroll students'));
+    } finally {
+      setRosterLoading(false);
+    }
+  };
+
+  const handleRemoveEnrollment = async (studentId: string) => {
+    if (!rosterSubject) return;
+    setRosterLoading(true);
+    try {
+      await removeSubjectEnrollment(rosterSubject.id, studentId);
+      await loadEnrollments(rosterSubject.id);
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, 'Failed to remove student'));
+    } finally {
+      setRosterLoading(false);
+    }
+  };
+
   const handleCreateSubject = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setMessage('');
     try {
-      await createSubject({
+      const created = await createSubject({
         code,
         name,
         department,
         semester,
-        ...(creditHours ? { creditHours: Number(creditHours) } : {}),
+        subjectType: isElective ? 'ELECTIVE' : 'CORE',
       });
       setCode('');
       setName('');
-      setCreditHours('');
-      setMessage('Subject created');
-      load();
+      setIsElective(false);
+      setMessage(
+        created.subjectType === 'ELECTIVE'
+          ? `${created.code} created — import the elective roster next`
+          : 'Subject created',
+      );
+      await load();
+      if (created.subjectType === 'ELECTIVE') {
+        await handleOpenRoster(created);
+      }
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Failed to create subject'));
     } finally {
@@ -150,7 +232,6 @@ const SubjectsManagement = () => {
     setEditName(subject.name);
     setEditDepartment(subject.department);
     setEditSemester(subject.semester);
-    setEditCreditHours(subject.creditHours != null ? String(subject.creditHours) : '');
   };
 
   const handleSaveSubject = async (subjectId: string) => {
@@ -162,7 +243,6 @@ const SubjectsManagement = () => {
         name: editName,
         department: editDepartment,
         semester: editSemester,
-        ...(editCreditHours ? { creditHours: Number(editCreditHours) } : { creditHours: undefined }),
       });
       setEditingSubjectId(null);
       setMessage('Subject updated');
@@ -252,8 +332,16 @@ const SubjectsManagement = () => {
           <input required placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="border rounded px-3 py-2" />
           <input required placeholder="Department" value={department} onChange={(e) => setDepartment(e.target.value)} className="border rounded px-3 py-2" />
           <input required type="number" placeholder="Semester" value={semester} onChange={(e) => setSemester(Number(e.target.value))} className="border rounded px-3 py-2" />
-          <input type="number" placeholder="Credit hours (optional)" value={creditHours} onChange={(e) => setCreditHours(e.target.value)} className="border rounded px-3 py-2" />
-          <button type="submit" disabled={loading} className="bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700 disabled:opacity-50">
+          <label className="flex items-center gap-2 text-sm text-gray-700 border rounded px-3 py-2 sm:col-span-2">
+            <input
+              type="checkbox"
+              checked={isElective}
+              onChange={(e) => setIsElective(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            Elective subject (import student roster after create)
+          </label>
+          <button type="submit" disabled={loading} className="bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700 disabled:opacity-50 sm:col-span-2 lg:col-span-1">
             Add Subject
           </button>
         </form>
@@ -310,7 +398,7 @@ const SubjectsManagement = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dept</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sem</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Credits</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assessments</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
@@ -330,34 +418,41 @@ const SubjectsManagement = () => {
                       <td className="px-4 py-3">
                         <input type="number" value={editSemester} onChange={(e) => setEditSemester(Number(e.target.value))} className="border rounded px-2 py-1 text-sm w-20" />
                       </td>
-                      <td className="px-4 py-3">
-                        <input type="number" value={editCreditHours} onChange={(e) => setEditCreditHours(e.target.value)} className="border rounded px-2 py-1 text-sm w-20" placeholder="—" />
-                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-400">—</td>
+                      <td className="px-4 py-3 text-sm text-gray-400">—</td>
                     </>
                   ) : (
                     <>
                       <td className="px-4 py-3 text-sm">{s.name}</td>
                       <td className="px-4 py-3 text-sm">{s.department}</td>
                       <td className="px-4 py-3 text-sm">{s.semester}</td>
-                      <td className="px-4 py-3 text-sm">{s.creditHours ?? '—'}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {s.subjectType === 'ELECTIVE' ? (
+                          <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
+                            Elective · {s.enrollmentCount ?? 0}
+                          </span>
+                        ) : (
+                          <span className="text-gray-500 text-xs">Core</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          {s.assessments?.length ? (
+                            s.assessments.map((a) => (
+                              <span key={a.id} className="inline-flex items-center gap-1 bg-gray-100 rounded-full px-2 py-1 text-xs">
+                                {a.name} ({Number(a.maxMarks)})
+                                {a.examDate && <span className="text-gray-500">· {formatExamDate(a.examDate)}</span>}
+                                <button type="button" onClick={() => startEditAssessment(s.id, a)} className="text-blue-600 hover:underline" aria-label={`Edit ${a.name}`}>Edit</button>
+                                <button type="button" onClick={() => handleDeleteAssessment(s.id, a)} className="text-red-600 hover:underline" aria-label={`Delete ${a.name}`}>Del</button>
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-sm text-gray-400">—</span>
+                          )}
+                        </div>
+                      </td>
                     </>
                   )}
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      {s.assessments?.length ? (
-                        s.assessments.map((a) => (
-                          <span key={a.id} className="inline-flex items-center gap-1 bg-gray-100 rounded-full px-2 py-1 text-xs">
-                            {a.name} ({Number(a.maxMarks)})
-                            {a.examDate && <span className="text-gray-500">· {formatExamDate(a.examDate)}</span>}
-                            <button type="button" onClick={() => startEditAssessment(s.id, a)} className="text-blue-600 hover:underline" aria-label={`Edit ${a.name}`}>Edit</button>
-                            <button type="button" onClick={() => handleDeleteAssessment(s.id, a)} className="text-red-600 hover:underline" aria-label={`Delete ${a.name}`}>Del</button>
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-sm text-gray-400">—</span>
-                      )}
-                    </div>
-                  </td>
                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                     {editingSubjectId === s.id ? (
                       <div className="flex gap-2">
@@ -365,7 +460,12 @@ const SubjectsManagement = () => {
                         <button type="button" onClick={() => setEditingSubjectId(null)} className="text-gray-600 hover:underline">Cancel</button>
                       </div>
                     ) : (
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        {s.subjectType === 'ELECTIVE' && (
+                          <button type="button" onClick={() => handleOpenRoster(s)} className="text-purple-700 hover:underline">
+                            Roster
+                          </button>
+                        )}
                         <button type="button" onClick={() => startEditSubject(s)} className="text-blue-600 hover:underline">Edit</button>
                         <button type="button" onClick={() => handleDeleteSubject(s)} className="text-red-600 hover:underline">Delete</button>
                       </div>
@@ -382,6 +482,95 @@ const SubjectsManagement = () => {
           </table>
         )}
       </div>
+
+      {rosterSubject && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-gray-200">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Elective roster — {rosterSubject.code} ({rosterSubject.name})
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Only these students appear when a teacher is assigned to this elective.
+              </p>
+            </div>
+            <div className="p-6 space-y-6">
+              <ExcelImportCard
+                title="Import roll numbers"
+                description="One roll number per row. Students must already exist in the student roster."
+                onDownloadTemplate={() => downloadEnrollmentTemplate(rosterSubject.id, rosterSubject.code)}
+                onImport={(file) => importSubjectEnrollments(rosterSubject.id, file)}
+                onImportComplete={() => loadEnrollments(rosterSubject.id)}
+              />
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Or paste roll numbers</h4>
+                <textarea
+                  ref={rosterPasteRef}
+                  value={rosterPaste}
+                  onChange={(e) => setRosterPaste(e.target.value)}
+                  rows={5}
+                  placeholder={'24IT093\n24IT094\n24IT095'}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm font-mono"
+                  aria-label="Paste roll numbers for elective enrollment"
+                />
+                <button
+                  type="button"
+                  onClick={handlePasteEnroll}
+                  disabled={rosterLoading || !rosterPaste.trim()}
+                  className="mt-2 bg-purple-600 text-white rounded px-4 py-2 text-sm hover:bg-purple-700 disabled:opacity-50"
+                >
+                  Add pasted students
+                </button>
+              </div>
+              {rosterResult && (
+                <p className="text-sm text-gray-600">
+                  Enrolled {rosterResult.imported}, skipped {rosterResult.skipped}
+                  {rosterResult.errors.length > 0 && `, ${rosterResult.errors.length} error(s)`}
+                </p>
+              )}
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">
+                  Enrolled students ({enrollments.length})
+                </h4>
+                {rosterLoading && enrollments.length === 0 ? (
+                  <p className="text-sm text-gray-500">Loading...</p>
+                ) : enrollments.length === 0 ? (
+                  <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">
+                    No students enrolled yet. Import or paste roll numbers before assigning a teacher.
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-gray-100 border border-gray-200 rounded-md max-h-48 overflow-y-auto">
+                    {enrollments.map((row) => (
+                      <li key={row.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                        <span>
+                          <span className="font-mono text-gray-800">{row.student.rollNumber}</span>
+                          <span className="text-gray-500 ml-2">{row.student.name}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveEnrollment(row.studentId)}
+                          className="text-red-600 hover:underline text-xs"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end">
+              <button
+                type="button"
+                onClick={handleCloseRoster}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-md border border-gray-300"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {editingAssessment && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">

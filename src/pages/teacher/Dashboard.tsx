@@ -40,7 +40,12 @@ export default function TeacherDashboard() {
             {assignments.map((a) => (
               <div key={a.id} className="bg-white rounded-lg shadow p-4 border border-gray-200">
                 <h3 className="font-medium">{a.subject.code} — {a.subject.name}</h3>
-                <p className="text-sm text-gray-500 mt-1">Semester {a.semester} · {a.academicYear}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Semester {a.semester} · {a.academicYear}
+                  {a.subject.subjectType === 'ELECTIVE' && (
+                    <span className="ml-2 text-purple-700">Elective · {a.subject.enrollmentCount ?? 0} students</span>
+                  )}
+                </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {a.subject.assessments?.map((ass) => {
                     const sub = a.assessmentSubmissions?.find((s) => s.assessmentId === ass.id);

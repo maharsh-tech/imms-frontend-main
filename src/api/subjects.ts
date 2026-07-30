@@ -1,4 +1,7 @@
 import apiClient from './client';
+import type { ImportResult } from '../types';
+
+export type SubjectType = 'CORE' | 'ELECTIVE';
 
 export interface Subject {
   id: string;
@@ -6,8 +9,23 @@ export interface Subject {
   name: string;
   department: string;
   semester: number;
-  creditHours?: number | null;
+  subjectType: SubjectType;
+  enrollmentCount?: number;
   assessments?: Assessment[];
+}
+
+export interface SubjectEnrollment {
+  id: string;
+  studentId: string;
+  enrolledAt: string;
+  student: {
+    id: string;
+    rollNumber: string;
+    name: string;
+    email: string;
+    department: string;
+    semester: number;
+  };
 }
 
 export interface Assessment {
@@ -43,7 +61,7 @@ export type CreateSubjectPayload = {
   name: string;
   department: string;
   semester: number;
-  creditHours?: number;
+  subjectType?: SubjectType;
 };
 
 export type UpdateSubjectPayload = Partial<Omit<CreateSubjectPayload, 'code'>>;
@@ -96,3 +114,38 @@ export const createAssignment = (data: {
   academicYear: string;
 }) => apiClient.post<SubjectAssignment>('/subject-assignments', data).then((r) => r.data);
 export const deleteAssignment = (id: string) => apiClient.delete(`/subject-assignments/${id}`);
+
+export const getSubjectEnrollments = (subjectId: string) =>
+  apiClient.get<SubjectEnrollment[]>(`/subjects/${subjectId}/enrollments`).then((r) => r.data);
+
+export const bulkEnrollStudents = (subjectId: string, rollNumbers: string[]) =>
+  apiClient
+    .post<ImportResult>(`/subjects/${subjectId}/enrollments/bulk`, { rollNumbers })
+    .then((r) => r.data);
+
+export const importSubjectEnrollments = (subjectId: string, file: File) => {
+  const form = new FormData();
+  form.append('file', file);
+  return apiClient
+    .post<ImportResult>(`/subjects/${subjectId}/enrollments/import`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    .then((r) => r.data);
+};
+
+export const downloadEnrollmentTemplate = async (subjectId: string, subjectCode: string) => {
+  const response = await apiClient.get(`/subjects/${subjectId}/enrollments/template`, {
+    responseType: 'blob',
+  });
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `${subjectCode}-elective-roster-template.xlsx`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+export const removeSubjectEnrollment = (subjectId: string, studentId: string) =>
+  apiClient.delete(`/subjects/${subjectId}/enrollments/${studentId}`);

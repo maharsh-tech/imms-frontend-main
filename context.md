@@ -69,7 +69,7 @@ imms-frontend/
 | `/login` | Public | Email/password login |
 | `/activate` | Public | Set password from activation link |
 | `/coordinator` | Coordinator | Tabs: account management, students, faculty, subjects, assignments |
-| `/coordinator/marks/:assignmentId/:assessmentId` | Coordinator | NE flags, unlock, publish |
+| `/coordinator/marks/:assignmentId/:assessmentId` | Coordinator | NE flags, lock, unlock, publish, unpublish |
 | `/teacher` | Teacher | Assigned subjects → marks entry links |
 | `/teacher/marks/:assignmentId/:assessmentId` | Teacher | Enter marks, AB, submit |
 | `/student` | Student | Published marksheet (or state message) |
@@ -83,7 +83,7 @@ imms-frontend/
 - [x] Epic 2.1 — Subject & Assessment management UI (full CRUD, search/filter)
 - [x] Epic 2.2 — Subject Assignment UI (semester auto-fill, academic year, search/filter, status badges)
 - [x] Epic 2.3 — Marks grid UI (NE / AB / save draft, search, summary, status badge, read-only banners)
-- [x] Epic 2.4 — Submit / unlock / publish with confirm dialogs + API error feedback
+- [x] Epic 2.4 — Submit / lock / unlock / publish / unpublish with confirm dialogs + API error feedback
 
 ## Environment Variables
 
@@ -119,13 +119,22 @@ Database seed runs in **backend only**: `cd imms-backend && npx prisma db seed`
 - NE rows highlighted amber for teachers; NE label shown in name column
 - Client-side search by roll number / name
 - Footer summary: entered · AB · NE · blank counts
-- Confirm dialogs on submit, unlock, publish
-- PUBLISHED coordinator view: info message only, no action buttons
+- Confirm dialogs on submit, unlock, publish, unpublish
+- Coordinator: **Lock Marks**, **Unlock for Teacher**, **Publish Results**, **Unpublish Results**
+- PUBLISHED coordinator view: unpublish available; info banner for students
 - All workflow actions show backend error messages via `apiErrorMessage`
+- Marksheet uses `hasPublished` from API (not only `/auth/me` studentState)
 
 ## Coordinator: Account Management
 
 Create student/teacher/coordinator accounts, bulk paste IDs, filter by role, copy activation links (manual delivery — no automated email UI). Roster import/add requires account first (activation not required).
+
+## Subjects: Core vs Elective
+
+- **Core** — all students in same department + semester appear on marks grid automatically
+- **Elective** — coordinator imports roll numbers after create; teacher sees only enrolled students
+
+Subjects tab: check "Elective subject" → roster modal (Excel or paste) → assign teacher in Assignments tab. Enrollment count badge on subject/assignment rows.
 
 ## Dev logins (after seed)
 
@@ -137,4 +146,4 @@ Create student/teacher/coordinator accounts, bulk paste IDs, filter by role, cop
 
 ## Last Updated
 
-**Account Management rename, manual activation links, RoleNavBar logout, DEV teacher mock** (2026-07-30)
+**Elective roster UI, lock/unpublish marks, marksheet hasPublished, RoleNavBar** (2026-07-30)

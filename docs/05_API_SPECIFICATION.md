@@ -101,8 +101,10 @@ Requires valid access cookie.
 
 For role STUDENT, `studentState` is one of:
 - `"NO_RECORD"` — no student record linked to user account
-- `"UNPUBLISHED"` — student record exists but no published results yet
-- `"PUBLISHED"` — at least one published assessment for student's semester/department
+- `"UNPUBLISHED"` — student record exists but no visible published results
+- `"PUBLISHED"` — at least one published assessment visible to this student
+
+Visibility matches `GET /marks/my-marksheet`: core subjects (dept + semester), enrolled electives, and any subject where the student has mark rows. Student roster is auto-linked on login/activation by email or roll number (`allowedUser.identifier`).
 
 For non-student roles, `studentState` is `null`.
 
@@ -274,17 +276,32 @@ POST /subjects
 Roles: COORDINATOR
 `
 **Body:**
-`json
+```json
 {
   "code": "CS301",
   "name": "Data Structures",
   "department": "CS",
   "semester": 3,
-  "creditHours": 4,
-  "passMarks": 40
+  "subjectType": "CORE"
 }
-`
+```
+`subjectType`: `"CORE"` (default) or `"ELECTIVE"`. Elective subjects require coordinator enrollment import before marks grid shows students.
+
 **Response 201:** Created subject object.
+
+---
+
+### 5.5 Elective Enrollments
+
+```
+GET    /subjects/:id/enrollments
+GET    /subjects/:id/enrollments/template
+POST   /subjects/:id/enrollments/bulk     Body: { "rollNumbers": ["24IT093", ...] }
+POST   /subjects/:id/enrollments/import   multipart Excel
+DELETE /subjects/:id/enrollments/:studentId
+Roles: COORDINATOR (elective subjects only)
+```
+Student must exist in master roster (same dept + semester). Import skips invalid rows with per-row errors.
 
 ---
 
@@ -368,10 +385,9 @@ Only allowed before marks entry begins.
 POST /subjects/:subjectId/assessments
 Roles: COORDINATOR
 ```
-**Body:**
-```json
-{ "name": "Internal 1", "maxMarks": 50 }
-```
+**Body:** `{ "name": "Internal 1", "maxMarks": 50, "examDate": "...", "examTime": "..." }`
+
+**Side effect:** Creates `assessment_submissions` rows (DRAFT) for every existing teacher assignment on this subject.
 
 ### 7.2 List Assessments for Subject
 ```
@@ -452,7 +468,17 @@ Sets submission status to `SUBMITTED`. Audit log created.
 
 ---
 
-### 8.5 Unlock Submission
+### 8.5 Lock Marks (Coordinator)
+```
+PATCH /marks/lock
+Roles: COORDINATOR
+```
+**Body:** `{ "subjectAssignmentId": "...", "assessmentId": "..." }`  
+Locks a DRAFT submission (sets `SUBMITTED`). Teacher cannot edit until unlocked.
+
+---
+
+### 8.6 Unlock Submission
 ```
 PATCH /marks/unlock
 Roles: COORDINATOR
@@ -462,17 +488,27 @@ Returns submission to `DRAFT`. Audit log created.
 
 ---
 
-### 8.6 Publish Results
+### 8.7 Publish Results
 ```
 PATCH /marks/publish
 Roles: COORDINATOR
 ```
 **Body:** `{ "subjectAssignmentId": "...", "assessmentId": "..." }`  
-Sets submission status to `PUBLISHED`. Students can now see results.
+Sets submission status to `PUBLISHED`. Students can now see results. For electives: requires at least one enrolled student; syncs enrollments for students with marks.
 
 ---
 
-### 8.7 Student Marksheet
+### 8.8 Unpublish Results
+```
+PATCH /marks/unpublish
+Roles: COORDINATOR
+```
+**Body:** `{ "subjectAssignmentId": "...", "assessmentId": "..." }`  
+Returns `PUBLISHED` → `SUBMITTED`. Results hidden from students.
+
+---
+
+### 8.9 Student Marksheet
 ```
 GET /marks/my-marksheet
 Roles: STUDENT

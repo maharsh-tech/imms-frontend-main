@@ -27,10 +27,9 @@ const StudentMarksheet = () => {
       try {
         const me = await apiClient.get('/auth/me')
         setStudentState(me.data.studentState)
-        if (me.data.studentState === 'PUBLISHED') {
-          const sheet = await getMyMarksheet()
-          setData(sheet as MarksheetData)
-        }
+        if (me.data.studentState === 'NO_RECORD') return
+        const sheet = await getMyMarksheet()
+        setData(sheet as MarksheetData)
       } finally {
         setLoading(false)
       }
@@ -81,14 +80,16 @@ const StudentMarksheet = () => {
   return shell(
     <main className="max-w-4xl mx-auto py-8 px-4">
       <h2 className="text-lg font-semibold text-gray-900 mb-4">My Marksheet</h2>
-      {studentState === 'UNPUBLISHED' && (
+      {(!data?.hasPublished || data.subjects.length === 0) && (
         <div className="bg-white rounded-lg shadow p-6 border border-blue-200">
           <p className="text-gray-600">
-            Results for your semester have not been published yet. Check back later.
+            No published results are visible for your account yet. For elective subjects, you must
+            be on the coordinator&apos;s elective roster before results appear. Contact the Exam
+            Coordinator if you think this is wrong.
           </p>
         </div>
       )}
-      {data && (
+      {data && data.hasPublished && data.subjects.length > 0 && (
         <>
           <p className="text-gray-700">
             {data.studentName} · {data.rollNumber} · Semester {data.semester}

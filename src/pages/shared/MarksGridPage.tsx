@@ -6,8 +6,10 @@ import {
   saveMarksBulk,
   flagNe,
   submitMarks,
+  lockMarks,
   unlockMarks,
   publishMarks,
+  unpublishMarks,
 } from '../../api/marks'
 import type { MarksGrid } from '../../api/marks'
 import { FlagType } from '../../types'
@@ -64,8 +66,8 @@ const MarksGridPage = () => {
           isNe: s.mark?.flag === FlagType.NE,
         })),
       )
-    } catch {
-      setError('Failed to load marks grid')
+    } catch (err) {
+      setError(apiErrorMessage(err, 'Failed to load marks grid'))
     } finally {
       setLoading(false)
     }
@@ -165,6 +167,25 @@ const MarksGridPage = () => {
     }
   }
 
+  const handleLock = async () => {
+    if (
+      !assignmentId ||
+      !assessmentId ||
+      !confirm('Lock marks? The teacher will not be able to edit until you unlock.')
+    ) {
+      return
+    }
+    setError('')
+    setMessage('')
+    try {
+      await lockMarks(assignmentId, assessmentId)
+      setMessage('Marks locked')
+      load()
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, 'Lock failed'))
+    }
+  }
+
   const handleUnlock = async () => {
     if (!assignmentId || !assessmentId || !confirm('Unlock marks for teacher editing?')) return
     setError('')
@@ -194,6 +215,25 @@ const MarksGridPage = () => {
       load()
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Publish failed'))
+    }
+  }
+
+  const handleUnpublish = async () => {
+    if (
+      !assignmentId ||
+      !assessmentId ||
+      !confirm('Unpublish results? Students will no longer see these marks.')
+    ) {
+      return
+    }
+    setError('')
+    setMessage('')
+    try {
+      await unpublishMarks(assignmentId, assessmentId)
+      setMessage('Unpublished — hidden from students')
+      load()
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, 'Unpublish failed'))
     }
   }
 
@@ -229,21 +269,21 @@ const MarksGridPage = () => {
           </div>
         )}
 
-        {isCoordinator && isLocked && (
+        {isCoordinator && isLocked && !isPublished && (
           <div
             className="mt-4 bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded text-sm"
             role="status"
           >
-            Marks are locked
+            Marks are locked — teacher cannot edit. Unlock to allow changes, or publish when ready.
           </div>
         )}
 
-        {isTeacher && isLocked && (
+        {isTeacher && isLocked && !isPublished && (
           <div
             className="mt-4 bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded text-sm"
             role="status"
           >
-            View only
+            Marks are locked by the coordinator — view only
           </div>
         )}
 
@@ -314,7 +354,9 @@ const MarksGridPage = () => {
                 <tr>
                   <td colSpan={6} className="px-4 py-6 text-center text-sm text-gray-500">
                     {rows.length === 0
-                      ? 'No students in this semester/department — import students first (Import Students tab).'
+                      ? grid?.assignment.subjectType === 'ELECTIVE'
+                        ? 'No students enrolled in this elective — coordinator must import the roster in Subjects first.'
+                        : 'No students in this semester/department — import students first (Students tab).'
                       : 'No students match your search'}
                   </td>
                 </tr>
@@ -396,13 +438,22 @@ const MarksGridPage = () => {
 
         <div className="mt-4 flex flex-wrap gap-3">
           {isCoordinator && isDraft && (
-            <button
-              onClick={handleSaveNe}
-              disabled={saving}
-              className="bg-amber-600 text-white px-4 py-2 rounded hover:bg-amber-700 disabled:opacity-50"
-            >
-              Save NE Flags
-            </button>
+            <>
+              <button
+                onClick={handleSaveNe}
+                disabled={saving}
+                className="bg-amber-600 text-white px-4 py-2 rounded hover:bg-amber-700 disabled:opacity-50"
+              >
+                Save NE Flags
+              </button>
+              <button
+                onClick={handleLock}
+                disabled={saving}
+                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50"
+              >
+                Lock Marks
+              </button>
+            </>
           )}
           {isTeacher && isDraft && (
             <>
@@ -439,6 +490,15 @@ const MarksGridPage = () => {
                 Publish Results
               </button>
             </>
+          )}
+          {isCoordinator && isPublished && (
+            <button
+              onClick={handleUnpublish}
+              disabled={saving}
+              className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 disabled:opacity-50"
+            >
+              Unpublish Results
+            </button>
           )}
         </div>
       </div>

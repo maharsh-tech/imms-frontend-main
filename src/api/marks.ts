@@ -19,6 +19,7 @@ export interface MarksGrid {
     faculty: { name: string };
     semester: number;
     academicYear: string;
+    subjectType?: 'CORE' | 'ELECTIVE';
   };
   assessment: { id: string; name: string; maxMarks: number };
   submission: { status: string; submittedAt?: string | null; publishedAt?: string | null };
@@ -45,10 +46,16 @@ export const flagNe = (data: {
 export const submitMarks = (subjectAssignmentId: string, assessmentId: string) =>
   apiClient.post('/marks/submit', { subjectAssignmentId, assessmentId }).then((r) => r.data);
 
+export const lockMarks = (subjectAssignmentId: string, assessmentId: string) =>
+  apiClient.patch('/marks/lock', { subjectAssignmentId, assessmentId }).then((r) => r.data);
+
 export const unlockMarks = (subjectAssignmentId: string, assessmentId: string) =>
   apiClient.patch('/marks/unlock', { subjectAssignmentId, assessmentId }).then((r) => r.data);
 
 export const publishMarks = (subjectAssignmentId: string, assessmentId: string) =>
   apiClient.patch('/marks/publish', { subjectAssignmentId, assessmentId }).then((r) => r.data);
+
+export const unpublishMarks = (subjectAssignmentId: string, assessmentId: string) =>
+  apiClient.patch('/marks/unpublish', { subjectAssignmentId, assessmentId }).then((r) => r.data);
 
 export const getMyMarksheet = () => apiClient.get('/marks/my-marksheet').then((r) => r.data);

@@ -70,6 +70,11 @@ const AssignmentsManagement = () => {
     [assignments],
   );
 
+  const selectedSubject = useMemo(
+    () => subjects.find((s) => s.id === subjectId),
+    [subjects, subjectId],
+  );
+
   const filteredAssignments = useMemo(() => {
     const q = search.trim().toLowerCase();
     return assignments.filter((a) => {
@@ -141,7 +146,10 @@ const AssignmentsManagement = () => {
           >
             <option value="">Select subject</option>
             {subjects.map((s) => (
-              <option key={s.id} value={s.id}>{s.code} — {s.name}</option>
+              <option key={s.id} value={s.id}>
+                {s.code} — {s.name}
+                {s.subjectType === 'ELECTIVE' ? ` (Elective · ${s.enrollmentCount ?? 0})` : ''}
+              </option>
             ))}
           </select>
           <select
@@ -182,6 +190,11 @@ const AssignmentsManagement = () => {
         <p className="mt-2 text-xs text-gray-500">
           Semester defaults to the subject&apos;s semester — change only for backlog/repeat batches.
         </p>
+        {selectedSubject?.subjectType === 'ELECTIVE' && (selectedSubject.enrollmentCount ?? 0) === 0 && (
+          <p className="mt-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+            This elective has no enrolled students yet. Import the roster in Subjects before the teacher enters marks.
+          </p>
+        )}
         <p className="mt-1 text-xs text-amber-700">
           To flag NE students: click an exam link below → tick NE column → Save NE Flags (once per exam, no Excel re-upload).
         </p>

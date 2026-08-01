@@ -53,7 +53,7 @@ export interface SubjectAssignment {
   academicYear: string;
   subject: Subject;
   faculty: Faculty;
-  assessmentSubmissions?: { assessmentId: string; status: string }[];
+  assessmentSubmissions?: { assessmentId: string; status: string; showNEToStudents: boolean }[];
 }
 
 export type CreateSubjectPayload = {

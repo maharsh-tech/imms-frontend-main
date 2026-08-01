@@ -58,4 +58,10 @@ export const publishMarks = (subjectAssignmentId: string, assessmentId: string) 
 export const unpublishMarks = (subjectAssignmentId: string, assessmentId: string) =>
   apiClient.patch('/marks/unpublish', { subjectAssignmentId, assessmentId }).then((r) => r.data);
 
+export const setNEVisibility = (data: {
+  subjectAssignmentId: string;
+  assessmentId: string;
+  showNEToStudents: boolean;
+}) => apiClient.patch('/marks/ne-visibility', data).then((r) => r.data);
+
 export const getMyMarksheet = () => apiClient.get('/marks/my-marksheet').then((r) => r.data);

@@ -21,6 +21,9 @@ const StudentMarksheet = () => {
   const [data, setData] = useState<MarksheetData | null>(null)
   const [loading, setLoading] = useState(true)
   const [studentState, setStudentState] = useState<string | null>(null)
+  
+  // Keep track of which subjects are collapsed (by code). Default = empty = all expanded.
+  const [collapsedSubjects, setCollapsedSubjects] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const load = async () => {
@@ -43,6 +46,15 @@ const StudentMarksheet = () => {
     } finally {
       logout()
     }
+  }
+
+  const toggleSubject = (code: string) => {
+    setCollapsedSubjects((prev) => {
+      const next = new Set(prev)
+      if (next.has(code)) next.delete(code)
+      else next.add(code)
+      return next
+    })
   }
 
   const shell = (content: ReactNode) => (
@@ -95,31 +107,49 @@ const StudentMarksheet = () => {
             {data.studentName} · {data.rollNumber} · Semester {data.semester}
           </p>
           <div className="mt-6 space-y-4">
-            {data.subjects.map((s) => (
-              <div key={s.code} className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-                <div className="px-4 py-3 bg-gray-50 border-b font-medium">
-                  {s.code} — {s.name}
+            {data.subjects.map((s) => {
+              const isCollapsed = collapsedSubjects.has(s.code)
+              return (
+                <div key={s.code} className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                  <button
+                    onClick={() => toggleSubject(s.code)}
+                    className="w-full px-4 py-3 bg-gray-50 border-b flex items-center justify-between hover:bg-gray-100 transition-colors focus:outline-none"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900">
+                        {s.code} — {s.name}
+                      </span>
+                      <span className="text-sm text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full">
+                        {s.assessments.length} {s.assessments.length === 1 ? 'exam' : 'exams'}
+                      </span>
+                    </div>
+                    <span className="text-gray-400 font-bold">
+                      {isCollapsed ? '▸' : '▾'}
+                    </span>
+                  </button>
+                  {!isCollapsed && (
+                    <table className="min-w-full">
+                      <thead>
+                        <tr className="text-left text-xs text-gray-500 uppercase bg-white">
+                          <th className="px-4 py-2 border-b">Exam</th>
+                          <th className="px-4 py-2 border-b">Max</th>
+                          <th className="px-4 py-2 border-b">Marks</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {s.assessments.map((a) => (
+                          <tr key={a.name} className="border-t hover:bg-gray-50/50">
+                            <td className="px-4 py-2 text-sm text-gray-900">{a.name}</td>
+                            <td className="px-4 py-2 text-sm text-gray-500">{a.maxMarks}</td>
+                            <td className="px-4 py-2 text-sm font-medium text-gray-900">{a.display}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="text-left text-xs text-gray-500 uppercase">
-                      <th className="px-4 py-2">Exam</th>
-                      <th className="px-4 py-2">Max</th>
-                      <th className="px-4 py-2">Marks</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {s.assessments.map((a) => (
-                      <tr key={a.name} className="border-t">
-                        <td className="px-4 py-2 text-sm">{a.name}</td>
-                        <td className="px-4 py-2 text-sm">{a.maxMarks}</td>
-                        <td className="px-4 py-2 text-sm font-medium">{a.display}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </>
       )}

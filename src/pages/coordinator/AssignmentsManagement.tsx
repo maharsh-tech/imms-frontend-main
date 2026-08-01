@@ -7,6 +7,7 @@ import {
   getSubjects,
   getFaculty,
 } from '../../api/subjects';
+import { setNEVisibility } from '../../api/marks';
 import type { SubjectAssignment, Subject, Faculty } from '../../api/subjects';
 import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge';
 
@@ -41,6 +42,8 @@ const AssignmentsManagement = () => {
   const [search, setSearch] = useState('');
   const [filterYear, setFilterYear] = useState('');
   const [filterSemester, setFilterSemester] = useState('');
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -123,6 +126,28 @@ const AssignmentsManagement = () => {
       setError(apiErrorMessage(err, 'Failed to delete assignment'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleNE = async (assignmentId: string, assessmentId: string, current: boolean) => {
+    try {
+      await setNEVisibility({
+        subjectAssignmentId: assignmentId,
+        assessmentId,
+        showNEToStudents: !current,
+      });
+      // Optimistically update the UI
+      setAssignments((prev) =>
+        prev.map((a) => {
+          if (a.id !== assignmentId) return a;
+          const updatedSubmissions = a.assessmentSubmissions?.map((s) =>
+            s.assessmentId === assessmentId ? { ...s, showNEToStudents: !current } : s
+          );
+          return { ...a, assessmentSubmissions: updatedSubmissions };
+        })
+      );
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, 'Failed to toggle NE visibility'));
     }
   };
 
@@ -238,39 +263,95 @@ const AssignmentsManagement = () => {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredAssignments.map((a) => (
-                <tr key={a.id}>
-                  <td className="px-4 py-3 text-sm font-medium">{a.subject.code} — {a.subject.name}</td>
-                  <td className="px-4 py-3 text-sm">{a.faculty.name}</td>
-                  <td className="px-4 py-3 text-sm">{a.semester}</td>
-                  <td className="px-4 py-3 text-sm">{a.academicYear}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      {a.subject.assessments?.map((ass) => {
-                        const sub = a.assessmentSubmissions?.find((s) => s.assessmentId === ass.id);
-                        return (
-                          <Link
-                            key={ass.id}
-                            to={`/coordinator/marks/${a.id}/${ass.id}`}
-                            className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
-                          >
-                            {ass.name}
-                            {sub && <SubmissionStatusBadge status={sub.status} />}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(a)}
-                      disabled={loading}
-                      className="text-red-600 hover:underline disabled:opacity-50"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
+                <React.Fragment key={a.id}>
+                  <tr>
+                    <td className="px-4 py-3 text-sm font-medium">{a.subject.code} — {a.subject.name}</td>
+                    <td className="px-4 py-3 text-sm">{a.faculty.name}</td>
+                    <td className="px-4 py-3 text-sm">{a.semester}</td>
+                    <td className="px-4 py-3 text-sm">{a.academicYear}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => setExpandedId(expandedId === a.id ? null : a.id)}
+                        className="inline-flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                      >
+                        <span className="text-xs">{expandedId === a.id ? '▴' : '▾'}</span>
+                        {a.subject.assessments?.length ?? 0} exams
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(a)}
+                        disabled={loading}
+                        className="text-red-600 hover:underline disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                  {expandedId === a.id && (
+                    <tr className="bg-gray-50/50">
+                      <td colSpan={6} className="px-8 py-4">
+                        {a.subject.assessments?.length === 0 ? (
+                          <p className="text-sm text-gray-500 italic">No exams defined for this subject.</p>
+                        ) : (
+                          <div className="bg-white border rounded-lg overflow-hidden shadow-sm">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Exam</th>
+                                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th>
+                                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">NE Visible to Students</th>
+                                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100">
+                                {a.subject.assessments?.map((ass) => {
+                                  const sub = a.assessmentSubmissions?.find((s) => s.assessmentId === ass.id);
+                                  const isPublished = sub?.status === 'PUBLISHED';
+                                  return (
+                                    <tr key={ass.id}>
+                                      <td className="px-4 py-2 text-sm text-gray-900">{ass.name}</td>
+                                      <td className="px-4 py-2">
+                                        <SubmissionStatusBadge status={sub?.status || 'DRAFT'} />
+                                      </td>
+                                      <td className="px-4 py-2">
+                                        {isPublished ? (
+                                          <button
+                                            onClick={() => handleToggleNE(a.id, ass.id, !!sub?.showNEToStudents)}
+                                            className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                              sub?.showNEToStudents ? 'bg-blue-600' : 'bg-gray-200'
+                                            }`}
+                                          >
+                                            <span
+                                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                                sub?.showNEToStudents ? 'translate-x-4' : 'translate-x-0'
+                                              }`}
+                                            />
+                                          </button>
+                                        ) : (
+                                          <span className="text-xs text-gray-400">—</span>
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-2">
+                                        <Link
+                                          to={`/coordinator/marks/${a.id}/${ass.id}`}
+                                          className="text-sm text-blue-600 hover:underline inline-flex items-center gap-1"
+                                        >
+                                          Open Marks ↗
+                                        </Link>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
               {!filteredAssignments.length && (
                 <tr>

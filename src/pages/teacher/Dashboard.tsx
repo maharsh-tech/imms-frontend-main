@@ -1,71 +1,88 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuthStore } from '../../stores/authStore';
-import { getMyAssignments } from '../../api/subjects';
-import type { SubjectAssignment } from '../../api/subjects';
-import apiClient from '../../api/client';
-import RoleNavBar from '../../components/shared/RoleNavBar';
-import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge';
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { useAuthStore } from '../../stores/authStore'
+import { getMyAssignments } from '../../api/subjects'
+import type { SubjectAssignment } from '../../api/subjects'
+import apiClient from '../../api/client'
+import { StaffShell } from '../../components/staff'
+import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge'
 
 export default function TeacherDashboard() {
-  const { user, logout } = useAuthStore();
-  const [assignments, setAssignments] = useState<SubjectAssignment[]>([]);
+  const { user, logout } = useAuthStore()
+  const [assignments, setAssignments] = useState<SubjectAssignment[]>([])
 
   useEffect(() => {
-    getMyAssignments().then(setAssignments);
-  }, []);
+    getMyAssignments().then(setAssignments)
+  }, [])
 
   const handleLogout = async () => {
     try {
-      await apiClient.post('/auth/logout');
+      await apiClient.post('/auth/logout')
     } finally {
-      logout();
+      logout()
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <RoleNavBar
-        title="IMMS Teacher"
-        userLabel={user?.name || user?.email}
-        onLogout={handleLogout}
-      />
+    <StaffShell
+      title="Teacher Portal"
+      userLabel={user?.name || user?.email}
+      onLogout={handleLogout}
+    >
+      <header className="mb-xl">
+        <h1 className="text-headline-lg-mobile font-semibold text-primary lg:text-headline-lg">
+          My Subjects
+        </h1>
+        <p className="mt-1 text-body-md text-on-surface-variant">
+          Enter marks for your assigned subjects and exams
+        </p>
+      </header>
 
-      <main className="max-w-4xl mx-auto py-8 px-4">
-        <h2 className="text-lg font-semibold mb-4">My Subjects</h2>
-        {assignments.length === 0 ? (
-          <p className="text-gray-500">No subjects assigned yet. Contact the coordinator.</p>
-        ) : (
-          <div className="space-y-4">
-            {assignments.map((a) => (
-              <div key={a.id} className="bg-white rounded-lg shadow p-4 border border-gray-200">
-                <h3 className="font-medium">{a.subject.code} — {a.subject.name}</h3>
-                <p className="text-sm text-gray-500 mt-1">
+      {assignments.length === 0 ? (
+        <div className="imms-card p-6 text-center">
+          <p className="text-body-md text-on-surface-variant">
+            No subjects assigned yet. Contact the coordinator.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {assignments.map((a) => (
+            <article
+              key={a.id}
+              className="imms-card overflow-hidden transition-shadow hover:shadow-[var(--shadow-card-hover)]"
+            >
+              <div className="border-b border-surface-variant p-4">
+                <h2 className="text-title-lg text-primary">
+                  {a.subject.code} — {a.subject.name}
+                </h2>
+                <p className="mt-1 text-body-md text-on-surface-variant">
                   Semester {a.semester} · {a.academicYear}
                   {a.subject.subjectType === 'ELECTIVE' && (
-                    <span className="ml-2 text-purple-700">Elective · {a.subject.enrollmentCount ?? 0} students</span>
+                    <span className="ml-2 font-medium text-primary">
+                      Elective · {a.subject.enrollmentCount ?? 0} students
+                    </span>
                   )}
                 </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {a.subject.assessments?.map((ass) => {
-                    const sub = a.assessmentSubmissions?.find((s) => s.assessmentId === ass.id);
-                    return (
-                      <Link
-                        key={ass.id}
-                        to={`/teacher/marks/${a.id}/${ass.id}`}
-                        className="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded text-sm hover:bg-blue-100"
-                      >
-                        {ass.name}
-                        {sub && <SubmissionStatusBadge status={sub.status} />}
-                      </Link>
-                    );
-                  })}
-                </div>
               </div>
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
-  );
+              <div className="flex flex-wrap gap-2 p-4">
+                {a.subject.assessments?.map((ass) => {
+                  const sub = a.assessmentSubmissions?.find((s) => s.assessmentId === ass.id)
+                  return (
+                    <Link
+                      key={ass.id}
+                      to={`/teacher/marks/${a.id}/${ass.id}`}
+                      className="inline-flex items-center gap-2 rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2 text-label-md text-primary transition-colors hover:bg-surface-container"
+                    >
+                      {ass.name}
+                      {sub && <SubmissionStatusBadge status={sub.status} />}
+                    </Link>
+                  )
+                })}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </StaffShell>
+  )
 }

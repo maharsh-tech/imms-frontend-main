@@ -325,29 +325,29 @@ const SubjectsManagement = () => {
         <div className="bg-red-50 border-l-4 border-red-400 p-3 text-sm text-red-700">{error}</div>
       )}
 
-      <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+      <div className="bg-surface-container-lowest rounded-lg shadow p-6 border border-outline-variant">
         <h3 className="text-lg font-semibold mb-4">Add Subject</h3>
         <form onSubmit={handleCreateSubject} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <input required placeholder="Code (IT301)" value={code} onChange={(e) => setCode(e.target.value)} className="border rounded px-3 py-2" />
           <input required placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="border rounded px-3 py-2" />
           <input required placeholder="Department" value={department} onChange={(e) => setDepartment(e.target.value)} className="border rounded px-3 py-2" />
           <input required type="number" placeholder="Semester" value={semester} onChange={(e) => setSemester(Number(e.target.value))} className="border rounded px-3 py-2" />
-          <label className="flex items-center gap-2 text-sm text-gray-700 border rounded px-3 py-2 sm:col-span-2">
+          <label className="flex items-center gap-2 text-sm text-on-surface border rounded px-3 py-2 sm:col-span-2">
             <input
               type="checkbox"
               checked={isElective}
               onChange={(e) => setIsElective(e.target.checked)}
-              className="rounded border-gray-300"
+              className="rounded border-outline-variant"
             />
             Elective subject (import student roster after create)
           </label>
-          <button type="submit" disabled={loading} className="bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700 disabled:opacity-50 sm:col-span-2 lg:col-span-1">
+          <button type="submit" disabled={loading} className="bg-primary text-white rounded px-4 py-2 hover:bg-primary-container disabled:opacity-50 sm:col-span-2 lg:col-span-1">
             Add Subject
           </button>
         </form>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+      <div className="bg-surface-container-lowest rounded-lg shadow p-6 border border-outline-variant">
         <h3 className="text-lg font-semibold mb-4">Add Assessment</h3>
         <form onSubmit={handleAddAssessment} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <select required value={selectedSubjectId} onChange={(e) => setSelectedSubjectId(e.target.value)} className="border rounded px-3 py-2">
@@ -366,7 +366,7 @@ const SubjectsManagement = () => {
         </form>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-4 border border-gray-200 flex flex-wrap gap-3">
+      <div className="bg-surface-container-lowest rounded-lg shadow p-4 border border-outline-variant flex flex-wrap gap-3">
         <input
           placeholder="Search code or name"
           value={search}
@@ -387,23 +387,23 @@ const SubjectsManagement = () => {
         </select>
       </div>
 
-      <div className="bg-white rounded-lg shadow border border-gray-200 overflow-x-auto">
+      <div className="bg-surface-container-lowest rounded-lg shadow border border-outline-variant overflow-x-auto">
         {loading && subjects.length === 0 ? (
-          <p className="p-6 text-center text-gray-500">Loading...</p>
+          <p className="p-6 text-center text-on-surface-variant">Loading...</p>
         ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-surface-variant">
+            <thead className="bg-surface-container-low">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dept</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sem</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assessments</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Code</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Dept</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Sem</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Assessments</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-surface-variant">
               {filteredSubjects.map((s) => (
                 <tr key={s.id}>
                   <td className="px-4 py-3 text-sm font-medium">{s.code}</td>
@@ -418,8 +418,8 @@ const SubjectsManagement = () => {
                       <td className="px-4 py-3">
                         <input type="number" value={editSemester} onChange={(e) => setEditSemester(Number(e.target.value))} className="border rounded px-2 py-1 text-sm w-20" />
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-400">—</td>
-                      <td className="px-4 py-3 text-sm text-gray-400">—</td>
+                      <td className="px-4 py-3 text-sm text-outline">—</td>
+                      <td className="px-4 py-3 text-sm text-outline">—</td>
                     </>
                   ) : (
                     <>
@@ -432,22 +432,22 @@ const SubjectsManagement = () => {
                             Elective · {s.enrollmentCount ?? 0}
                           </span>
                         ) : (
-                          <span className="text-gray-500 text-xs">Core</span>
+                          <span className="text-on-surface-variant text-xs">Core</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">
                           {s.assessments?.length ? (
                             s.assessments.map((a) => (
-                              <span key={a.id} className="inline-flex items-center gap-1 bg-gray-100 rounded-full px-2 py-1 text-xs">
+                              <span key={a.id} className="inline-flex items-center gap-1 bg-background rounded-full px-2 py-1 text-xs">
                                 {a.name} ({Number(a.maxMarks)})
-                                {a.examDate && <span className="text-gray-500">· {formatExamDate(a.examDate)}</span>}
-                                <button type="button" onClick={() => startEditAssessment(s.id, a)} className="text-blue-600 hover:underline" aria-label={`Edit ${a.name}`}>Edit</button>
+                                {a.examDate && <span className="text-on-surface-variant">· {formatExamDate(a.examDate)}</span>}
+                                <button type="button" onClick={() => startEditAssessment(s.id, a)} className="text-primary hover:underline" aria-label={`Edit ${a.name}`}>Edit</button>
                                 <button type="button" onClick={() => handleDeleteAssessment(s.id, a)} className="text-red-600 hover:underline" aria-label={`Delete ${a.name}`}>Del</button>
                               </span>
                             ))
                           ) : (
-                            <span className="text-sm text-gray-400">—</span>
+                            <span className="text-sm text-outline">—</span>
                           )}
                         </div>
                       </td>
@@ -457,7 +457,7 @@ const SubjectsManagement = () => {
                     {editingSubjectId === s.id ? (
                       <div className="flex gap-2">
                         <button type="button" onClick={() => handleSaveSubject(s.id)} disabled={loading} className="text-green-600 hover:underline">Save</button>
-                        <button type="button" onClick={() => setEditingSubjectId(null)} className="text-gray-600 hover:underline">Cancel</button>
+                        <button type="button" onClick={() => setEditingSubjectId(null)} className="text-on-surface-variant hover:underline">Cancel</button>
                       </div>
                     ) : (
                       <div className="flex flex-wrap gap-2">
@@ -466,7 +466,7 @@ const SubjectsManagement = () => {
                             Roster
                           </button>
                         )}
-                        <button type="button" onClick={() => startEditSubject(s)} className="text-blue-600 hover:underline">Edit</button>
+                        <button type="button" onClick={() => startEditSubject(s)} className="text-primary hover:underline">Edit</button>
                         <button type="button" onClick={() => handleDeleteSubject(s)} className="text-red-600 hover:underline">Delete</button>
                       </div>
                     )}
@@ -475,7 +475,7 @@ const SubjectsManagement = () => {
               ))}
               {!filteredSubjects.length && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-sm text-gray-500">No subjects found</td>
+                  <td colSpan={7} className="px-4 py-6 text-center text-sm text-on-surface-variant">No subjects found</td>
                 </tr>
               )}
             </tbody>
@@ -485,12 +485,12 @@ const SubjectsManagement = () => {
 
       {rosterSubject && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">
+          <div className="bg-surface-container-lowest rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-outline-variant">
+            <div className="p-6 border-b border-outline-variant">
+              <h3 className="text-lg font-semibold text-on-surface">
                 Elective roster — {rosterSubject.code} ({rosterSubject.name})
               </h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-on-surface-variant mt-1">
                 Only these students appear when a teacher is assigned to this elective.
               </p>
             </div>
@@ -503,14 +503,14 @@ const SubjectsManagement = () => {
                 onImportComplete={() => loadEnrollments(rosterSubject.id)}
               />
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Or paste roll numbers</h4>
+                <h4 className="text-sm font-medium text-on-surface mb-2">Or paste roll numbers</h4>
                 <textarea
                   ref={rosterPasteRef}
                   value={rosterPaste}
                   onChange={(e) => setRosterPaste(e.target.value)}
                   rows={5}
                   placeholder={'24IT093\n24IT094\n24IT095'}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm font-mono"
+                  className="w-full border border-outline-variant rounded-md px-3 py-2 text-sm font-mono"
                   aria-label="Paste roll numbers for elective enrollment"
                 />
                 <button
@@ -523,28 +523,28 @@ const SubjectsManagement = () => {
                 </button>
               </div>
               {rosterResult && (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-on-surface-variant">
                   Enrolled {rosterResult.imported}, skipped {rosterResult.skipped}
                   {rosterResult.errors.length > 0 && `, ${rosterResult.errors.length} error(s)`}
                 </p>
               )}
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">
+                <h4 className="text-sm font-medium text-on-surface mb-2">
                   Enrolled students ({enrollments.length})
                 </h4>
                 {rosterLoading && enrollments.length === 0 ? (
-                  <p className="text-sm text-gray-500">Loading...</p>
+                  <p className="text-sm text-on-surface-variant">Loading...</p>
                 ) : enrollments.length === 0 ? (
                   <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">
                     No students enrolled yet. Import or paste roll numbers before assigning a teacher.
                   </p>
                 ) : (
-                  <ul className="divide-y divide-gray-100 border border-gray-200 rounded-md max-h-48 overflow-y-auto">
+                  <ul className="divide-y divide-gray-100 border border-outline-variant rounded-md max-h-48 overflow-y-auto">
                     {enrollments.map((row) => (
                       <li key={row.id} className="flex items-center justify-between px-3 py-2 text-sm">
                         <span>
-                          <span className="font-mono text-gray-800">{row.student.rollNumber}</span>
-                          <span className="text-gray-500 ml-2">{row.student.name}</span>
+                          <span className="font-mono text-on-surface">{row.student.rollNumber}</span>
+                          <span className="text-on-surface-variant ml-2">{row.student.name}</span>
                         </span>
                         <button
                           type="button"
@@ -559,11 +559,11 @@ const SubjectsManagement = () => {
                 )}
               </div>
             </div>
-            <div className="p-6 border-t border-gray-200 flex justify-end">
+            <div className="p-6 border-t border-outline-variant flex justify-end">
               <button
                 type="button"
                 onClick={handleCloseRoster}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-md border border-gray-300"
+                className="px-4 py-2 text-on-surface hover:bg-surface-container-low rounded-md border border-outline-variant"
               >
                 Done
               </button>
@@ -574,7 +574,7 @@ const SubjectsManagement = () => {
 
       {editingAssessment && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md border border-gray-200">
+          <div className="bg-surface-container-lowest rounded-lg shadow-lg p-6 w-full max-w-md border border-outline-variant">
             <h3 className="text-lg font-semibold mb-4">Edit Assessment</h3>
             <div className="space-y-3">
               <input value={editAssessmentName} onChange={(e) => setEditAssessmentName(e.target.value)} className="border rounded px-3 py-2 w-full" placeholder="Name" />
@@ -583,8 +583,8 @@ const SubjectsManagement = () => {
               <input value={editExamTime} onChange={(e) => setEditExamTime(e.target.value)} className="border rounded px-3 py-2 w-full" placeholder="Exam time" />
             </div>
             <div className="mt-4 flex gap-3 justify-end">
-              <button type="button" onClick={() => setEditingAssessment(null)} className="px-4 py-2 text-gray-600 hover:underline">Cancel</button>
-              <button type="button" onClick={handleSaveAssessment} disabled={loading} className="bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700 disabled:opacity-50">Save</button>
+              <button type="button" onClick={() => setEditingAssessment(null)} className="px-4 py-2 text-on-surface-variant hover:underline">Cancel</button>
+              <button type="button" onClick={handleSaveAssessment} disabled={loading} className="bg-primary text-white rounded px-4 py-2 hover:bg-primary-container disabled:opacity-50">Save</button>
             </div>
           </div>
         </div>

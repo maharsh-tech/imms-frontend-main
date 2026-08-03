@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { Fragment, useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   getAssignments,
@@ -136,16 +136,7 @@ const AssignmentsManagement = () => {
         assessmentId,
         showNEToStudents: !current,
       });
-      // Optimistically update the UI
-      setAssignments((prev) =>
-        prev.map((a) => {
-          if (a.id !== assignmentId) return a;
-          const updatedSubmissions = a.assessmentSubmissions?.map((s) =>
-            s.assessmentId === assessmentId ? { ...s, showNEToStudents: !current } : s
-          );
-          return { ...a, assessmentSubmissions: updatedSubmissions };
-        })
-      );
+      await load();
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Failed to toggle NE visibility'));
     }
@@ -160,7 +151,7 @@ const AssignmentsManagement = () => {
         <div className="bg-red-50 border-l-4 border-red-400 p-3 text-sm text-red-700">{error}</div>
       )}
 
-      <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+      <div className="bg-surface-container-lowest rounded-lg shadow p-6 border border-outline-variant">
         <h3 className="text-lg font-semibold mb-4">Assign Teacher to Subject</h3>
         <form onSubmit={handleCreate} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <select
@@ -207,12 +198,12 @@ const AssignmentsManagement = () => {
           <button
             type="submit"
             disabled={loading}
-            className="bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700 disabled:opacity-50"
+            className="bg-primary text-white rounded px-4 py-2 hover:bg-primary-container disabled:opacity-50"
           >
             Assign
           </button>
         </form>
-        <p className="mt-2 text-xs text-gray-500">
+        <p className="mt-2 text-xs text-on-surface-variant">
           Semester defaults to the subject&apos;s semester — change only for backlog/repeat batches.
         </p>
         {selectedSubject?.subjectType === 'ELECTIVE' && (selectedSubject.enrollmentCount ?? 0) === 0 && (
@@ -225,7 +216,7 @@ const AssignmentsManagement = () => {
         </p>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-4 border border-gray-200 flex flex-wrap gap-3">
+      <div className="bg-surface-container-lowest rounded-lg shadow p-4 border border-outline-variant flex flex-wrap gap-3">
         <input
           placeholder="Search subject or teacher"
           value={search}
@@ -246,24 +237,24 @@ const AssignmentsManagement = () => {
         </select>
       </div>
 
-      <div className="bg-white rounded-lg shadow border border-gray-200 overflow-x-auto">
+      <div className="bg-surface-container-lowest rounded-lg shadow border border-outline-variant overflow-x-auto">
         {loading && assignments.length === 0 ? (
-          <p className="p-6 text-center text-gray-500">Loading...</p>
+          <p className="p-6 text-center text-on-surface-variant">Loading...</p>
         ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-surface-variant">
+            <thead className="bg-surface-container-low">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teacher</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sem</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Year</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assessments (NE / Marks)</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Subject</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Teacher</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Sem</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Year</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Assessments (NE / Marks)</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-surface-variant">
               {filteredAssignments.map((a) => (
-                <React.Fragment key={a.id}>
+                <Fragment key={a.id}>
                   <tr>
                     <td className="px-4 py-3 text-sm font-medium">{a.subject.code} — {a.subject.name}</td>
                     <td className="px-4 py-3 text-sm">{a.faculty.name}</td>
@@ -272,7 +263,7 @@ const AssignmentsManagement = () => {
                     <td className="px-4 py-3">
                       <button
                         onClick={() => setExpandedId(expandedId === a.id ? null : a.id)}
-                        className="inline-flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                        className="inline-flex items-center gap-1 text-sm font-medium text-on-surface hover:text-primary bg-background hover:bg-primary-fixed/30 px-2 py-1 rounded transition-colors"
                       >
                         <span className="text-xs">{expandedId === a.id ? '▴' : '▾'}</span>
                         {a.subject.assessments?.length ?? 0} exams
@@ -290,19 +281,19 @@ const AssignmentsManagement = () => {
                     </td>
                   </tr>
                   {expandedId === a.id && (
-                    <tr className="bg-gray-50/50">
+                    <tr className="bg-surface-container-low/50">
                       <td colSpan={6} className="px-8 py-4">
                         {a.subject.assessments?.length === 0 ? (
-                          <p className="text-sm text-gray-500 italic">No exams defined for this subject.</p>
+                          <p className="text-sm text-on-surface-variant italic">No exams defined for this subject.</p>
                         ) : (
-                          <div className="bg-white border rounded-lg overflow-hidden shadow-sm">
-                            <table className="min-w-full divide-y divide-gray-200">
-                              <thead className="bg-gray-50">
+                          <div className="bg-surface-container-lowest border rounded-lg overflow-hidden shadow-[var(--shadow-card)]">
+                            <table className="min-w-full divide-y divide-surface-variant">
+                              <thead className="bg-surface-container-low">
                                 <tr>
-                                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Exam</th>
-                                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th>
-                                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">NE Visible to Students</th>
-                                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Actions</th>
+                                  <th className="px-4 py-2 text-left text-xs font-medium text-on-surface-variant">Exam</th>
+                                  <th className="px-4 py-2 text-left text-xs font-medium text-on-surface-variant">Status</th>
+                                  <th className="px-4 py-2 text-left text-xs font-medium text-on-surface-variant">Show Marks to NE Students</th>
+                                  <th className="px-4 py-2 text-left text-xs font-medium text-on-surface-variant">Actions</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-100">
@@ -311,7 +302,7 @@ const AssignmentsManagement = () => {
                                   const isPublished = sub?.status === 'PUBLISHED';
                                   return (
                                     <tr key={ass.id}>
-                                      <td className="px-4 py-2 text-sm text-gray-900">{ass.name}</td>
+                                      <td className="px-4 py-2 text-sm text-on-surface">{ass.name}</td>
                                       <td className="px-4 py-2">
                                         <SubmissionStatusBadge status={sub?.status || 'DRAFT'} />
                                       </td>
@@ -320,23 +311,23 @@ const AssignmentsManagement = () => {
                                           <button
                                             onClick={() => handleToggleNE(a.id, ass.id, !!sub?.showNEToStudents)}
                                             className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                              sub?.showNEToStudents ? 'bg-blue-600' : 'bg-gray-200'
+                                              sub?.showNEToStudents ? 'bg-primary' : 'bg-gray-200'
                                             }`}
                                           >
                                             <span
-                                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-surface-container-lowest shadow ring-0 transition duration-200 ease-in-out ${
                                                 sub?.showNEToStudents ? 'translate-x-4' : 'translate-x-0'
                                               }`}
                                             />
                                           </button>
                                         ) : (
-                                          <span className="text-xs text-gray-400">—</span>
+                                          <span className="text-xs text-outline">—</span>
                                         )}
                                       </td>
                                       <td className="px-4 py-2">
                                         <Link
                                           to={`/coordinator/marks/${a.id}/${ass.id}`}
-                                          className="text-sm text-blue-600 hover:underline inline-flex items-center gap-1"
+                                          className="text-sm text-primary hover:underline inline-flex items-center gap-1"
                                         >
                                           Open Marks ↗
                                         </Link>
@@ -351,11 +342,11 @@ const AssignmentsManagement = () => {
                       </td>
                     </tr>
                   )}
-                </React.Fragment>
+                </Fragment>
               ))}
               {!filteredAssignments.length && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-sm text-gray-500">No assignments found</td>
+                  <td colSpan={6} className="px-4 py-6 text-center text-sm text-on-surface-variant">No assignments found</td>
                 </tr>
               )}
             </tbody>

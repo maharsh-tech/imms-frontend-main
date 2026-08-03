@@ -8,7 +8,10 @@ import ActivateAccount from './pages/ActivateAccount';
 import CoordinatorDashboard from './pages/coordinator/Dashboard';
 import TeacherDashboard from './pages/teacher/Dashboard';
 import MarksGridPage from './pages/shared/MarksGridPage';
+import StudentShell from './components/student/StudentShell';
 import StudentMarksheet from './pages/student/Marksheet';
+import StudentSchedule from './pages/student/Schedule';
+import StudentProfile from './pages/student/Profile';
 
 export default function App() {
   return (
@@ -28,7 +31,11 @@ export default function App() {
               <Route path="/teacher/marks/:assignmentId/:assessmentId" element={<MarksGridPage />} />
             </Route>
             <Route element={<RoleRoute allowedRoles={[Role.STUDENT]} />}>
-              <Route path="/student" element={<StudentMarksheet />} />
+              <Route path="/student" element={<StudentShell />}>
+                <Route index element={<StudentMarksheet />} />
+                <Route path="schedule" element={<StudentSchedule />} />
+                <Route path="profile" element={<StudentProfile />} />
+              </Route>
             </Route>
           </Route>
 

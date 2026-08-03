@@ -14,6 +14,8 @@ import {
 import type { MarksGrid } from '../../api/marks'
 import { FlagType } from '../../types'
 import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge'
+import { StaffShell } from '../../components/staff'
+import apiClient from '../../api/client'
 
 type RowState = {
   studentId: string
@@ -37,7 +39,7 @@ type NeFilter = 'all' | 'ne' | 'not-ne'
 
 const MarksGridPage = () => {
   const { assignmentId, assessmentId } = useParams<{ assignmentId: string; assessmentId: string }>()
-  const { user } = useAuthStore()
+  const { user, logout } = useAuthStore()
   const isCoordinator = user?.role === 'COORDINATOR'
   const isTeacher = user?.role === 'TEACHER'
 
@@ -241,22 +243,61 @@ const MarksGridPage = () => {
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)))
   }
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading...</div>
-  if (!grid) return <div className="p-8 text-center text-red-500">{error || 'Not found'}</div>
+  const handleLogout = async () => {
+    try {
+      await apiClient.post('/auth/logout')
+    } finally {
+      logout()
+    }
+  }
+
+  if (loading) {
+    return (
+      <StaffShell
+        title={isCoordinator ? 'Coordinator Portal' : 'Teacher Portal'}
+        userLabel={user?.name || user?.email}
+        onLogout={handleLogout}
+        wide
+      >
+        <p className="py-12 text-center text-body-md text-on-surface-variant">Loading...</p>
+      </StaffShell>
+    )
+  }
+
+  if (!grid) {
+    return (
+      <StaffShell
+        title={isCoordinator ? 'Coordinator Portal' : 'Teacher Portal'}
+        userLabel={user?.name || user?.email}
+        onLogout={handleLogout}
+        wide
+      >
+        <p className="py-12 text-center text-body-md text-error">{error || 'Not found'}</p>
+      </StaffShell>
+    )
+  }
 
   const backLink = isCoordinator ? '/coordinator' : '/teacher'
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-5xl mx-auto">
-        <Link to={backLink} className="text-blue-600 text-sm hover:underline">← Back</Link>
-        <h1 className="text-2xl font-bold mt-2">
-          {grid.assignment.subject.code} — {grid.assessment.name}
-        </h1>
-        <p className="text-gray-600 text-sm mt-1 flex flex-wrap items-center gap-2">
-          <span>{grid.assignment.faculty.name} · Max {maxMarks} marks</span>
-          <SubmissionStatusBadge status={status} />
-        </p>
+    <StaffShell
+      title={isCoordinator ? 'Coordinator Portal' : 'Teacher Portal'}
+      userLabel={user?.name || user?.email}
+      onLogout={handleLogout}
+      wide
+    >
+      <Link to={backLink} className="text-label-md text-primary hover:underline">
+        ← Back to dashboard
+      </Link>
+      <h1 className="mt-2 text-headline-lg-mobile font-semibold text-primary lg:text-headline-lg">
+        {grid.assignment.subject.code} — {grid.assessment.name}
+      </h1>
+      <p className="mt-1 flex flex-wrap items-center gap-2 text-body-md text-on-surface-variant">
+        <span>
+          {grid.assignment.faculty.name} · Max {maxMarks} marks
+        </span>
+        <SubmissionStatusBadge status={status} />
+      </p>
 
         {isCoordinator && isDraft && (
           <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -288,14 +329,16 @@ const MarksGridPage = () => {
         )}
 
         {isTeacher && isDraft && (
-          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+          <div className="mt-4 bg-primary-fixed/30 border border-primary-fixed rounded-lg p-3 text-sm text-primary">
             Students marked <strong>NE</strong> by the coordinator are flagged but you can still enter marks.
-            Published results will show <strong>NE</strong> for those students.
+            After publish, NE students see <strong>NE</strong> by default. Enable{' '}
+            <strong>Show Marks to NE Students</strong> on the Assignments page to reveal their entered
+            marks instead.
           </div>
         )}
 
         {isPublished && isCoordinator && (
-          <div className="mt-4 bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded text-sm">
+          <div className="mt-4 bg-primary-fixed/30 border border-primary-fixed text-primary p-3 rounded text-sm">
             Results are published. Students can view their marksheet.
           </div>
         )}
@@ -309,10 +352,10 @@ const MarksGridPage = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by roll number or name…"
-            className="w-full max-w-sm border rounded px-3 py-2 text-sm"
+            className="imms-input max-w-sm text-sm"
             aria-label="Search students"
           />
-          <div className="flex rounded-md border border-gray-300 overflow-hidden" role="group" aria-label="Filter by NE status">
+          <div className="flex overflow-hidden rounded-lg border border-outline-variant" role="group" aria-label="Filter by NE status">
             {([
               ['all', `All (${rows.length})`],
               ['ne', `NE (${summary.ne})`],
@@ -322,12 +365,12 @@ const MarksGridPage = () => {
                 key={value}
                 type="button"
                 onClick={() => setNeFilter(value)}
-                className={`px-3 py-2 text-xs font-medium ${
+                className={`px-3 py-2 text-label-sm font-medium transition-colors ${
                   neFilter === value
                     ? value === 'ne'
-                      ? 'bg-amber-600 text-white'
-                      : 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                      ? 'bg-secondary text-on-secondary'
+                      : 'bg-primary text-on-primary'
+                    : 'bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low'
                 }`}
               >
                 {label}
@@ -336,23 +379,23 @@ const MarksGridPage = () => {
           </div>
         </div>
 
-        <div className="mt-4 bg-white rounded-lg shadow border overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="imms-card mt-4 overflow-x-auto">
+          <table className="min-w-full divide-y divide-surface-variant">
+            <thead className="bg-surface-container-low">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Sr</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Student ID</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Enter Marks</th>
-                {isCoordinator && <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">NE</th>}
-                {isTeacher && <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">NE</th>}
-                {isTeacher && <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">AB</th>}
+                <th className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">Sr</th>
+                <th className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">Student ID</th>
+                <th className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">Name</th>
+                <th className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">Enter Marks</th>
+                {isCoordinator && <th className="px-4 py-3 text-center text-label-sm uppercase text-on-surface-variant">NE</th>}
+                {isTeacher && <th className="px-4 py-3 text-center text-label-sm uppercase text-on-surface-variant">NE</th>}
+                {isTeacher && <th className="px-4 py-3 text-center text-label-sm uppercase text-on-surface-variant">AB</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-surface-variant">
               {filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-sm text-gray-500">
+                  <td colSpan={6} className="px-4 py-6 text-center text-sm text-on-surface-variant">
                     {rows.length === 0
                       ? grid?.assignment.subjectType === 'ELECTIVE'
                         ? 'No students enrolled in this elective — coordinator must import the roster in Subjects first.'
@@ -375,14 +418,14 @@ const MarksGridPage = () => {
                           value={row.isAb ? '' : row.marksObtained}
                           disabled={row.isAb}
                           onChange={(e) => updateRow(index, { marksObtained: e.target.value })}
-                          className="w-20 border rounded px-2 py-1 text-sm"
+                          className="imms-input w-20 py-1 text-sm"
                           aria-label={`Marks for ${row.name}`}
                         />
                       ) : (
                         <span className="text-sm">
                           {row.isAb ? 'AB' : row.marksObtained || (row.isNe ? '—' : '—')}
                           {row.isNe && row.marksObtained && isCoordinator && (
-                            <span className="text-gray-500 text-xs ml-1">(NE flagged)</span>
+                            <span className="text-on-surface-variant text-xs ml-1">(NE flagged)</span>
                           )}
                         </span>
                       )}
@@ -405,7 +448,7 @@ const MarksGridPage = () => {
                             NE
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-400">—</span>
+                          <span className="text-xs text-outline">—</span>
                         )}
                       </td>
                     )}
@@ -432,7 +475,7 @@ const MarksGridPage = () => {
           </table>
         </div>
 
-        <p className="mt-3 text-sm text-gray-600">
+        <p className="mt-3 text-sm text-on-surface-variant">
           {summary.entered} entered · {summary.ab} AB · {summary.ne} NE · {summary.blank} blank
         </p>
 
@@ -460,7 +503,7 @@ const MarksGridPage = () => {
               <button
                 onClick={handleSaveMarks}
                 disabled={saving}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-container disabled:opacity-50"
               >
                 Save Draft
               </button>
@@ -478,7 +521,7 @@ const MarksGridPage = () => {
               <button
                 onClick={handleUnlock}
                 disabled={saving}
-                className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 disabled:opacity-50"
+                className="bg-secondary text-on-secondary rounded-lg px-4 py-2 text-label-md font-semibold hover:opacity-90 disabled:opacity-50"
               >
                 Unlock for Teacher
               </button>
@@ -501,8 +544,7 @@ const MarksGridPage = () => {
             </button>
           )}
         </div>
-      </div>
-    </div>
+    </StaffShell>
   )
 }
 

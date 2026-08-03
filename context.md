@@ -6,12 +6,12 @@
 
 | Property | Value |
 |---|---|
-| Framework | React 18 + Vite |
-| Styling | Tailwind CSS v4 |
+| Framework | React 19 + Vite |
+| Styling | Tailwind CSS v4 (Academic Core design tokens in `src/index.css`) |
 | Client State | Zustand (user profile only — **no tokens in storage**) |
 | HTTP Client | Axios with `withCredentials: true` (httpOnly cookies) |
 | Routing | React Router v7 |
-| Auth | Plan A: activation link → login |
+| Auth | Plan A: activation link → set password → login |
 | Git Remote | https://github.com/maharsh-tech/imms-frontend-main.git (branch: main) |
 
 ## Architecture Principle — UI/UX Only
@@ -31,31 +31,50 @@
 
 `src/api/` is a **thin HTTP client layer** — no validation, no business rules.
 
+## Auth Pages (Public)
+
+| File | Route | Purpose |
+|---|---|---|
+| `src/pages/Login.tsx` | `/login` | Sign-in form. Posts `{ loginId, password }` to `POST /auth/login`. Students use **roll number**; staff use **@charusat.ac.in** email. Redirects by role after success. |
+| `src/pages/ActivateAccount.tsx` | `/activate?token=…` | First-time password setup from coordinator activation link. Posts `{ token, newPassword }` to `POST /auth/activate`, then redirects to `/login?activated=1`. UI styled like “reset password”; this is **account activation**, not a forgot-password flow. |
+
+Shared layout/components: `src/components/auth/` (`AuthShell`, `AuthCard`, `PasswordField`, `AuthAlert`).
+
 ## Project Structure
 
 ```
 imms-frontend/
 ├── src/
 │   ├── App.tsx
+│   ├── index.css                    # Design tokens (Academic Core palette + typography)
 │   ├── api/
-│   │   ├── client.ts              # withCredentials, 401 → /auth/refresh
+│   │   ├── client.ts                # withCredentials, 401 → /auth/refresh
 │   │   ├── allowedUsers.ts
+│   │   ├── faculty.ts, students.ts
 │   │   ├── import.ts
 │   │   ├── subjects.ts
 │   │   └── marks.ts
 │   ├── components/
 │   │   ├── AuthBootstrap.tsx
-│   │   └── shared/ExcelImportCard.tsx, SubmissionStatusBadge.tsx
+│   │   ├── auth/                    # Login + activate shared UI
+│   │   ├── staff/                   # StaffShell, StaffTabBar (coordinator/teacher)
+│   │   ├── student/                 # Student portal shell, SubjectCard, etc.
+│   │   └── shared/                  # SubmissionStatusBadge, ExcelImportCard
 │   ├── pages/
 │   │   ├── Login.tsx
 │   │   ├── ActivateAccount.tsx
 │   │   ├── coordinator/
 │   │   │   ├── Dashboard.tsx
-│   │   │   ├── AllowedUsers.tsx
+│   │   │   ├── AccountInvites.tsx
+│   │   │   ├── StudentsManagement.tsx
+│   │   │   ├── FacultyManagement.tsx
 │   │   │   ├── SubjectsManagement.tsx
 │   │   │   └── AssignmentsManagement.tsx
 │   │   ├── teacher/Dashboard.tsx
-│   │   ├── student/Marksheet.tsx
+│   │   ├── student/
+│   │   │   ├── Marksheet.tsx
+│   │   │   ├── Schedule.tsx         # Placeholder (no API yet)
+│   │   │   └── Profile.tsx
 │   │   └── shared/MarksGridPage.tsx
 │   ├── routes/PrivateRoute.tsx, RoleRoute.tsx
 │   └── stores/authStore.ts
@@ -66,13 +85,23 @@ imms-frontend/
 
 | Path | Role | Purpose |
 |---|---|---|
-| `/login` | Public | Email/password login |
-| `/activate` | Public | Set password from activation link |
-| `/coordinator` | Coordinator | Tabs: account management, students, faculty, subjects, assignments |
+| `/login` | Public | Email/roll-number + password login |
+| `/activate?token=…` | Public | Set password from activation link |
+| `/coordinator` | Coordinator | Tabs: accounts, students, faculty, subjects, assignments |
 | `/coordinator/marks/:assignmentId/:assessmentId` | Coordinator | NE flags, lock, unlock, publish, unpublish |
 | `/teacher` | Teacher | Assigned subjects → marks entry links |
 | `/teacher/marks/:assignmentId/:assessmentId` | Teacher | Enter marks, AB, submit |
-| `/student` | Student | Published marksheet (or state message) |
+| `/student` | Student | Marksheet (default tab) |
+| `/student/schedule` | Student | Schedule placeholder |
+| `/student/profile` | Student | Account info + logout |
+
+## UI Surfaces by Role
+
+| Role | Shell | Notes |
+|---|---|---|
+| Student | `StudentShell` | Student Portal header, sidebar (desktop) / bottom nav (mobile), no profile photo |
+| Coordinator / Teacher | `StaffShell` | Portal header + logout; coordinator uses scrollable `StaffTabBar` |
+| Marks grid | `StaffShell` (wide) | Shared by coordinator and teacher at `/…/marks/:assignmentId/:assessmentId` |
 
 ## Implemented Features
 
@@ -84,6 +113,7 @@ imms-frontend/
 - [x] Epic 2.2 — Subject Assignment UI (semester auto-fill, academic year, search/filter, status badges)
 - [x] Epic 2.3 — Marks grid UI (NE / AB / save draft, search, summary, status badge, read-only banners)
 - [x] Epic 2.4 — Submit / lock / unlock / publish / unpublish with confirm dialogs + API error feedback
+- [x] Student portal UI — marksheet cards, profile, auth pages (Academic Core design)
 
 ## Environment Variables
 
@@ -146,4 +176,4 @@ Subjects tab: check "Elective subject" → roster modal (Excel or paste) → ass
 
 ## Last Updated
 
-**Elective roster UI, lock/unpublish marks, marksheet hasPublished, RoleNavBar** (2026-07-30)
+**Student portal UI, auth pages, coordinator/teacher StaffShell + design tokens** (2026-08-03)

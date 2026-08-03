@@ -57,8 +57,8 @@ IMMS follows a **3-tier web architecture** with a clear separation between:
 
 | Layer | Technology | Justification |
 |---|---|---|
-| Frontend | React 18 + Vite | Fast HMR, industry standard, excellent ecosystem |
-| Styling | Tailwind CSS or CSS Modules | Rapid UI development |
+| Frontend | React 19 + Vite | Fast HMR, industry standard, excellent ecosystem |
+| Styling | Tailwind CSS v4 | Design tokens in `index.css`; Academic Core student/auth UI |
 | State Management | Zustand + React Query | Lightweight, server-state friendly |
 | Backend | NestJS (Node.js) | Structured modules, built-in DI, ideal for role-based systems |
 | Language | TypeScript (full stack) | Type safety, shared types possible |
@@ -101,15 +101,29 @@ src/
 src/
 ├── api/                           # Thin HTTP client — no business logic
 │   ├── client.ts
-│   ├── allowedUsers.ts, import.ts, subjects.ts, marks.ts
+│   ├── allowedUsers.ts, faculty.ts, students.ts, import.ts, subjects.ts, marks.ts
+├── components/
+│   ├── auth/                      # AuthShell, AuthCard — login + activate
+│   ├── student/                   # StudentShell, SubjectCard — student portal
+│   └── shared/                    # RoleNavBar (coordinator/teacher), badges, import
 ├── pages/
+│   ├── Login.tsx                  # /login
+│   ├── ActivateAccount.tsx        # /activate?token=… (first-time password)
 │   ├── coordinator/               # Dashboard tabs + marks grid (NE/unlock/publish)
 │   ├── teacher/                   # Assignment list → marks entry
-│   ├── student/Marksheet.tsx      # Renders backend-computed display values
+│   ├── student/                   # Marksheet, Schedule (placeholder), Profile
 │   └── shared/MarksGridPage.tsx
 ├── routes/                        # UX guards only
 └── stores/authStore.ts            # User profile — no tokens
 ```
+
+### Auth UI flow
+
+1. Coordinator creates account → activation link copied manually.
+2. User opens `/activate?token=…` → `ActivateAccount.tsx` → `POST /auth/activate`.
+3. User signs in at `/login` → `Login.tsx` → `POST /auth/login` → role-based redirect.
+
+Student portal uses a separate shell (`StudentShell`) with marksheet / schedule / profile tabs. Coordinator and teacher use `RoleNavBar`.
 
 ---
 

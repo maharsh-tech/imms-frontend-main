@@ -34,3 +34,15 @@ All architectural and design documentation for both the frontend and backend is 
    ```bash
    npm run dev
    ```
+
+## 🔐 Key Pages
+
+| Route | File | What it does |
+|---|---|---|
+| `/login` | `src/pages/Login.tsx` | Sign in with roll number (students) or staff email + password |
+| `/activate?token=…` | `src/pages/ActivateAccount.tsx` | First-time password setup from coordinator activation link |
+| `/student` | `src/pages/student/Marksheet.tsx` | Student marksheet (inside `StudentShell`) |
+| `/coordinator` | `src/pages/coordinator/Dashboard.tsx` | Coordinator dashboard |
+| `/teacher` | `src/pages/teacher/Dashboard.tsx` | Teacher dashboard |
+
+Public auth pages share layout in `src/components/auth/`. Student portal layout lives in `src/components/student/`. See **[context.md](./context.md)** for the full route map and project structure.

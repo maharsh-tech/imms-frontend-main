@@ -1,138 +1,146 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import apiClient from '../api/client';
-import { KeyRound } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react'
+import { ArrowLeft, ArrowRight, CheckCircle, KeyRound, Lock } from 'lucide-react'
+import { useSearchParams, useNavigate, Link } from 'react-router-dom'
+import apiClient from '../api/client'
+import { AuthAlert, AuthCard, AuthShell, PasswordField } from '../components/auth'
+
+const getStrengthLevel = (password: string): number => {
+  if (password.length === 0) return 0
+  if (password.length <= 4) return 1
+  if (password.length <= 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) return 2
+  if (password.length < 12 || !/[^A-Za-z0-9]/.test(password)) return 3
+  return 4
+}
 
 const ActivateAccount = () => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const token = searchParams.get('token') ?? '';
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const token = searchParams.get('token') ?? ''
 
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const strengthLevel = useMemo(() => getStrengthLevel(newPassword), [newPassword])
 
   useEffect(() => {
     if (!token) {
-      setError('Invalid activation link. Ask your coordinator for a new one.');
+      setError('Invalid activation link. Ask your coordinator for a new one.')
     }
-  }, [token]);
+  }, [token])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+    e.preventDefault()
+    setError('')
 
-    if (!token) return;
+    if (!token) return
     if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      return;
+      setError('Password must be at least 6 characters long.')
+      return
     }
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
+      setError('Passwords do not match.')
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
 
     try {
-      await apiClient.post('/auth/activate', { token, newPassword });
-      navigate('/login?activated=1', { replace: true });
+      await apiClient.post('/auth/activate', { token, newPassword })
+      navigate('/login?activated=1', { replace: true })
     } catch (err: unknown) {
       const message =
         err && typeof err === 'object' && 'response' in err
           ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-          : undefined;
-      setError(message || 'Failed to activate account. The link may have expired.');
+          : undefined
+      setError(message || 'Failed to activate account. The link may have expired.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
-            <KeyRound className="h-6 w-6 text-blue-600" />
-          </div>
+    <AuthShell>
+      <div className="mb-xl text-center">
+        <div className="mb-md inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary-fixed">
+          <KeyRound className="h-8 w-8 text-primary" aria-hidden="true" />
         </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Set Your Password
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Create a password to activate your IMMS account.
+        <h1 className="mb-sm text-headline-md font-semibold text-on-surface">Secure Your Account</h1>
+        <p className="text-body-md text-on-surface-variant">
+          Please choose a strong password that you haven&apos;t used before.
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-200">
-          {error && (
-            <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
+      <AuthCard>
+        {error && <AuthAlert variant="error">{error}</AuthAlert>}
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
-                New Password
-              </label>
-              <div className="mt-1">
-                <input
-                  id="newPassword"
-                  name="newPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  disabled={!token || loading}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
+        <form className="space-y-lg" onSubmit={handleSubmit}>
+          <div className="space-y-xs">
+            <PasswordField
+              id="newPassword"
+              label="New Password"
+              value={newPassword}
+              onChange={setNewPassword}
+              icon={Lock}
+              disabled={!token || loading}
+              autoComplete="new-password"
+            />
+            <div className="mt-2 flex gap-1 px-1" aria-hidden="true">
+              {[0, 1, 2, 3].map((index) => {
+                let barColor = 'bg-outline-variant'
+                if (strengthLevel > index) {
+                  if (strengthLevel >= 4) barColor = 'bg-green-500'
+                  else if (strengthLevel >= 3) barColor = 'bg-yellow-500'
+                  else if (strengthLevel >= 2) barColor = 'bg-orange-500'
+                  else barColor = 'bg-error'
+                }
+                return (
+                  <div key={index} className={`h-1 flex-1 rounded-full transition-colors ${barColor}`} />
+                )
+              })}
             </div>
+          </div>
 
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirm New Password
-              </label>
-              <div className="mt-1">
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  disabled={!token || loading}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
-            </div>
+          <PasswordField
+            id="confirmPassword"
+            label="Re-enter Password"
+            value={confirmPassword}
+            onChange={setConfirmPassword}
+            icon={CheckCircle}
+            disabled={!token || loading}
+            autoComplete="new-password"
+          />
 
-            <div>
-              <button
-                type="submit"
-                disabled={!token || loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors"
-              >
-                {loading ? 'Activating...' : 'Activate Account'}
-              </button>
-            </div>
-          </form>
+          <div className="flex items-start gap-sm rounded-lg bg-surface-container-low p-md">
+            <p className="text-label-sm text-on-surface-variant">
+              Password must be at least 6 characters. Use a mix of letters, numbers, and symbols
+              for a stronger password.
+            </p>
+          </div>
 
-          <p className="mt-4 text-center text-sm text-gray-600">
-            Already activated?{' '}
-            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
-              Sign in
-            </Link>
-          </p>
+          <button
+            type="submit"
+            disabled={!token || loading}
+            className="flex w-full items-center justify-center gap-sm rounded-lg bg-primary px-xl py-3 text-label-md font-bold text-on-primary shadow-sm transition-all hover:bg-primary-container hover:text-on-primary-container active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? 'Activating...' : 'Activate Account'}
+            {!loading && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
+          </button>
+        </form>
+
+        <div className="mt-lg text-center">
+          <Link
+            to="/login"
+            className="inline-flex items-center justify-center gap-xs text-label-md text-primary transition-colors hover:underline"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Back to Login
+          </Link>
         </div>
-      </div>
-    </div>
-  );
-};
+      </AuthCard>
+    </AuthShell>
+  )
+}
 
-export default ActivateAccount;
+export default ActivateAccount

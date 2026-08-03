@@ -107,9 +107,9 @@ const FacultyManagement = () => {
   }
 
   const addForm = (
-    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-      <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-        <UserPlus className="w-4 h-4 text-blue-600" />
+    <div className="bg-surface-container-low border border-outline-variant rounded-lg p-4">
+      <h3 className="text-sm font-semibold text-on-surface mb-3 flex items-center gap-2">
+        <UserPlus className="w-4 h-4 text-primary" />
         Add single teacher
       </h3>
       <form onSubmit={handleAddTeacher} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -120,7 +120,7 @@ const FacultyManagement = () => {
           placeholder="Code (ABC)"
           value={teacherCode}
           onChange={(e) => setTeacherCode(normalizeTeacherCodeInput(e.target.value))}
-          className="px-3 py-2 border border-gray-300 rounded-md text-sm font-mono uppercase"
+          className="px-3 py-2 border border-outline-variant rounded-md text-sm font-mono uppercase"
           aria-label="Teacher code"
         />
         <input
@@ -129,7 +129,7 @@ const FacultyManagement = () => {
           placeholder="Full name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-md text-sm sm:col-span-2"
+          className="px-3 py-2 border border-outline-variant rounded-md text-sm sm:col-span-2"
           aria-label="Teacher name"
         />
         <input
@@ -138,20 +138,20 @@ const FacultyManagement = () => {
           placeholder="Department"
           value={department}
           onChange={(e) => setDepartment(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+          className="px-3 py-2 border border-outline-variant rounded-md text-sm"
           aria-label="Department"
         />
         <button
           type="submit"
           disabled={addLoading}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
+          className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-container disabled:opacity-50"
         >
           {addLoading ? 'Adding…' : 'Add teacher'}
         </button>
       </form>
       {previewEmail && (
-        <p className="text-xs text-gray-500 mt-2">
-          Login email: <span className="font-mono text-gray-800">{previewEmail}</span> · account must
+        <p className="text-xs text-on-surface-variant mt-2">
+          Login email: <span className="font-mono text-on-surface">{previewEmail}</span> · account must
           exist in Account Management first
         </p>
       )}
@@ -162,11 +162,11 @@ const FacultyManagement = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-blue-600" />
+          <h2 className="text-xl font-semibold text-on-surface flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-primary" />
             Faculty
           </h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-on-surface-variant mt-1">
             All teachers in the database. Each has a unique 3-letter teacher code. Sign in with
             @charusat.ac.in email and password.
           </p>
@@ -175,7 +175,7 @@ const FacultyManagement = () => {
           <button
             type="button"
             onClick={() => setShowAdd((v) => !v)}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-primary bg-primary-fixed/30 rounded-md hover:bg-surface-container"
           >
             {showAdd ? <ChevronUp className="w-4 h-4 mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
             {showAdd ? 'Hide form' : 'Add teacher'}
@@ -183,7 +183,7 @@ const FacultyManagement = () => {
           <button
             type="button"
             onClick={() => setShowImport((v) => !v)}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-primary bg-primary-fixed/30 rounded-md hover:bg-surface-container"
           >
             {showImport ? <ChevronUp className="w-4 h-4 mr-2" /> : <ChevronDown className="w-4 h-4 mr-2" />}
             {showImport ? 'Hide import' : 'Import Excel'}
@@ -210,46 +210,46 @@ const FacultyManagement = () => {
       )}
 
       {loading ? (
-        <p className="text-sm text-gray-500">Loading faculty…</p>
+        <p className="text-sm text-on-surface-variant">Loading faculty…</p>
       ) : faculty.length === 0 ? (
         <div className="space-y-4">
           {!showAdd && addForm}
-          <div className="bg-white shadow rounded-lg p-8 border border-gray-200 text-center">
-            <p className="text-gray-600">No teachers yet.</p>
-            <p className="text-sm text-gray-500 mt-2">
+          <div className="bg-surface-container-lowest shadow rounded-lg p-8 border border-outline-variant text-center">
+            <p className="text-on-surface-variant">No teachers yet.</p>
+            <p className="text-sm text-on-surface-variant mt-2">
               Create accounts in Account Management with 3-letter codes, then add a teacher above or import Excel.
             </p>
           </div>
         </div>
       ) : (
-        <div className="bg-white shadow rounded-lg border border-gray-200 overflow-hidden">
-          <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-4">
+        <div className="bg-surface-container-lowest shadow rounded-lg border border-outline-variant overflow-hidden">
+          <div className="p-4 border-b border-outline-variant flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
-              <label htmlFor="faculty-search" className="block text-xs font-medium text-gray-500 mb-1">
+              <label htmlFor="faculty-search" className="block text-xs font-medium text-on-surface-variant mb-1">
                 Search
               </label>
               <div className="relative">
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-outline" />
                 <input
                   id="faculty-search"
                   type="search"
                   placeholder="Code, name, email, or department…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                  className="block w-full pl-9 pr-3 py-2 border border-outline-variant rounded-md text-sm focus:ring-primary/20 focus:border-primary"
                 />
               </div>
             </div>
             {departments.length > 1 && (
               <div>
-                <label htmlFor="dept-filter" className="block text-xs font-medium text-gray-500 mb-1">
+                <label htmlFor="dept-filter" className="block text-xs font-medium text-on-surface-variant mb-1">
                   Department
                 </label>
                 <select
                   id="dept-filter"
                   value={deptFilter}
                   onChange={(e) => setDeptFilter(e.target.value)}
-                  className="block w-full sm:w-40 px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                  className="block w-full sm:w-40 px-3 py-2 border border-outline-variant rounded-md text-sm focus:ring-primary/20 focus:border-primary"
                 >
                   <option value="ALL">All</option>
                   {departments.map((d) => (
@@ -263,37 +263,37 @@ const FacultyManagement = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-surface-variant">
+              <thead className="bg-surface-container-low">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">
                     Teacher Code
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">
                     Name
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">
                     Email
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">
                     Department
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-surface-variant">
                 {filteredRows.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-sm text-gray-500 text-center">
+                    <td colSpan={4} className="px-4 py-6 text-sm text-on-surface-variant text-center">
                       No teachers match your filters.
                     </td>
                   </tr>
                 ) : (
                   filteredRows.map((member) => (
-                    <tr key={member.id} className="hover:bg-gray-50">
+                    <tr key={member.id} className="hover:bg-surface-container-low">
                       <td className="px-4 py-2 text-sm font-mono font-medium">{member.facultyCode}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{member.name}</td>
-                      <td className="px-4 py-2 text-sm text-gray-600">{member.email}</td>
-                      <td className="px-4 py-2 text-sm text-gray-600">{member.department}</td>
+                      <td className="px-4 py-2 text-sm text-on-surface">{member.name}</td>
+                      <td className="px-4 py-2 text-sm text-on-surface-variant">{member.email}</td>
+                      <td className="px-4 py-2 text-sm text-on-surface-variant">{member.department}</td>
                     </tr>
                   ))
                 )}
@@ -301,7 +301,7 @@ const FacultyManagement = () => {
             </table>
           </div>
 
-          <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
+          <div className="px-4 py-3 bg-surface-container-low border-t border-outline-variant text-xs text-on-surface-variant">
             {filteredRows.length} of {faculty.length} teachers
           </div>
         </div>

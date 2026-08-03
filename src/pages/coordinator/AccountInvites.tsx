@@ -246,17 +246,17 @@ const AccountInvites = () => {
   }
 
   if (loading) {
-    return <div className="p-8 text-center text-gray-500 animate-pulse">Loading invites...</div>
+    return <div className="p-8 text-center text-on-surface-variant animate-pulse">Loading invites...</div>
   }
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
+    <div className="bg-surface-container-lowest shadow rounded-lg p-6">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">
+          <h2 className="text-2xl font-bold text-on-surface">
             Account Management
           </h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-on-surface-variant mt-1">
             Students sign in with roll number (<span className="font-mono">24IT093</span>). Teachers
             use a unique 3-letter code (<span className="font-mono">ABC</span>) →{' '}
             <span className="font-mono">abc@charusat.ac.in</span> for login.
@@ -266,7 +266,7 @@ const AccountInvites = () => {
           <button
             type="button"
             onClick={handleCopyAllPending}
-            className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100"
+            className="inline-flex items-center px-3 py-2 text-sm font-medium text-primary bg-primary-fixed/30 rounded-md hover:bg-surface-container"
           >
             {copiedKey === 'all-pending' ? (
               <>
@@ -301,9 +301,9 @@ const AccountInvites = () => {
         </div>
       )}
 
-      <div className="bg-gray-50 p-4 rounded-md mb-6 border border-gray-200">
-        <h3 className="text-lg font-medium text-gray-700 mb-3">Bulk invite (paste student IDs)</h3>
-        <p className="text-xs text-gray-500 mb-2">
+      <div className="bg-surface-container-low p-4 rounded-md mb-6 border border-outline-variant">
+        <h3 className="text-lg font-medium text-on-surface mb-3">Bulk invite (paste student IDs)</h3>
+        <p className="text-xs text-on-surface-variant mb-2">
           {bulkRole === 'COORDINATOR'
             ? 'One coordinator email per line'
             : bulkRole === 'STUDENT'
@@ -321,14 +321,14 @@ const AccountInvites = () => {
                 ? 'ABC\nDEF\nGHI'
                 : '24IT093\n24IT094\n24IT095'
           }
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm font-mono focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full border border-outline-variant rounded-md px-3 py-2 text-sm font-mono focus:ring-primary/20 focus:border-primary outline-none"
           aria-label="Bulk account creation"
         />
         <div className="flex flex-wrap gap-3 mt-3">
           <select
             value={bulkRole}
             onChange={(e) => setBulkRole(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white"
+            className="px-3 py-2 border border-outline-variant rounded-md text-sm bg-surface-container-lowest"
           >
             <option value="STUDENT">Students</option>
             <option value="TEACHER">Teachers</option>
@@ -338,13 +338,13 @@ const AccountInvites = () => {
             type="button"
             onClick={handleBulkAdd}
             disabled={bulkLoading}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-container disabled:opacity-50"
           >
             {bulkLoading ? 'Creating...' : 'Create accounts & get links'}
           </button>
         </div>
         {bulkResult && (
-          <p className="mt-3 text-sm text-gray-700">
+          <p className="mt-3 text-sm text-on-surface">
             Created: {bulkResult.created} · Skipped: {bulkResult.skipped}
             {bulkResult.errors.length > 0 && (
               <span className="text-red-600"> · {bulkResult.errors.length} errors</span>
@@ -353,9 +353,9 @@ const AccountInvites = () => {
         )}
       </div>
 
-      <div className="bg-gray-50 p-4 rounded-md mb-8 border border-gray-200">
-        <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center">
-          <UserPlus className="w-5 h-5 mr-2 text-blue-600" />
+      <div className="bg-surface-container-low p-4 rounded-md mb-8 border border-outline-variant">
+        <h3 className="text-lg font-medium text-on-surface mb-4 flex items-center">
+          <UserPlus className="w-5 h-5 mr-2 text-primary" />
           Add single account
         </h3>
         <form onSubmit={handleSingleAdd} className="flex flex-col gap-3">
@@ -366,7 +366,7 @@ const AccountInvites = () => {
                 required
                 placeholder={addRole === 'TEACHER' ? 'Code (ABC)' : 'Roll (24IT093)'}
                 maxLength={addRole === 'TEACHER' ? 3 : undefined}
-                className="w-full sm:w-40 px-3 py-2 border border-gray-300 rounded-md text-sm font-mono uppercase"
+                className="w-full sm:w-40 px-3 py-2 border border-outline-variant rounded-md text-sm font-mono uppercase"
                 value={identifier}
                 onChange={(e) =>
                   setIdentifier(
@@ -382,14 +382,14 @@ const AccountInvites = () => {
                 type="email"
                 required
                 placeholder="coordinator@charusat.ac.in"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                className="flex-1 px-3 py-2 border border-outline-variant rounded-md text-sm"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={addLoading}
               />
             )}
             <select
-              className="w-full sm:w-40 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white"
+              className="w-full sm:w-40 px-3 py-2 border border-outline-variant rounded-md text-sm bg-surface-container-lowest"
               value={addRole}
               onChange={(e) => setAddRole(e.target.value)}
               disabled={addLoading}
@@ -401,14 +401,14 @@ const AccountInvites = () => {
             <button
               type="submit"
               disabled={addLoading}
-              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-container disabled:opacity-50"
             >
               {addLoading ? 'Adding...' : 'Add'}
             </button>
           </div>
           {previewEmail && addRole !== 'COORDINATOR' && (
-            <p className="text-sm text-gray-600">
-              Email will be: <span className="font-mono text-gray-900">{previewEmail}</span>
+            <p className="text-sm text-on-surface-variant">
+              Email will be: <span className="font-mono text-on-surface">{previewEmail}</span>
             </p>
           )}
         </form>
@@ -422,8 +422,8 @@ const AccountInvites = () => {
             onClick={() => setRoleFilter(role)}
             className={`px-3 py-1 text-xs font-medium rounded-full ${
               roleFilter === role
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-primary text-white'
+                : 'bg-background text-on-surface-variant hover:bg-gray-200'
             }`}
           >
             {role === 'ALL' ? 'All' : role.charAt(0) + role.slice(1).toLowerCase() + 's'}
@@ -432,32 +432,32 @@ const AccountInvites = () => {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-surface-variant">
+          <thead className="bg-surface-container-low">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Roster</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Account</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">ID</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Email</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Role</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Roster</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Account</th>
 
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-on-surface-variant uppercase">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-surface-container-lowest divide-y divide-surface-variant">
             {filteredInvites.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-sm text-gray-500">
+                <td colSpan={6} className="px-4 py-6 text-center text-sm text-on-surface-variant">
                   No accounts in this category.
                 </td>
               </tr>
             ) : (
               filteredInvites.map((invite) => (
-                <tr key={invite.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-mono font-medium text-gray-900">
+                <tr key={invite.id} className="hover:bg-surface-container-low">
+                  <td className="px-4 py-3 text-sm font-mono font-medium text-on-surface">
                     {invite.identifier ?? '—'}
                   </td>
-                  <td className="px-4 py-3 text-sm font-mono text-gray-700">{invite.email}</td>
+                  <td className="px-4 py-3 text-sm font-mono text-on-surface">{invite.email}</td>
                   <td className="px-4 py-3 text-sm">
                     <span
                       className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
@@ -465,7 +465,7 @@ const AccountInvites = () => {
                           ? 'bg-purple-100 text-purple-800'
                           : invite.role === 'TEACHER'
                             ? 'bg-green-100 text-green-800'
-                            : 'bg-blue-100 text-blue-800'
+                            : 'bg-blue-100 text-primary'
                       }`}
                     >
                       {invite.role}
@@ -473,7 +473,7 @@ const AccountInvites = () => {
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {invite.role === 'COORDINATOR' ? (
-                      <span className="text-gray-400">—</span>
+                      <span className="text-outline">—</span>
                     ) : invite.rosterLinked ? (
                       <span className="text-green-700 font-medium">In roster</span>
                     ) : (
@@ -502,7 +502,7 @@ const AccountInvites = () => {
                       <button
                         type="button"
                         onClick={() => handleCopy(invite.activationLink!, invite.id)}
-                        className="inline-flex items-center text-blue-600 hover:text-blue-800 text-xs"
+                        className="inline-flex items-center text-primary hover:text-primary text-xs"
                       >
                         {copiedKey === invite.id ? (
                           <>
@@ -536,16 +536,16 @@ const AccountInvites = () => {
       {rosterInvite && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div
-            className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 border border-gray-200"
+            className="bg-surface-container-lowest rounded-lg shadow-xl max-w-md w-full p-6 border border-outline-variant"
             role="dialog"
             aria-labelledby="roster-dialog-title"
           >
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 id="roster-dialog-title" className="text-lg font-semibold text-gray-900">
+                <h3 id="roster-dialog-title" className="text-lg font-semibold text-on-surface">
                   Add to roster
                 </h3>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-on-surface-variant mt-1">
                   Invite exists for{' '}
                   <span className="font-mono font-medium">{rosterInvite.identifier}</span> — student
                   does not need to activate first.
@@ -554,7 +554,7 @@ const AccountInvites = () => {
               <button
                 type="button"
                 onClick={handleCloseRoster}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-outline hover:text-on-surface-variant"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />
@@ -562,38 +562,38 @@ const AccountInvites = () => {
             </div>
             <form onSubmit={handleAddToRoster} className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Roll number</label>
+                <label className="block text-xs font-medium text-on-surface-variant mb-1">Roll number</label>
                 <input
                   type="text"
                   readOnly
                   value={rosterInvite.identifier ?? ''}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm font-mono bg-gray-50"
+                  className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm font-mono bg-surface-container-low"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Full name</label>
+                <label className="block text-xs font-medium text-on-surface-variant mb-1">Full name</label>
                 <input
                   type="text"
                   required
                   value={rosterName}
                   onChange={(e) => setRosterName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
                   autoFocus
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Department</label>
+                  <label className="block text-xs font-medium text-on-surface-variant mb-1">Department</label>
                   <input
                     type="text"
                     required
                     value={rosterDepartment}
                     onChange={(e) => setRosterDepartment(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Semester</label>
+                  <label className="block text-xs font-medium text-on-surface-variant mb-1">Semester</label>
                   <input
                     type="number"
                     required
@@ -601,33 +601,33 @@ const AccountInvites = () => {
                     max={12}
                     value={rosterSemester}
                     onChange={(e) => setRosterSemester(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Batch</label>
+                <label className="block text-xs font-medium text-on-surface-variant mb-1">Batch</label>
                 <input
                   type="text"
                   required
                   value={rosterBatch}
                   onChange={(e) => setRosterBatch(e.target.value)}
                   placeholder="2023-2027"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
                 />
               </div>
               <div className="flex gap-2 pt-2">
                 <button
                   type="submit"
                   disabled={rosterLoading}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-container disabled:opacity-50"
                 >
                   {rosterLoading ? 'Adding…' : 'Add student'}
                 </button>
                 <button
                   type="button"
                   onClick={handleCloseRoster}
-                  className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+                  className="px-4 py-2 text-sm text-on-surface border border-outline-variant rounded-md hover:bg-surface-container-low"
                 >
                   Cancel
                 </button>

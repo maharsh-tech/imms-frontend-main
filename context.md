@@ -152,14 +152,15 @@ Database seed runs in **backend only**: `cd imms-backend && npx prisma db seed`
 - Client-side search by roll number / name
 - Footer summary: entered · AB · NE · blank counts
 - Confirm dialogs on submit, unlock, publish, unpublish
-- Coordinator: **Lock Marks**, **Unlock for Teacher**, **Publish Results**, **Unpublish Results**
+- Coordinator: **Lock Marks**, **Unlock for Teacher**, **Publish Results**, **Unpublish Results**, **Save Marks** (enables editing student marks and AB checkboxes in DRAFT mode)
+- Export features (coordinator only): **Download PDF** (using `jspdf` & `jspdf-autotable`) and **Download Excel** (using `exceljs` as native warning-free `.xlsx` file). NE student marks are masked in exports as a light-blue highlighted "NE" cell.
 - PUBLISHED coordinator view: unpublish available; info banner for students
 - All workflow actions show backend error messages via `apiErrorMessage`
 - Marksheet uses `hasPublished` from API (not only `/auth/me` studentState)
 
 ## Coordinator: Account Management
 
-Create student/teacher/coordinator accounts, bulk paste IDs, filter by role, copy activation links (manual delivery — no automated email UI). **Copy activation link** / **Copy all pending links** call `POST /allowed-users/:id/regenerate-activation-link` (issues a fresh token; invalidates any previous unused link). Listing accounts does not expose links — only `hasActivationToken`. Roster import/add requires account first (activation not required).
+Create student/teacher/coordinator accounts, bulk paste IDs, filter by role, copy activation links (manual delivery — no automated email UI). **Copy activation link** / **Copy all pending links** call `POST /allowed-users/:id/regenerate-activation-link`. Bulk creation button renamed to **Create accounts & download Excel**, which automatically generates and triggers a download of a native `.xlsx` sheet containing Student/Faculty/Coordinator IDs and activation links using `exceljs`. Listing accounts does not expose links — only `hasActivationToken`. Roster import/add requires account first (activation not required).
 
 **Student Excel:** CSPIT `Roll No` + `Student Name` (regular `24IT…` and diploma `D25IT…`). Set department/semester in import panel; batch auto from roll.
 
@@ -183,6 +184,11 @@ Subjects tab: check "Elective subject" → roster modal (Excel or paste) → ass
 | Student | 23IT001 | password123 |
 
 ## Last Updated
+
+**Coordinator PDF/Excel exports, editing capabilities, and bulk invite downloads** (2026-08-05):
+- Implemented PDF and Excel exporting for coordinators on the marks grid, masking NE student marks with a light-blue highlighted "NE" cell (AB marked as red "AB"). Excel downloads generate native, warning-free `.xlsx` files using `exceljs`.
+- Enabled coordinators to edit student marks and AB status in `DRAFT` status and added a "Save Marks" action button.
+- Replaced the Bulk Invite button with "Create accounts & download Excel" which auto-generates and downloads a native `.xlsx` sheet of created user IDs/emails and activation links.
 
 **CSPIT Excel import, teacher email slugs, Account Management UI** (2026-08-05)
 

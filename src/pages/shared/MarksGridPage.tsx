@@ -16,6 +16,10 @@ import { FlagType } from '../../types'
 import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge'
 import { StaffShell } from '../../components/staff'
 import apiClient from '../../api/client'
+import { FileText, FileSpreadsheet } from 'lucide-react'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import ExcelJS from 'exceljs'
 
 type RowState = {
   studentId: string
@@ -157,15 +161,31 @@ const MarksGridPage = () => {
   }
 
   const handleSubmit = async () => {
+    if (summary.blank > 0) {
+      setError('Cannot submit: all students must be graded, marked absent (AB), or marked not eligible (NE).')
+      return
+    }
     if (!assignmentId || !assessmentId || !confirm('Submit marks to coordinator? You cannot edit after this.')) return
     setError('')
     setMessage('')
+    setSaving(true)
     try {
+      await saveMarksBulk({
+        subjectAssignmentId: assignmentId,
+        assessmentId,
+        marks: rows.map((r) => ({
+          studentId: r.studentId,
+          marksObtained: r.isAb ? null : r.marksObtained === '' ? null : Number(r.marksObtained),
+          flag: r.isAb ? FlagType.AB : FlagType.NONE,
+        })),
+      })
       await submitMarks(assignmentId, assessmentId)
-      setMessage('Submitted')
+      setMessage('Marks submitted successfully')
       load()
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Submit failed'))
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -237,6 +257,140 @@ const MarksGridPage = () => {
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Unpublish failed'))
     }
+  }
+
+  const handleDownloadExcel = async () => {
+    if (!grid) return
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet('Marks')
+
+    worksheet.columns = [
+      { header: 'Sr', key: 'sr', width: 8 },
+      { header: 'Student ID', key: 'studentId', width: 15 },
+      { header: 'Name', key: 'name', width: 30 },
+      { header: 'Marks Obtained', key: 'marks', width: 18 }
+    ]
+
+    const headerRow = worksheet.getRow(1)
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } }
+    headerRow.eachCell((cell) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF1A365D' }
+      }
+      cell.alignment = { vertical: 'middle', horizontal: 'left' }
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      }
+    })
+    headerRow.height = 25
+
+    rows.forEach((row, index) => {
+      let markText: string | number = row.marksObtained === '' ? '—' : Number(row.marksObtained)
+      if (row.isNe) {
+        markText = 'NE'
+      } else if (row.isAb) {
+        markText = 'AB'
+      }
+
+      const addedRow = worksheet.addRow({
+        sr: index + 1,
+        studentId: row.rollNumber,
+        name: row.name,
+        marks: markText
+      })
+
+      const markCell = addedRow.getCell('marks')
+      if (row.isNe) {
+        markCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFD1ECF1' }
+        }
+        markCell.font = { bold: true, color: { argb: 'FF0C5460' } }
+        markCell.alignment = { horizontal: 'center' }
+      } else if (row.isAb) {
+        markCell.font = { bold: true, color: { argb: 'FFE53E3E' } }
+        markCell.alignment = { horizontal: 'center' }
+      } else {
+        markCell.alignment = { horizontal: 'left' }
+      }
+
+      addedRow.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+          left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+          bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+          right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
+        }
+        if (cell.value !== markText) {
+          cell.alignment = { vertical: 'middle', horizontal: 'left' }
+        }
+      })
+      addedRow.height = 20
+    })
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${grid.assignment.subject.code}_${grid.assessment.name}_marks.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  const handleDownloadPdf = () => {
+    if (!grid) return
+    const doc = new jsPDF()
+
+    doc.setFontSize(18)
+    doc.setTextColor(26, 54, 93)
+    doc.text(`${grid.assignment.subject.code} — ${grid.assessment.name}`, 14, 20)
+
+    doc.setFontSize(10)
+    doc.setTextColor(74, 85, 104)
+    doc.text(`Faculty: ${grid.assignment.faculty.name}`, 14, 28)
+    doc.text(`Max Marks: ${grid.assessment.maxMarks}  |  Semester: ${grid.assignment.semester}`, 14, 34)
+
+    autoTable(doc, {
+      startY: 40,
+      head: [['Sr', 'Student ID', 'Name', 'Marks Obtained']],
+      body: rows.map((r, i) => [
+        String(i + 1),
+        r.rollNumber,
+        r.name,
+        r.isNe ? 'NE' : r.isAb ? 'AB' : r.marksObtained || '—'
+      ]),
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.column.index === 3) {
+          const val = data.cell.text[0]
+          if (val === 'NE') {
+            data.cell.styles.fillColor = [209, 236, 241]
+            data.cell.styles.textColor = [12, 84, 96]
+            data.cell.styles.fontStyle = 'bold'
+          } else if (val === 'AB') {
+            data.cell.styles.textColor = [229, 62, 62]
+            data.cell.styles.fontStyle = 'bold'
+          }
+        }
+      },
+      headStyles: {
+        fillColor: [26, 54, 93],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+      },
+      theme: 'striped',
+    })
+
+    const filename = `${grid.assignment.subject.code}_${grid.assessment.name}_marks.pdf`
+    doc.save(filename)
   }
 
   const updateRow = (index: number, patch: Partial<RowState>) => {
@@ -346,15 +500,16 @@ const MarksGridPage = () => {
         {message && <div className="mt-4 bg-green-50 text-green-700 p-3 rounded text-sm">{message}</div>}
         {error && <div className="mt-4 bg-red-50 text-red-700 p-3 rounded text-sm">{error}</div>}
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by roll number or name…"
-            className="imms-input max-w-sm text-sm"
-            aria-label="Search students"
-          />
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by roll number or name…"
+              className="imms-input max-w-sm text-sm"
+              aria-label="Search students"
+            />
           <div className="flex overflow-hidden rounded-lg border border-outline-variant" role="group" aria-label="Filter by NE status">
             {([
               ['all', `All (${rows.length})`],
@@ -377,6 +532,25 @@ const MarksGridPage = () => {
               </button>
             ))}
           </div>
+          </div>
+          {isCoordinator && (
+            <div className="flex gap-2">
+              <button
+                onClick={handleDownloadPdf}
+                className="flex items-center gap-1.5 bg-red-700 hover:bg-red-800 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+              >
+                <FileText size={16} />
+                <span>Download PDF</span>
+              </button>
+              <button
+                onClick={handleDownloadExcel}
+                className="flex items-center gap-1.5 bg-green-700 hover:bg-green-800 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+              >
+                <FileSpreadsheet size={16} />
+                <span>Download Excel</span>
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="imms-card mt-4 overflow-x-auto">
@@ -389,7 +563,7 @@ const MarksGridPage = () => {
                 <th className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">Enter Marks</th>
                 {isCoordinator && <th className="px-4 py-3 text-center text-label-sm uppercase text-on-surface-variant">NE</th>}
                 {isTeacher && <th className="px-4 py-3 text-center text-label-sm uppercase text-on-surface-variant">NE</th>}
-                {isTeacher && <th className="px-4 py-3 text-center text-label-sm uppercase text-on-surface-variant">AB</th>}
+                {(isTeacher || isCoordinator) && <th className="px-4 py-3 text-center text-label-sm uppercase text-on-surface-variant">AB</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-variant">
@@ -412,12 +586,18 @@ const MarksGridPage = () => {
                       {row.name}
                     </td>
                     <td className="px-4 py-2">
-                      {isTeacher && isDraft ? (
+                      {(isTeacher || isCoordinator) && isDraft ? (
                         <input
                           type="number"
+                          min={0}
+                          max={maxMarks}
                           value={row.isAb ? '' : row.marksObtained}
                           disabled={row.isAb}
-                          onChange={(e) => updateRow(index, { marksObtained: e.target.value })}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            if (val !== '' && Number(val) < 0) return
+                            updateRow(index, { marksObtained: val })
+                          }}
                           className="imms-input w-20 py-1 text-sm"
                           aria-label={`Marks for ${row.name}`}
                         />
@@ -452,7 +632,7 @@ const MarksGridPage = () => {
                         )}
                       </td>
                     )}
-                    {isTeacher && (
+                    {(isTeacher || isCoordinator) && (
                       <td className="px-4 py-2 text-center">
                         <input
                           type="checkbox"
@@ -482,6 +662,13 @@ const MarksGridPage = () => {
         <div className="mt-4 flex flex-wrap gap-3">
           {isCoordinator && isDraft && (
             <>
+              <button
+                onClick={handleSaveMarks}
+                disabled={saving}
+                className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-container disabled:opacity-50"
+              >
+                Save Marks
+              </button>
               <button
                 onClick={handleSaveNe}
                 disabled={saving}

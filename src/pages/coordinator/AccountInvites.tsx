@@ -72,6 +72,8 @@ const AccountInvites = () => {
   const [email, setEmail] = useState('')
   const [addRole, setAddRole] = useState('STUDENT')
   const [addLoading, setAddLoading] = useState(false)
+  const [showBulkForm, setShowBulkForm] = useState(false)
+  const [showSingleForm, setShowSingleForm] = useState(false)
   const [rosterInvite, setRosterInvite] = useState<AccountInvite | null>(null)
   const [rosterName, setRosterName] = useState('')
   const [rosterDepartment, setRosterDepartment] = useState('IT')
@@ -258,6 +260,7 @@ const AccountInvites = () => {
       if (result.invites && result.invites.length > 0) {
         await downloadInviteLinksExcel(result.invites)
       }
+      setShowBulkForm(false)
     } catch (err: unknown) {
       const message =
         err && typeof err === 'object' && 'response' in err
@@ -287,6 +290,7 @@ const AccountInvites = () => {
       setEmail('')
       setIdentifier('')
       fetchInvites()
+      setShowSingleForm(false)
     } catch (err: unknown) {
       const message =
         err && typeof err === 'object' && 'response' in err
@@ -368,9 +372,33 @@ const AccountInvites = () => {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
+            onClick={() => {
+              setShowBulkForm(!showBulkForm)
+              setShowSingleForm(false)
+            }}
+            className={`inline-flex items-center px-3 py-2 text-sm font-semibold rounded-md border border-outline-variant cursor-pointer transition-colors ${
+              showBulkForm ? 'bg-primary text-white hover:bg-primary-container' : 'bg-surface-container-low text-primary hover:bg-surface-container'
+            }`}
+          >
+            {showBulkForm ? 'Close Bulk Invite' : 'Bulk Invite'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowSingleForm(!showSingleForm)
+              setShowBulkForm(false)
+            }}
+            className={`inline-flex items-center px-3 py-2 text-sm font-semibold rounded-md border border-outline-variant cursor-pointer transition-colors ${
+              showSingleForm ? 'bg-primary text-white hover:bg-primary-container' : 'bg-surface-container-low text-primary hover:bg-surface-container'
+            }`}
+          >
+            {showSingleForm ? 'Close Add Single' : 'Add Single'}
+          </button>
+          <button
+            type="button"
             onClick={handleCopyAllPending}
             disabled={linkLoadingId === 'all-pending'}
-            className="inline-flex items-center px-3 py-2 text-sm font-medium text-primary bg-primary-fixed/30 rounded-md hover:bg-surface-container disabled:opacity-60"
+            className="inline-flex items-center px-3 py-2 text-sm font-semibold text-primary bg-primary-fixed/30 rounded-md hover:bg-surface-container disabled:opacity-60 cursor-pointer"
           >
             {copiedKey === 'all-pending' ? (
               <>
@@ -407,115 +435,119 @@ const AccountInvites = () => {
         </div>
       )}
 
-      <div className="bg-surface-container-low p-4 rounded-md mb-6 border border-outline-variant">
-        <h3 className="text-lg font-medium text-on-surface mb-3">Bulk invite (paste student IDs)</h3>
-        <p className="text-xs text-on-surface-variant mb-2">
-          {bulkRole === 'COORDINATOR'
-            ? 'One coordinator email per line'
-            : bulkRole === 'STUDENT'
-              ? 'One roll number per line — college email is generated automatically'
-              : 'One ID per line — email is generated automatically'}
-        </p>
-        <textarea
-          value={bulkText}
-          onChange={(e) => setBulkText(e.target.value)}
-          rows={5}
-          placeholder={
-            bulkRole === 'COORDINATOR'
-              ? 'coordinator@charusat.ac.in'
-              : bulkRole === 'TEACHER'
-                ? 'nishatshaikh.it@charusat.ac.in\npriyankapatel.it@charusat.ac.in'
-                : '24IT093\n24IT094\n24IT095'
-          }
-          className="w-full border border-outline-variant rounded-md px-3 py-2 text-sm font-mono focus:ring-primary/20 focus:border-primary outline-none"
-          aria-label="Bulk account creation"
-        />
-        <div className="flex flex-wrap gap-3 mt-3">
-          <select
-            value={bulkRole}
-            onChange={(e) => setBulkRole(e.target.value)}
-            className="px-3 py-2 border border-outline-variant rounded-md text-sm bg-surface-container-lowest"
-          >
-            <option value="STUDENT">Students</option>
-            <option value="TEACHER">Teachers</option>
-            <option value="COORDINATOR">Coordinators</option>
-          </select>
-          <button
-            type="button"
-            onClick={handleBulkAdd}
-            disabled={bulkLoading}
-            className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-container disabled:opacity-50"
-          >
-            {bulkLoading ? 'Creating...' : 'Create accounts & download Excel'}
-          </button>
-        </div>
-        {bulkResult && (
-          <p className="mt-3 text-sm text-on-surface">
-            Created: {bulkResult.created} · Skipped: {bulkResult.skipped}
-            {bulkResult.errors.length > 0 && (
-              <span className="text-red-600"> · {bulkResult.errors.length} errors</span>
-            )}
+      {showBulkForm && (
+        <div className="bg-surface-container-low p-4 rounded-md mb-6 border border-outline-variant">
+          <h3 className="text-lg font-medium text-on-surface mb-3">Bulk invite (paste student IDs)</h3>
+          <p className="text-xs text-on-surface-variant mb-2">
+            {bulkRole === 'COORDINATOR'
+              ? 'One coordinator email per line'
+              : bulkRole === 'STUDENT'
+                ? 'One roll number per line — college email is generated automatically'
+                : 'One ID per line — email is generated automatically'}
           </p>
-        )}
-      </div>
-
-      <div className="bg-surface-container-low p-4 rounded-md mb-8 border border-outline-variant">
-        <h3 className="text-lg font-medium text-on-surface mb-4 flex items-center">
-          <UserPlus className="w-5 h-5 mr-2 text-primary" />
-          Add single account
-        </h3>
-        <form onSubmit={handleSingleAdd} className="flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row gap-3">
-            {addRole === 'STUDENT' ? (
-              <input
-                type="text"
-                required
-                placeholder="Roll (24IT093)"
-                className="w-full sm:w-40 px-3 py-2 border border-outline-variant rounded-md text-sm font-mono uppercase"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value.toUpperCase())}
-                disabled={addLoading}
-              />
-            ) : (
-              <input
-                type="email"
-                required
-                placeholder={
-                  addRole === 'TEACHER'
-                    ? 'nishatshaikh.it@charusat.ac.in'
-                    : 'coordinator@charusat.ac.in'
-                }
-                className="flex-1 px-3 py-2 border border-outline-variant rounded-md text-sm"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={addLoading}
-              />
-            )}
+          <textarea
+            value={bulkText}
+            onChange={(e) => setBulkText(e.target.value)}
+            rows={5}
+            placeholder={
+              bulkRole === 'COORDINATOR'
+                ? 'coordinator@charusat.ac.in'
+                : bulkRole === 'TEACHER'
+                  ? 'nishatshaikh.it@charusat.ac.in\npriyankapatel.it@charusat.ac.in'
+                  : '24IT093\n24IT094\n24IT095'
+            }
+            className="w-full border border-outline-variant rounded-md px-3 py-2 text-sm font-mono focus:ring-primary/20 focus:border-primary outline-none"
+            aria-label="Bulk account creation"
+          />
+          <div className="flex flex-wrap gap-3 mt-3">
             <select
-              className="w-full sm:w-40 px-3 py-2 border border-outline-variant rounded-md text-sm bg-surface-container-lowest"
-              value={addRole}
-              onChange={(e) => setAddRole(e.target.value)}
-              disabled={addLoading}
+              value={bulkRole}
+              onChange={(e) => setBulkRole(e.target.value)}
+              className="px-3 py-2 border border-outline-variant rounded-md text-sm bg-surface-container-lowest"
             >
-              <option value="STUDENT">Student</option>
-              <option value="TEACHER">Teacher</option>
-              <option value="COORDINATOR">Coordinator</option>
+              <option value="STUDENT">Students</option>
+              <option value="TEACHER">Teachers</option>
+              <option value="COORDINATOR">Coordinators</option>
             </select>
             <button
-              type="submit"
-              disabled={addLoading}
-              className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-container disabled:opacity-50"
+              type="button"
+              onClick={handleBulkAdd}
+              disabled={bulkLoading}
+              className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-container disabled:opacity-50 cursor-pointer"
             >
-              {addLoading ? 'Adding...' : 'Add'}
+              {bulkLoading ? 'Creating...' : 'Create accounts & download Excel'}
             </button>
           </div>
-          {previewEmail && addRole === 'STUDENT' && (
-            <p className="text-sm text-on-surface-variant">
-              Email will be: <span className="font-mono text-on-surface">{previewEmail}</span>
+          {bulkResult && (
+            <p className="mt-3 text-sm text-on-surface">
+              Created: {bulkResult.created} · Skipped: {bulkResult.skipped}
+              {bulkResult.errors.length > 0 && (
+                <span className="text-red-600"> · {bulkResult.errors.length} errors</span>
+              )}
             </p>
           )}
-        </form>
-      </div>
+        </div>
+      )}
+
+      {showSingleForm && (
+        <div className="bg-surface-container-low p-4 rounded-md mb-8 border border-outline-variant">
+          <h3 className="text-lg font-medium text-on-surface mb-4 flex items-center">
+            <UserPlus className="w-5 h-5 mr-2 text-primary" />
+            Add single account
+          </h3>
+          <form onSubmit={handleSingleAdd} className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              {addRole === 'STUDENT' ? (
+                <input
+                  type="text"
+                  required
+                  placeholder="Roll (24IT093)"
+                  className="w-full sm:w-40 px-3 py-2 border border-outline-variant rounded-md text-sm font-mono uppercase"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value.toUpperCase())}
+                  disabled={addLoading}
+                />
+              ) : (
+                <input
+                  type="email"
+                  required
+                  placeholder={
+                    addRole === 'TEACHER'
+                      ? 'nishatshaikh.it@charusat.ac.in'
+                      : 'coordinator@charusat.ac.in'
+                  }
+                  className="flex-1 px-3 py-2 border border-outline-variant rounded-md text-sm"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={addLoading}
+                />
+              )}
+              <select
+                className="w-full sm:w-40 px-3 py-2 border border-outline-variant rounded-md text-sm bg-surface-container-lowest"
+                value={addRole}
+                onChange={(e) => setAddRole(e.target.value)}
+                disabled={addLoading}
+              >
+                <option value="STUDENT">Student</option>
+                <option value="TEACHER">Teacher</option>
+                <option value="COORDINATOR">Coordinator</option>
+              </select>
+              <button
+                type="submit"
+                disabled={addLoading}
+                className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-container disabled:opacity-50 cursor-pointer"
+              >
+                {addLoading ? 'Adding...' : 'Add'}
+              </button>
+            </div>
+            {previewEmail && addRole === 'STUDENT' && (
+              <p className="text-sm text-on-surface-variant">
+                Email will be: <span className="font-mono text-on-surface">{previewEmail}</span>
+              </p>
+            )}
+          </form>
+        </div>
+      )}
 
       <div className="flex gap-2 mb-4">
         {(['STUDENT', 'TEACHER', 'COORDINATOR', 'ALL'] as RoleFilter[]).map((role) => (

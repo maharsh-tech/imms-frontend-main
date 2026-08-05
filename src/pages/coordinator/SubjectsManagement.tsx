@@ -76,6 +76,8 @@ const SubjectsManagement = () => {
   const [filterSemester, setFilterSemester] = useState('');
 
   const [expandedSubjects, setExpandedSubjects] = useState<Record<string, boolean>>({});
+  const [showAddSubject, setShowAddSubject] = useState(false);
+  const [showAddAssessment, setShowAddAssessment] = useState(false);
 
   const toggleRow = (subjectId: string) => {
     setExpandedSubjects((prev) => ({
@@ -227,6 +229,7 @@ const SubjectsManagement = () => {
       if (created.subjectType === 'ELECTIVE') {
         await handleOpenRoster(created);
       }
+      setShowAddSubject(false);
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Failed to create subject'));
     } finally {
@@ -253,6 +256,7 @@ const SubjectsManagement = () => {
       });
       setMessage('Assessment added — go to Assignments tab, click the exam link, and set NE students before marks entry.');
       load();
+      setShowAddAssessment(false);
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Failed to add assessment'));
     } finally {
@@ -362,46 +366,77 @@ const SubjectsManagement = () => {
         <div className="bg-red-50 border-l-4 border-red-400 p-3 text-sm text-red-700">{error}</div>
       )}
 
-      <div className="bg-surface-container-lowest rounded-lg shadow p-6 border border-outline-variant">
-        <h3 className="text-lg font-semibold mb-4">Add Subject</h3>
-        <form onSubmit={handleCreateSubject} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <input required placeholder="Code (IT301)" value={code} onChange={(e) => setCode(e.target.value)} className="border rounded px-3 py-2" />
-          <input required placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="border rounded px-3 py-2" />
-          <input required placeholder="Department" value={department} onChange={(e) => setDepartment(e.target.value)} className="border rounded px-3 py-2" />
-          <input required type="number" placeholder="Semester" value={semester} onChange={(e) => setSemester(Number(e.target.value))} className="border rounded px-3 py-2" />
-          <label className="flex items-center gap-2 text-sm text-on-surface border rounded px-3 py-2 sm:col-span-2">
-            <input
-              type="checkbox"
-              checked={isElective}
-              onChange={(e) => setIsElective(e.target.checked)}
-              className="rounded border-outline-variant"
-            />
-            Elective subject (import student roster after create)
-          </label>
-          <button type="submit" disabled={loading} className="bg-primary text-white rounded px-4 py-2 hover:bg-primary-container disabled:opacity-50 sm:col-span-2 lg:col-span-1">
-            Add Subject
-          </button>
-        </form>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setShowAddSubject(!showAddSubject);
+            setShowAddAssessment(false);
+          }}
+          className={`inline-flex items-center px-3 py-2 text-sm font-semibold rounded-md border border-outline-variant cursor-pointer transition-colors ${
+            showAddSubject ? 'bg-primary text-white hover:bg-primary-container' : 'bg-surface-container-low text-primary hover:bg-surface-container'
+          }`}
+        >
+          {showAddSubject ? 'Close Add Subject' : 'Add Subject'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setShowAddAssessment(!showAddAssessment);
+            setShowAddSubject(false);
+          }}
+          className={`inline-flex items-center px-3 py-2 text-sm font-semibold rounded-md border border-outline-variant cursor-pointer transition-colors ${
+            showAddAssessment ? 'bg-primary text-white hover:bg-primary-container' : 'bg-surface-container-low text-primary hover:bg-surface-container'
+          }`}
+        >
+          {showAddAssessment ? 'Close Add Assessment' : 'Add Assessment'}
+        </button>
       </div>
 
-      <div className="bg-surface-container-lowest rounded-lg shadow p-6 border border-outline-variant">
-        <h3 className="text-lg font-semibold mb-4">Add Assessment</h3>
-        <form onSubmit={handleAddAssessment} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <select required value={selectedSubjectId} onChange={(e) => setSelectedSubjectId(e.target.value)} className="border rounded px-3 py-2">
-            <option value="">Select subject</option>
-            {subjects.map((s) => (
-              <option key={s.id} value={s.id}>{s.code} — {s.name}</option>
-            ))}
-          </select>
-          <input required placeholder="Assessment name" value={assessmentName} onChange={(e) => setAssessmentName(e.target.value)} className="border rounded px-3 py-2" />
-          <input required type="number" placeholder="Max marks" value={maxMarks} onChange={(e) => setMaxMarks(e.target.value === '' ? '' : Number(e.target.value))} className="border rounded px-3 py-2" />
-          <input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} className="border rounded px-3 py-2" aria-label="Exam date" />
-          <input placeholder="Exam time (e.g. 10:00 AM)" value={examTime} onChange={(e) => setExamTime(e.target.value)} className="border rounded px-3 py-2" />
-          <button type="submit" disabled={loading} className="bg-green-600 text-white rounded px-4 py-2 hover:bg-green-700 disabled:opacity-50">
-            Add Assessment
-          </button>
-        </form>
-      </div>
+      {showAddSubject && (
+        <div className="bg-surface-container-lowest rounded-lg shadow p-6 border border-outline-variant">
+          <h3 className="text-lg font-semibold mb-4">Add Subject</h3>
+          <form onSubmit={handleCreateSubject} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <input required placeholder="Code (IT301)" value={code} onChange={(e) => setCode(e.target.value)} className="border rounded px-3 py-2" />
+            <input required placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="border rounded px-3 py-2" />
+            <input required placeholder="Department" value={department} onChange={(e) => setDepartment(e.target.value)} className="border rounded px-3 py-2" />
+            <input required type="number" placeholder="Semester" value={semester} onChange={(e) => setSemester(Number(e.target.value))} className="border rounded px-3 py-2" />
+            <label className="flex items-center gap-2 text-sm text-on-surface border rounded px-3 py-2 sm:col-span-2">
+              <input
+                type="checkbox"
+                checked={isElective}
+                onChange={(e) => setIsElective(e.target.checked)}
+                className="rounded border-outline-variant"
+              />
+              Elective subject (import student roster after create)
+            </label>
+            <button type="submit" disabled={loading} className="bg-primary text-white rounded px-4 py-2 hover:bg-primary-container disabled:opacity-50 sm:col-span-2 lg:col-span-1 cursor-pointer">
+              Add Subject
+            </button>
+          </form>
+        </div>
+      )}
+
+      {showAddAssessment && (
+        <div className="bg-surface-container-lowest rounded-lg shadow p-6 border border-outline-variant">
+          <h3 className="text-lg font-semibold mb-4">Add Assessment</h3>
+          <form onSubmit={handleAddAssessment} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <select required value={selectedSubjectId} onChange={(e) => setSelectedSubjectId(e.target.value)} className="border rounded px-3 py-2 bg-surface-container-lowest">
+              <option value="">Select subject</option>
+              {subjects.map((s) => (
+                <option key={s.id} value={s.id}>{s.code} — {s.name}</option>
+              ))}
+            </select>
+            <input required placeholder="Assessment name" value={assessmentName} onChange={(e) => setAssessmentName(e.target.value)} className="border rounded px-3 py-2" />
+            <input required type="number" placeholder="Max marks" value={maxMarks} onChange={(e) => setMaxMarks(e.target.value === '' ? '' : Number(e.target.value))} className="border rounded px-3 py-2" />
+            <input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} className="border rounded px-3 py-2" aria-label="Exam date" />
+            <input placeholder="Exam time (e.g. 10:00 AM)" value={examTime} onChange={(e) => setExamTime(e.target.value)} className="border rounded px-3 py-2" />
+            <button type="submit" disabled={loading} className="bg-green-600 text-white rounded px-4 py-2 hover:bg-green-700 disabled:opacity-50 cursor-pointer">
+              Add Assessment
+            </button>
+          </form>
+        </div>
+      )}
 
       <div className="bg-surface-container-lowest rounded-lg shadow p-4 border border-outline-variant flex flex-wrap gap-3">
         <input

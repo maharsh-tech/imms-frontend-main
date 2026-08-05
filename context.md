@@ -189,6 +189,7 @@ Subjects tab: check "Elective subject" → roster modal (Excel or paste) → ass
 - Converted `StaffTabBar` into `StaffSidebar` rendering vertical navigation links.
 - Updated `StaffShell` layout to render a sticky left vertical sidebar (260px wide) on desktop (>= 1024px) and a minimal top bar + slide-in drawer on mobile.
 - Refactored `Dashboard` state to integrate with `StaffShell` for tab swapping.
+- Converted creation and invite panels (Bulk Invite, Add Single Account, Add Subject, Add Assessment) into toggleable forms controlled by button triggers.
 
 **Coordinator PDF/Excel exports, editing capabilities, and bulk invite downloads** (2026-08-05):
 - Implemented PDF and Excel exporting for coordinators on the marks grid, masking NE student marks with a light-blue highlighted "NE" cell (AB marked as red "AB"). Excel downloads generate native, warning-free `.xlsx` files using `exceljs`.

@@ -102,7 +102,7 @@ imms-frontend/
 | Role | Shell | Notes |
 |---|---|---|
 | Student | `StudentShell` | Student Portal header, sidebar (desktop) / bottom nav (mobile), no profile photo |
-| Coordinator / Teacher | `StaffShell` | Portal header + logout; coordinator uses scrollable `StaffTabBar` |
+| Coordinator / Teacher | `StaffShell` | Left-aligned fixed sidebar (desktop) / slide-in drawer (mobile) with `StaffSidebar`. User info + Logout pinned to bottom |
 | Marks grid | `StaffShell` (wide) | Shared by coordinator and teacher at `/…/marks/:assignmentId/:assessmentId` |
 
 ## Implemented Features
@@ -184,6 +184,11 @@ Subjects tab: check "Elective subject" → roster modal (Excel or paste) → ass
 | Student | 23IT001 | password123 |
 
 ## Last Updated
+
+**Staff portal layout restructuring to vertical left-hand sidebar** (2026-08-05):
+- Converted `StaffTabBar` into `StaffSidebar` rendering vertical navigation links.
+- Updated `StaffShell` layout to render a sticky left vertical sidebar (260px wide) on desktop (>= 1024px) and a minimal top bar + slide-in drawer on mobile.
+- Refactored `Dashboard` state to integrate with `StaffShell` for tab swapping.
 
 **Coordinator PDF/Excel exports, editing capabilities, and bulk invite downloads** (2026-08-05):
 - Implemented PDF and Excel exporting for coordinators on the marks grid, masking NE student marks with a light-blue highlighted "NE" cell (AB marked as red "AB"). Excel downloads generate native, warning-free `.xlsx` files using `exceljs`.

@@ -26,3 +26,10 @@ export const bulkCreateAccountInvites = async (data: {
 export const deleteAccountInvite = async (id: string): Promise<void> => {
   await apiClient.delete(`/allowed-users/${id}`);
 };
+
+export const regenerateActivationLink = async (id: string): Promise<AccountInvite> => {
+  const response = await apiClient.post<AccountInvite>(
+    `/allowed-users/${id}/regenerate-activation-link`,
+  );
+  return response.data;
+};

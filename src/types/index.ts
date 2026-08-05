@@ -52,6 +52,7 @@ export interface AccountInvite {
   createdAt: string;
   isActivated: boolean;
   activationLink: string | null;
+  hasActivationToken?: boolean;
   rosterLinked?: boolean | null;
 }
 

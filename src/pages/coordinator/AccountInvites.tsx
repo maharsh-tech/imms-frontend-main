@@ -4,6 +4,7 @@ import {
   createAccountInvite,
   bulkCreateAccountInvites,
   deleteAccountInvite,
+  regenerateActivationLink,
 } from '../../api/allowedUsers'
 import type { AccountInvite, BulkCreateResult } from '../../types'
 import { createStudent } from '../../api/students'
@@ -61,6 +62,7 @@ const AccountInvites = () => {
   const [error, setError] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('STUDENT')
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  const [linkLoadingId, setLinkLoadingId] = useState<string | null>(null)
   const [bulkText, setBulkText] = useState('')
   const [bulkRole, setBulkRole] = useState('STUDENT')
   const [bulkLoading, setBulkLoading] = useState(false)
@@ -131,11 +133,47 @@ const AccountInvites = () => {
   }
 
   const handleCopyAllPending = async () => {
-    const lines = filteredInvites
-      .filter((i) => i.activationLink)
-      .map((i) => `${i.identifier ?? '—'}\t${i.email}\t${i.activationLink}`)
-    if (lines.length === 0) return
-    await handleCopy(lines.join('\n'), 'all-pending')
+    const pending = filteredInvites.filter((i) => !i.isActivated)
+    if (pending.length === 0) return
+    setLinkLoadingId('all-pending')
+    setError('')
+    try {
+      const lines = await Promise.all(
+        pending.map(async (invite) => {
+          const updated = await regenerateActivationLink(invite.id)
+          return `${invite.identifier ?? '—'}\t${invite.email}\t${updated.activationLink ?? ''}`
+        }),
+      )
+      await handleCopy(lines.join('\n'), 'all-pending')
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, 'Failed to generate activation links'))
+    } finally {
+      setLinkLoadingId(null)
+    }
+  }
+
+  const handleCopyActivationLink = async (invite: AccountInvite) => {
+    setLinkLoadingId(invite.id)
+    setError('')
+    try {
+      const updated = await regenerateActivationLink(invite.id)
+      if (!updated.activationLink) {
+        setError('Failed to generate activation link')
+        return
+      }
+      await handleCopy(updated.activationLink, invite.id)
+      setInvites((prev) =>
+        prev.map((i) =>
+          i.id === invite.id
+            ? { ...i, hasActivationToken: true, activationLink: updated.activationLink }
+            : i,
+        ),
+      )
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, 'Failed to generate activation link'))
+    } finally {
+      setLinkLoadingId(null)
+    }
   }
 
   const handleBulkAdd = async () => {
@@ -269,13 +307,16 @@ const AccountInvites = () => {
           <button
             type="button"
             onClick={handleCopyAllPending}
-            className="inline-flex items-center px-3 py-2 text-sm font-medium text-primary bg-primary-fixed/30 rounded-md hover:bg-surface-container"
+            disabled={linkLoadingId === 'all-pending'}
+            className="inline-flex items-center px-3 py-2 text-sm font-medium text-primary bg-primary-fixed/30 rounded-md hover:bg-surface-container disabled:opacity-60"
           >
             {copiedKey === 'all-pending' ? (
               <>
                 <Check className="w-4 h-4 mr-2" />
                 Copied all pending links
               </>
+            ) : linkLoadingId === 'all-pending' ? (
+              'Generating links...'
             ) : (
               <>
                 <Copy className="w-4 h-4 mr-2" />
@@ -498,21 +539,24 @@ const AccountInvites = () => {
                         Add to roster
                       </button>
                     )}
-                    {invite.activationLink && (
+                    {!invite.isActivated && (
                       <button
                         type="button"
-                        onClick={() => handleCopy(invite.activationLink!, invite.id)}
-                        className="inline-flex items-center text-primary hover:text-primary text-xs"
+                        onClick={() => handleCopyActivationLink(invite)}
+                        disabled={linkLoadingId === invite.id}
+                        className="inline-flex items-center text-primary hover:text-primary text-xs disabled:opacity-60"
                       >
                         {copiedKey === invite.id ? (
                           <>
                             <Check className="w-4 h-4 mr-1" />
                             Copied
                           </>
+                        ) : linkLoadingId === invite.id ? (
+                          'Generating...'
                         ) : (
                           <>
                             <Copy className="w-4 h-4 mr-1" />
-                            Copy link
+                            {invite.hasActivationToken ? 'Copy new link' : 'Copy activation link'}
                           </>
                         )}
                       </button>

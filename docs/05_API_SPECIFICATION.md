@@ -47,15 +47,17 @@ POST /auth/activate
 ```
 **Body:**
 ```json
-{ "token": "<activation-jwt>", "newPassword": "your-new-password" }
+{ "token": "<activation-jwt>", "newPassword": "NewPass1234" }
 ```
+
+Password rules: minimum 10 characters, at least one letter and one digit.
 
 **Response 200:**
 ```json
 { "message": "Account activated. You can now sign in with your new password." }
 ```
 
-Activation links are generated when coordinator creates a user: `{FRONTEND_URL}/activate?token=...` (7-day expiry, one-time use).
+Activation links are generated when coordinator creates a user (`POST /allowed-users` or bulk) or explicitly via `POST /allowed-users/:id/regenerate-activation-link`: `{FRONTEND_URL}/activate?token=...` (7-day expiry, one-time use). Listing accounts does **not** return links (only `hasActivationToken`).
 
 ---
 
@@ -73,7 +75,7 @@ Uses `imms_refresh_token` cookie. Refreshes `imms_access_token` cookie.
 ```
 POST /auth/logout
 ```
-Clears auth cookies.
+No access token required. Revokes session via `imms_refresh_token` cookie (`tokenVersion` bump when valid), then clears auth cookies.
 
 **Response 200:** `{ "message": "Logged out successfully" }`
 
@@ -197,42 +199,59 @@ Domain rules: `STUDENT` → `@charusat.edu.in`; `TEACHER`/`COORDINATOR` → `@ch
 ```json
 {
   "id": "cuid123",
-  "email": "student@charusat.edu.in",
+  "email": "24it093@charusat.edu.in",
   "role": "STUDENT",
-  "credentials": {
-    "email": "student@charusat.edu.in",
-    "activationLink": "http://localhost:5173/activate?token=..."
-  }
+  "identifier": "24IT093",
+  "isActivated": false,
+  "activationLink": "http://localhost:5173/activate?token=...",
+  "hasActivationToken": true,
+  "rosterLinked": false
 }
 ```
 
 ---
 
 ### 2.2 List Allowed Users
-`
-GET /allowed-users?role=TEACHER&page=1&limit=50
+```
+GET /allowed-users
 Roles: COORDINATOR
-`
-**Response 200:**
-`json
-{
-  "data": [
-    { "id": "cuid123", "email": "...", "role": "TEACHER", "name": "..." }
-  ],
-  "total": 45,
-  "page": 1,
-  "limit": 50
-}
-`
+```
+**Response 200:** Array of account rows. Pending users include `hasActivationToken` (whether an unused token exists) but **`activationLink` is always `null`** — links are not rotated on list load.
+
+```json
+[
+  {
+    "id": "cuid123",
+    "email": "24it093@charusat.edu.in",
+    "role": "STUDENT",
+    "identifier": "24IT093",
+    "isActivated": false,
+    "activationLink": null,
+    "hasActivationToken": true,
+    "rosterLinked": false
+  }
+]
+```
 
 ---
 
-### 2.3 Remove Allowed User
-`
+### 2.3 Regenerate Activation Link
+```
+POST /allowed-users/:id/regenerate-activation-link
+Roles: COORDINATOR
+```
+Issues a fresh activation link for a pending account. Invalidates any previous unused activation token for that user.
+
+**Response 200:** Same shape as create response, with `activationLink` populated.
+
+---
+
+### 2.4 Remove Allowed User
+```
 DELETE /allowed-users/:id
 Roles: COORDINATOR
-`
-**Response 200:** { "message": "User removed from whitelist" }
+```
+**Response 200:** `{ "success": true }`
 
 ---
 

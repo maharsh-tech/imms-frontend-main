@@ -159,7 +159,7 @@ Database seed runs in **backend only**: `cd imms-backend && npx prisma db seed`
 
 ## Coordinator: Account Management
 
-Create student/teacher/coordinator accounts, bulk paste IDs, filter by role, copy activation links (manual delivery — no automated email UI). Roster import/add requires account first (activation not required).
+Create student/teacher/coordinator accounts, bulk paste IDs, filter by role, copy activation links (manual delivery — no automated email UI). **Copy activation link** / **Copy all pending links** call `POST /allowed-users/:id/regenerate-activation-link` (issues a fresh token; invalidates any previous unused link). Listing accounts does not expose links — only `hasActivationToken`. Roster import/add requires account first (activation not required).
 
 **Student Excel:** CSPIT `Roll No` + `Student Name` (regular `24IT…` and diploma `D25IT…`). Set department/semester in import panel; batch auto from roll.
 
@@ -187,5 +187,7 @@ Subjects tab: check "Elective subject" → roster modal (Excel or paste) → ass
 **CSPIT Excel import, teacher email slugs, Account Management UI** (2026-08-05)
 
 **Docs sync — backend security hardening** (2026-08-05): API spec updated for change-password (`currentPassword`), password reset endpoints, `GET /health`, and `GET /audit`. No frontend UI yet for reset or audit viewer.
+
+**Post-audit bugfixes** (2026-08-05): Account Management copy-link flow via regenerate endpoint; activation password validation aligned (10 chars + letter + digit); logout no longer requires valid access cookie.
 
 **Student portal UI, auth pages, coordinator/teacher StaffShell + design tokens** (2026-08-03)

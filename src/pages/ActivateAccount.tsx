@@ -35,8 +35,12 @@ const ActivateAccount = () => {
     setError('')
 
     if (!token) return
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters long.')
+    if (newPassword.length < 10) {
+      setError('Password must be at least 10 characters long.')
+      return
+    }
+    if (!/[A-Za-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      setError('Password must contain at least one letter and one digit.')
       return
     }
     if (newPassword !== confirmPassword) {
@@ -114,8 +118,7 @@ const ActivateAccount = () => {
 
           <div className="flex items-start gap-sm rounded-lg bg-surface-container-low p-md">
             <p className="text-label-sm text-on-surface-variant">
-              Password must be at least 6 characters. Use a mix of letters, numbers, and symbols
-              for a stronger password.
+              Password must be at least 10 characters and include at least one letter and one digit.
             </p>
           </div>
 

@@ -36,7 +36,9 @@
 | File | Route | Purpose |
 |---|---|---|
 | `src/pages/Login.tsx` | `/login` | Sign-in form. Posts `{ loginId, password }` to `POST /auth/login`. Students use **roll number**; staff use **@charusat.ac.in** email. Redirects by role after success. |
-| `src/pages/ActivateAccount.tsx` | `/activate?token=…` | First-time password setup from coordinator activation link. Posts `{ token, newPassword }` to `POST /auth/activate`, then redirects to `/login?activated=1`. UI styled like “reset password”; this is **account activation**, not a forgot-password flow. |
+| `src/pages/ActivateAccount.tsx` | `/activate?token=…` | First-time password setup from coordinator activation link. Posts `{ token, newPassword }` to `POST /auth/activate`, then redirects to `/login?activated=1`. Password: min 10 chars, letter + digit. UI styled like “reset password”; this is **account activation**, not a forgot-password flow. |
+
+> **Not yet in UI:** `POST /auth/request-password-reset` and `POST /auth/reset-password` exist on the backend but have no frontend pages yet. `GET /audit` (coordinator audit log viewer) is also backend-only.
 
 Shared layout/components: `src/components/auth/` (`AuthShell`, `AuthCard`, `PasswordField`, `AuthAlert`).
 
@@ -183,5 +185,7 @@ Subjects tab: check "Elective subject" → roster modal (Excel or paste) → ass
 ## Last Updated
 
 **CSPIT Excel import, teacher email slugs, Account Management UI** (2026-08-05)
+
+**Docs sync — backend security hardening** (2026-08-05): API spec updated for change-password (`currentPassword`), password reset endpoints, `GET /health`, and `GET /audit`. No frontend UI yet for reset or audit viewer.
 
 **Student portal UI, auth pages, coordinator/teacher StaffShell + design tokens** (2026-08-03)

@@ -114,7 +114,58 @@ For non-student roles, `studentState` is `null`.
 ```
 POST /auth/change-password
 ```
-**Body:** `{ "newPassword": "..." }`
+**Body:**
+```json
+{
+  "currentPassword": "existing-password",
+  "newPassword": "NewPass123"
+}
+```
+Password rules: minimum 10 characters, at least one letter and one digit. On success, all existing refresh sessions are revoked (`tokenVersion` bump).
+
+---
+
+### 1.7 Request Password Reset
+```
+POST /auth/request-password-reset
+```
+**Body:** `{ "email": "student@charusat.edu.in" }`
+
+Always returns `{ "message": "If the email exists, a reset link has been sent." }` (no email enumeration). Issues a single-use token (60 min expiry) stored server-side. **Email delivery not implemented** — token is for future mail integration; coordinators can reset accounts via activation flow in dev.
+
+---
+
+### 1.8 Reset Password
+```
+POST /auth/reset-password
+```
+**Body:**
+```json
+{
+  "token": "one-time-reset-token",
+  "newPassword": "NewPass123"
+}
+```
+Consumes the reset token (single-use). Revokes all existing sessions on success.
+
+---
+
+### 1.9 Health Check
+```
+GET /health
+```
+No auth required. Used by load balancers / uptime monitors.
+
+**Response 200:**
+```json
+{
+  "status": "healthy",
+  "db": "ok",
+  "uptimeMs": 123456,
+  "checkedAt": "2026-08-05T12:00:00.000Z",
+  "latencyMs": 3
+}
+```
 
 ---
 
@@ -638,12 +689,16 @@ Roles: COORDINATOR
 ## 10. Audit Logs
 
 ### 10.1 Get Audit Logs
-`
-GET /audit?subjectId=cuid&userId=cuid&from=2026-01-01&to=2026-07-24&page=1&limit=50
+```
+GET /audit?subjectId=cuid&studentId=cuid&userId=cuid&from=2026-01-01&to=2026-07-24&page=1&limit=50
 Roles: COORDINATOR
-`
+```
+Filter params (all optional): `subjectId`, `studentId`, `userId`, `from`, `to`, `page` (default 1), `limit` (default 50, max 100).
+
+Returns mark value changes (`INSERT`/`UPDATE`), submission transitions (`SUBMIT`/`UNLOCK`/`PUBLISH`), and roster link events (`LINK`).
+
 **Response 200:**
-`json
+```json
 {
   "data": [
     {
@@ -651,16 +706,17 @@ Roles: COORDINATOR
       "action": "UPDATE",
       "tableName": "marks",
       "recordId": "cuid_mark",
-      "previousValue": { "marksObtained": 20 },
-      "newValue": { "marksObtained": 25 },
-      "user": { "name": "John Teacher", "role": "TEACHER" },
+      "markId": "cuid_mark",
+      "previousValue": { "marksObtained": 20, "flag": "NONE" },
+      "newValue": { "marksObtained": 25, "flag": "NONE" },
+      "user": { "name": "John Teacher", "email": "...", "role": "TEACHER" },
       "createdAt": "2026-07-24T10:30:00Z"
     }
   ],
   "total": 120,
   "page": 1
 }
-`
+```
 
 ---
 

@@ -1,3 +1,3 @@
 export { default as StaffShell } from './StaffShell'
-export { default as StaffTabBar } from './StaffTabBar'
-export type { StaffTab } from './StaffTabBar'
+export { default as StaffSidebar } from './StaffSidebar'
+export type { StaffTab } from './StaffSidebar'

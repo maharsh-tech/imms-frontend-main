@@ -5,7 +5,7 @@ import StudentsManagement from './StudentsManagement'
 import FacultyManagement from './FacultyManagement'
 import SubjectsManagement from './SubjectsManagement'
 import AssignmentsManagement from './AssignmentsManagement'
-import { StaffShell, StaffTabBar } from '../../components/staff'
+import { StaffShell } from '../../components/staff'
 import { Users, GraduationCap, BookOpen, Layers, Link2 } from 'lucide-react'
 import apiClient from '../../api/client'
 
@@ -37,6 +37,9 @@ export default function CoordinatorDashboard() {
       userLabel={user?.name || user?.email}
       onLogout={handleLogout}
       wide
+      tabs={tabs}
+      activeTab={tab}
+      onTabChange={setTab}
     >
       <header className="mb-md">
         <h1 className="text-headline-lg-mobile font-semibold text-primary lg:text-headline-lg">
@@ -46,8 +49,6 @@ export default function CoordinatorDashboard() {
           Manage accounts, rosters, subjects, and marks workflow
         </p>
       </header>
-
-      <StaffTabBar tabs={tabs} active={tab} onChange={setTab} />
 
       {tab === 'invites' && <AccountInvites />}
       {tab === 'students' && <StudentsManagement />}

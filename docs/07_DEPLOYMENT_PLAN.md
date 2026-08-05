@@ -57,14 +57,6 @@ JWT_EXPIRES_IN=15m
 REFRESH_TOKEN_SECRET=<another-strong-secret>
 REFRESH_TOKEN_EXPIRES_IN=7d
 
-# Google OAuth
-GOOGLE_CLIENT_ID=<from-google-cloud-console>
-GOOGLE_CLIENT_SECRET=<from-google-cloud-console>
-GOOGLE_CALLBACK_URL=https://api.imms.yourdomain.com/api/v1/auth/google/callback
-
-# Domain Restriction — CRITICAL
-ALLOWED_EMAIL_DOMAIN=college.ac.in
-
 # App
 NODE_ENV=production
 PORT=3000
@@ -76,7 +68,6 @@ CORS_ORIGINS=https://imms.yourdomain.com
 
 ```env
 VITE_API_BASE_URL=https://api.imms.yourdomain.com/api/v1
-VITE_GOOGLE_CLIENT_ID=<same as backend>
 ```
 
 > **IMPORTANT:** Never commit `.env` files to Git. Use `.env.example` templates only.
@@ -175,25 +166,15 @@ npx prisma migrate deploy
 4. Copy **Pooled URI** (port 6543) → set as `DATABASE_URL`
 5. Append `?pgbouncer=true&connection_limit=1` to `DATABASE_URL`
 
-### Step 2: Google Cloud Console
-1. console.cloud.google.com → New Project: **IMMS**
-2. Enable **Google+ API**
-3. OAuth Consent Screen → add institutional domain to Authorized Domains
-4. Create OAuth 2.0 Client ID (type: Web Application)
-5. Add Authorized Redirect URIs:
-   - `https://api.imms.yourdomain.com/api/v1/auth/google/callback` (production)
-   - `http://localhost:3000/api/v1/auth/google/callback` (development)
-6. Save **Client ID** and **Client Secret**
-
-### Step 3: Railway Backend
+### Step 2: Railway Backend
 1. Create account at railway.app
 2. New Project → Deploy from GitHub → select `imms` repo
 3. Set root directory to `backend/`
-4. Add ALL environment variables from Section 4 (including `ALLOWED_EMAIL_DOMAIN`)
+4. Add ALL environment variables from Section 4
 5. Railway detects Dockerfile and builds automatically
 6. Assign custom domain: `api.imms.yourdomain.com`
 
-### Step 4: Database Migrations
+### Step 3: Database Migrations
 ```bash
 # Run from local machine with DIRECT_URL in your local .env:
 npx prisma migrate deploy
@@ -202,13 +183,13 @@ npx prisma migrate deploy
 npx prisma db seed
 ```
 
-### Step 5: Vercel Frontend
+### Step 4: Vercel Frontend
 1. Import repo at vercel.com
 2. Framework: **Vite** | Root dir: `frontend/` | Output dir: `dist/`
-3. Add `VITE_API_BASE_URL` and `VITE_GOOGLE_CLIENT_ID`
+3. Add `VITE_API_BASE_URL`
 4. Deploy and assign custom domain: `imms.yourdomain.com`
 
-### Step 6: Run Smoke Tests (Section 11)
+### Step 5: Run Smoke Tests (Section 11)
 
 ---
 
@@ -238,7 +219,7 @@ Mitigations already in place:
 Run after every production deployment:
 
 **Authentication and Domain Restriction**
-- [ ] Coordinator logs in with institutional Google account → coordinator dashboard
+- [ ] Coordinator logs in with institutional email/password → coordinator dashboard
 - [ ] Teacher logs in → sees only assigned subjects
 - [ ] Student logs in → sees marksheet or appropriate state message (NOT blank screen)
 - [ ] Login with non-institutional email (e.g. @gmail.com) → domain blocked error shown
@@ -297,8 +278,7 @@ Run after every production deployment:
 
 - [ ] HTTPS enforced on all routes (Vercel and Railway enforce by default)
 - [ ] `JWT_SECRET` minimum 64 chars — generate: `openssl rand -base64 64`
-- [ ] `ALLOWED_EMAIL_DOMAIN` set to correct institutional domain (e.g. `college.ac.in`)
-- [ ] Google OAuth redirect URI exactly matches registered URI — no wildcards
+- [ ] Role-specific email domains enforced at registration and login
 - [ ] `CORS_ORIGINS` set to exact frontend URL — NOT wildcard `*`
 - [ ] Rate limiting on `/auth` endpoints enabled (`@nestjs/throttler`)
 - [ ] `DATABASE_URL` never exposed to frontend build or logs

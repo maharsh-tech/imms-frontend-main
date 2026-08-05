@@ -97,19 +97,20 @@ model AllowedUser {
 }
 
 // ─────────────────────────────────────────────
-// USERS (after Google OAuth login)
+// USERS (email/password — created on account activation)
 // ─────────────────────────────────────────────
 
 model User {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  name       String
-  googleId   String   @unique
-  profilePic String?
-  role       Role
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  email               String   @unique
+  name                String
+  passwordHash        String
+  needsPasswordChange Boolean  @default(true)
+  profilePic          String?
+  role                Role
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   allowedUserId String      @unique
   allowedUser   AllowedUser @relation(fields: [allowedUserId], references: [id])
@@ -314,14 +315,16 @@ model AuditLog {
 ## 3. Table Descriptions
 
 ### 3.1 allowed_users
-Pre-registration whitelist. Coordinator adds emails here before anyone can log in. Determines role on first Google OAuth login.
+Pre-registration whitelist. Coordinator adds emails here before anyone can log in. Determines role when the user record is created at activation.
 
 ### 3.2 users
-Created on first successful Google login. Links to `allowed_users` via id. 
-**Security invariant:** The application-layer logic (NestJS AuthService) must explicitly assert `googleEmail === allowedUser.email` before inserting a new user. The schema relations no longer enforce this automatically. *(Note: This assertion is a requirement for the upcoming Authentication implementation in Epic 1.3; it does not exist in code yet).* Role cannot be changed post-creation without coordinator intervention.
+Created when the user completes activation (`POST /auth/activate`) and sets their password. Links to `allowed_users` via id.
+**Security invariant:** `AuthService` validates that the activation token email matches `allowedUser.email` and that the email domain matches the assigned role before creating the user. Role cannot be changed post-creation without coordinator intervention.
+
+> **Code status:** Google OAuth is **not implemented**. There is no `googleId` column; auth uses `passwordHash` and `needsPasswordChange`.
 
 ### 3.3 students
-Imported via Excel. Linked to User on first login via email match. If no Google account exists yet, userId is null.
+Imported via Excel. Linked to User on first login via email match. If the user has not activated yet, userId is null.
 
 ### 3.4 faculty
 Imported via Excel. Linked to User on first login. Must exist before subject assignment.

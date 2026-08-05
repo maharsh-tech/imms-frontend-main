@@ -46,7 +46,9 @@ IMMS operates in three phases per semester:
 
 ### 3.1 Authentication Module
 
-**FR-AUTH-01:** The system shall use **email/password authentication** with **Plan A onboarding**: coordinator registers users, student receives an **activation link**, sets password once, then signs in normally. No Google OAuth.
+**FR-AUTH-01:** The system shall use **email/password authentication** with **Plan A onboarding**: coordinator registers users, student receives an **activation link**, sets password once, then signs in normally.
+
+> **Code status:** Google OAuth is **not implemented**. Auth is email/password + JWT only (`POST /auth/login`, `POST /auth/activate`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`).
 
 **FR-AUTH-02 (Domain Restriction):** Email domain is enforced by role on the backend:
 - `COORDINATOR` and `TEACHER` → `@charusat.ac.in` only
@@ -73,7 +75,7 @@ IMMS operates in three phases per semester:
 
 **FR-COORD-01: Student Import**
 - The Coordinator shall upload an Excel file (.xlsx) containing student data.
-- Required columns: Roll Number, Full Name, Email (Google), Department, Semester, Batch/Year.
+- Required columns: Roll Number, Full Name, Email, Department, Semester, Batch/Year.
 - The system shall validate the file structure before processing.
 - The import process shall act as an 'upsert'. If a Roll Number already exists, it will update their `Semester` and other details. This acts as the semester promotion mechanism.
 - **NE (Not Eligible) is not imported via Excel.** NE is flagged per exam by the Coordinator before each internal (see FR-COORD-06).
@@ -81,7 +83,7 @@ IMMS operates in three phases per semester:
 
 **FR-COORD-02: Faculty Import**
 - The Coordinator shall upload an Excel file (.xlsx) containing faculty data.
-- Required columns: Faculty ID, Full Name, Email (Google), Department.
+- Required columns: Faculty ID, Full Name, Email, Department.
 - Same validation rules as student import apply.
 
 **FR-COORD-03: Subject Management**
@@ -220,7 +222,6 @@ IMMS operates in three phases per semester:
 - Mobile-friendly but optimized for desktop
 
 ### 5.2 External APIs
-- Google OAuth 2.0 (authentication)
 - Supabase Postgres (database)
 - (Optional) SendGrid or Nodemailer (email notifications — P2)
 
@@ -233,7 +234,7 @@ IMMS operates in three phases per semester:
 
 ## 6. Constraints
 
-- All users must have a Google account to use the system
+- All users must use an institutional email matching their role domain before first login
 - The Coordinator must pre-register user emails before first login
 - Marks cannot be altered by students under any condition
 - Submitted marks require Coordinator intervention to edit

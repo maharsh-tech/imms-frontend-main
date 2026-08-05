@@ -22,8 +22,6 @@
 
 **Milestone 1: Complete** (pending your testing)
 
-> Auth pivot: Google OAuth tasks replaced by email/password + activation link (see `02_SRS.md`).
-
 ---
 
 ### Epic 1.1 — Project Scaffolding
@@ -61,18 +59,18 @@ est new imms-backend) | 1h | Backend |
 
 | # | Task | Est. Hours | Owner |
 |---|---|---|---|
-| 1.3.1 | Configure Google OAuth app in Google Cloud Console | 0.5h | Backend |
-| 1.3.2 | Install and configure passport-google-oauth20 | 1h | Backend |
-| 1.3.3 | Implement Google strategy (check AllowedUser whitelist) | 2h | Backend |
+| 1.3.1 | Implement activation token issuance when coordinator adds allowed user | 1h | Backend |
+| 1.3.2 | Implement `POST /auth/activate` (set password, create User from AllowedUser) | 2h | Backend |
+| 1.3.3 | Implement email/password login with AllowedUser whitelist + domain checks | 2h | Backend |
 | 1.3.4 | Implement JWT access token issuance (15min expiry) | 1h | Backend |
 | 1.3.5 | Implement refresh token storage and rotation | 1.5h | Backend |
 | 1.3.6 | Implement JWT guard and RolesGuard | 1.5h | Backend |
-| 1.3.7 | **Domain restriction middleware**: validate email ends with ALLOWED_EMAIL_DOMAIN before whitelist check | 1h | Backend |
+| 1.3.7 | **Domain restriction**: validate email domain matches role before login | 1h | Backend |
 | 1.3.8 | **Student identity matching**: after student auth, query Student table by email; return studentState (NO_RECORD / UNPUBLISHED / PUBLISHED) | 1.5h | Backend |
 | 1.3.9 | `GET /auth/me` endpoint | 0.5h | Backend |
 | 1.3.10 | `POST /auth/logout` endpoint | 0.5h | Backend |
-| 1.3.11 | Frontend: Login page with "Sign in with Google" button | 1h | Frontend |
-| 1.3.12 | Frontend: Handle OAuth callback, store tokens | 1.5h | Frontend |
+| 1.3.11 | Frontend: Login page (email/password) | 1h | Frontend |
+| 1.3.12 | Frontend: Activate account page (`/activate?token=…`) | 1.5h | Frontend |
 | 1.3.13 | Frontend: Axios interceptor for auto-refresh on 401 | 1.5h | Frontend |
 | 1.3.14 | Frontend: PrivateRoute and RoleRoute components | 1h | Frontend |
 | 1.3.15 | Frontend: Zustand auth store (user state, logout) | 1h | Frontend |

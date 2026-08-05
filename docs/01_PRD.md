@@ -36,7 +36,7 @@ Academic institutions currently manage examination marks through disconnected Ex
 - Support Excel-based bulk import for students and faculty
 - Handle AB (Absent) and NE (Not Eligible) flags — NE marks always hidden from students on marksheet
 - Retain all historical marks while restricting student view to only their current semester
-- Match student Google login to their roll number record; show clear status when record is unlinked
+- Match student login to their roll number record; show clear status when record is unlinked
 
 ---
 
@@ -76,7 +76,7 @@ Academic institutions currently manage examination marks through disconnected Ex
 ### 6.1 Authentication and Authorization
 | ID | Requirement | Priority |
 |---|---|---|
-| AUTH-01 | Email/password login with **Plan A activation link** onboarding (no Google OAuth) | P0 |
+| AUTH-01 | Email/password login with **Plan A activation link** onboarding | P0 |
 | AUTH-02 | **Domain restriction by role**: staff `@charusat.ac.in`, students `@charusat.edu.in` | P0 |
 | AUTH-03 | Role assigned when coordinator pre-registers email in AllowedUser whitelist | P0 |
 | AUTH-04 | Session via **httpOnly JWT cookies** (15min access / 7d refresh) — not in localStorage | P0 |
@@ -143,7 +143,7 @@ Academic institutions currently manage examination marks through disconnected Ex
 - As a Teacher, I want to submit marks in one click so I do not accidentally leave them in draft.
 
 ### Student
-- As a Student, I want to log in with my Google account and see my current semester's marks immediately after publication.
+- As a Student, I want to log in with my institutional email and password and see my current semester's marks immediately after publication.
 - As a Student, I want to download my marksheet as a PDF for visa and job applications.
 
 ---
@@ -177,7 +177,7 @@ Academic institutions currently manage examination marks through disconnected Ex
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Institution uses non-Google email accounts | Medium | High | Allow coordinator to map external emails to Google accounts |
+| User email domain does not match role (staff vs student) | Medium | High | Enforce role-specific domains at registration and login; coordinator uses correct institutional email per role |
 | Excel format inconsistency across batches | High | Medium | Provide strict template download; validate on upload |
 | PDF library performance at bulk generation | Medium | Medium | Queue-based PDF generation for bulk exports |
 | Supabase free tier connection limits | Medium | High | Use connection pooling (PgBouncer) built into Supabase |

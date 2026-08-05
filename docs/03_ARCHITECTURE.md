@@ -65,6 +65,8 @@ IMMS follows a **3-tier web architecture** with a clear separation between:
 | ORM | Prisma | Type-safe DB access, migrations, schema as code |
 | Database | PostgreSQL (Supabase) | Managed Postgres, built-in auth (unused here), storage |
 | Authentication | Email/password + activation link (Plan A); JWT in httpOnly cookies |
+
+> **Google OAuth:** Not implemented in code. No Google OAuth routes, strategies, or env vars are used by the application.
 | PDF Generation | @react-pdf/renderer or Puppeteer | PDF marksheets and reports |
 | Excel Parsing | xlsx (SheetJS) | Robust .xlsx parsing in Node.js |
 | Deployment | Vercel (FE) + Railway/Render (BE) | Zero-config, free tier viable for this scale |

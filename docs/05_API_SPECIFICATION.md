@@ -16,7 +16,7 @@ POST /auth/login
 ```
 **Body:**
 ```json
-{ "loginId": "dev@charusat.ac.in", "password": "..." }
+{ "loginId": "dev.it@charusat.ac.in", "password": "..." }
 ```
 
 Students use roll number: `{ "loginId": "24IT093", "password": "..." }`
@@ -26,7 +26,7 @@ Students use roll number: `{ "loginId": "24IT093", "password": "..." }`
 {
   "user": {
     "id": "cuid123",
-    "email": "dev@charusat.ac.in",
+    "email": "dev.it@charusat.ac.in",
     "name": "John Doe",
     "role": "TEACHER",
     "needsPasswordChange": false
@@ -90,7 +90,7 @@ Requires valid access cookie.
 {
   "user": {
     "id": "cuid123",
-    "email": "dev@charusat.ac.in",
+    "email": "dev.it@charusat.ac.in",
     "name": "John Doe",
     "role": "TEACHER",
     "needsPasswordChange": false
@@ -125,12 +125,19 @@ POST /auth/change-password
 POST /allowed-users
 Roles: COORDINATOR
 ```
-**Body:**
+**Body (student — identifier auto-generates email):**
 ```json
-{
-  "email": "student@charusat.edu.in",
-  "role": "STUDENT"
-}
+{ "role": "STUDENT", "identifier": "24IT093" }
+```
+
+**Body (teacher — full institutional email):**
+```json
+{ "role": "TEACHER", "email": "nishatshaikh.it@charusat.ac.in" }
+```
+
+**Body (coordinator):**
+```json
+{ "email": "coordinator@charusat.ac.in", "role": "COORDINATOR" }
 ```
 
 Domain rules: `STUDENT` → `@charusat.edu.in`; `TEACHER`/`COORDINATOR` → `@charusat.ac.in`.
@@ -186,7 +193,14 @@ POST /students/import
 Roles: COORDINATOR
 Content-Type: multipart/form-data
 `
-**Body:** Form field ile (.xlsx file)
+**Body:** Form field `file` (.xlsx file)
+
+**Query params (required unless noted):**
+- `department` — e.g. `IT`
+- `semester` — e.g. `5`
+- `batch` — optional; auto-derives from roll when omitted (`24IT` → `2024-2028`, `D25IT` → `D2025-2028`)
+
+**CSPIT columns:** `Roll No`, `Student Name` (ignores `Sr No`). Supports regular and diploma rolls.
 
 **Response 200:**
 `json
@@ -256,6 +270,11 @@ Roles: COORDINATOR
 Content-Type: multipart/form-data
 `
 Same pattern as student import.
+
+**Query params:**
+- `department` — optional, default `IT`
+
+**Formats:** CSPIT single-column name list (matched to Account Management), or structured sheet with email slug + name.
 
 ---
 

@@ -6,7 +6,7 @@ import {
 } from '../../api/import'
 import ExcelImportCard from '../../components/shared/ExcelImportCard'
 import { groupStudentsByBatch, formatBatchOptionLabel } from '../../utils/roll-batch'
-import { isValidRollNumber, normalizeRollInput } from '../../utils/identifier-patterns'
+import { isValidRollNumber, normalizeRollInput, deriveBatchFromRollNumber } from '../../utils/identifier-patterns'
 import { GraduationCap, ChevronDown, ChevronUp, Search, UserPlus } from 'lucide-react'
 
 const apiErrorMessage = (err: unknown, fallback: string): string => {
@@ -32,7 +32,7 @@ const StudentsManagement = () => {
   const [name, setName] = useState('')
   const [department, setDepartment] = useState('IT')
   const [semester, setSemester] = useState('5')
-  const [batch, setBatch] = useState('2023-2027')
+  const [batch, setBatch] = useState('')
 
   const loadStudents = async () => {
     setLoading(true)
@@ -85,7 +85,7 @@ const StudentsManagement = () => {
     e.preventDefault()
     const roll = normalizeRollInput(rollNumber)
     if (!isValidRollNumber(roll)) {
-      setError('Roll number must match format 24IT093')
+      setError('Roll number must match format 24IT093 or D25IT131 (diploma)')
       return
     }
     setAddLoading(true)
@@ -96,7 +96,7 @@ const StudentsManagement = () => {
         name: name.trim(),
         department: department.trim(),
         semester: Number.parseInt(semester, 10),
-        batch: batch.trim(),
+        batch: batch.trim() || deriveBatchFromRollNumber(roll),
       })
       setRollNumber('')
       setName('')
@@ -119,7 +119,7 @@ const StudentsManagement = () => {
         <input
           type="text"
           required
-          placeholder="Roll (24IT093)"
+          placeholder="Roll (24IT093 or D25IT131)"
           value={rollNumber}
           onChange={(e) => setRollNumber(e.target.value.toUpperCase())}
           className="px-3 py-2 border border-outline-variant rounded-md text-sm font-mono"
@@ -157,7 +157,7 @@ const StudentsManagement = () => {
         <input
           type="text"
           required
-          placeholder="Batch (2024-2028)"
+          placeholder="Batch (optional — auto from roll)"
           value={batch}
           onChange={(e) => setBatch(e.target.value)}
           className="px-3 py-2 border border-outline-variant rounded-md text-sm"
@@ -184,7 +184,7 @@ const StudentsManagement = () => {
             Students
           </h2>
           <p className="text-sm text-on-surface-variant mt-1">
-            All students in the database, grouped by batch (e.g. 24IT). Students sign in with roll
+            All students in the database, grouped by batch (e.g. 24IT, D25IT diploma). Students sign in with roll
             number only.
           </p>
         </div>
@@ -211,13 +211,56 @@ const StudentsManagement = () => {
       {showAdd && addForm}
 
       {showImport && (
-        <ExcelImportCard
-          title="Student Import"
-          description="Upload .xlsx to add or update roster rows. Account must exist in Account Management first. Email is auto from roll number."
-          onDownloadTemplate={downloadStudentTemplate}
-          onImport={importStudents}
-          onImportComplete={handleImportComplete}
-        />
+        <div className="space-y-4">
+          <div className="bg-surface-container-low border border-outline-variant rounded-lg p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label className="text-sm">
+              <span className="block text-xs font-medium text-on-surface-variant mb-1">Department (import default)</span>
+              <input
+                type="text"
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
+                aria-label="Import department default"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="block text-xs font-medium text-on-surface-variant mb-1">Semester (import default)</span>
+              <input
+                type="number"
+                min={1}
+                max={12}
+                value={semester}
+                onChange={(e) => setSemester(e.target.value)}
+                className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
+                aria-label="Import semester default"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="block text-xs font-medium text-on-surface-variant mb-1">Batch override (optional)</span>
+              <input
+                type="text"
+                placeholder="Auto from roll if empty"
+                value={batch}
+                onChange={(e) => setBatch(e.target.value)}
+                className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
+                aria-label="Import batch override"
+              />
+            </label>
+          </div>
+          <ExcelImportCard
+            title="Student Import"
+            description="Upload CSPIT roster (.xlsx): Roll No + Student Name columns. Supports regular (24IT…) and diploma (D25IT…) rolls. Account must exist in Account Management first."
+            onDownloadTemplate={downloadStudentTemplate}
+            onImport={(file) =>
+              importStudents(file, {
+                department: department.trim(),
+                semester: Number.parseInt(semester, 10),
+                ...(batch.trim() ? { batch: batch.trim() } : {}),
+              })
+            }
+            onImportComplete={handleImportComplete}
+          />
+        </div>
       )}
 
       {error && (

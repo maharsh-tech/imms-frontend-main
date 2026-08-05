@@ -94,7 +94,7 @@ const Login = () => {
                 required
                 value={loginId}
                 onChange={(e) => setLoginId(e.target.value)}
-                placeholder="24IT093 or dev@charusat.ac.in"
+                placeholder="24IT093 or nishatshaikh.it@charusat.ac.in"
                 className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest py-3 pl-10 pr-4 text-body-md transition-all outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>

@@ -6,7 +6,6 @@ import {
   deleteAccountInvite,
 } from '../../api/allowedUsers'
 import type { AccountInvite, BulkCreateResult } from '../../types'
-import { normalizeTeacherCodeInput } from '../../utils/identifier-patterns'
 import { createStudent } from '../../api/students'
 import { Trash2, UserPlus, Copy, Check, X } from 'lucide-react'
 
@@ -16,6 +15,7 @@ const buildPreviewEmail = (identifier: string, role: string): string => {
   const id = identifier.trim().toLowerCase()
   if (!id) return ''
   const domain = role === 'STUDENT' ? 'charusat.edu.in' : 'charusat.ac.in'
+  if (id.includes('@')) return id
   return `${id}@${domain}`
 }
 
@@ -27,17 +27,19 @@ const parseBulkLines = (
   for (const line of text.split('\n')) {
     const trimmed = line.trim()
     if (!trimmed) continue
-    if (role === 'COORDINATOR') {
-      entries.push({ email: trimmed.toLowerCase() })
+    if (role === 'COORDINATOR' || role === 'TEACHER') {
+      if (trimmed.includes('@')) {
+        entries.push({ email: trimmed.toLowerCase() })
+      } else if (role === 'TEACHER') {
+        entries.push({ identifier: trimmed.toLowerCase() })
+      } else {
+        entries.push({ email: trimmed.toLowerCase() })
+      }
       continue
     }
     const id = trimmed.split(/[,\t\s]+/)[0]?.trim()
     if (!id) continue
-    if (role === 'TEACHER') {
-      entries.push({ identifier: normalizeTeacherCodeInput(id) })
-    } else {
-      entries.push({ identifier: id.toUpperCase() })
-    }
+    entries.push({ identifier: id.toUpperCase() })
   }
   return entries
 }
@@ -75,10 +77,12 @@ const AccountInvites = () => {
   const [rosterLoading, setRosterLoading] = useState(false)
 
 
-  const previewEmail = useMemo(
-    () => (addRole === 'COORDINATOR' ? email : buildPreviewEmail(identifier, addRole)),
-    [identifier, addRole, email],
-  )
+  const previewEmail = useMemo(() => {
+    if (addRole === 'COORDINATOR' || addRole === 'TEACHER') {
+      return email.trim().toLowerCase()
+    }
+    return buildPreviewEmail(identifier, addRole)
+  }, [identifier, addRole, email])
 
   const fetchInvites = async () => {
     try {
@@ -141,7 +145,7 @@ const AccountInvites = () => {
         bulkRole === 'COORDINATOR'
           ? 'Add one email per line for coordinators'
           : bulkRole === 'TEACHER'
-            ? 'Add one 3-letter teacher code per line (e.g. ABC)'
+            ? 'Add one teacher email per line (e.g. nishatshaikh.it@charusat.ac.in)'
             : 'Add one ID per line (e.g. 24IT093)',
       )
       return
@@ -167,19 +171,18 @@ const AccountInvites = () => {
 
   const handleSingleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (addRole === 'COORDINATOR' && !email.trim()) return
-    if (addRole !== 'COORDINATOR' && !identifier.trim()) return
+    if ((addRole === 'COORDINATOR' || addRole === 'TEACHER') && !email.trim()) return
+    if (addRole === 'STUDENT' && !identifier.trim()) return
     setAddLoading(true)
     setError('')
     try {
       await createAccountInvite({
         role: addRole,
-        identifier: addRole !== 'COORDINATOR'
-          ? addRole === 'TEACHER'
-            ? normalizeTeacherCodeInput(identifier)
-            : identifier.trim().toUpperCase()
-          : undefined,
-        email: addRole === 'COORDINATOR' ? email.trim().toLowerCase() : undefined,
+        identifier: addRole === 'STUDENT' ? identifier.trim().toUpperCase() : undefined,
+        email:
+          addRole === 'COORDINATOR' || addRole === 'TEACHER'
+            ? email.trim().toLowerCase()
+            : undefined,
       })
       setEmail('')
       setIdentifier('')
@@ -258,8 +261,8 @@ const AccountInvites = () => {
           </h2>
           <p className="text-sm text-on-surface-variant mt-1">
             Students sign in with roll number (<span className="font-mono">24IT093</span>). Teachers
-            use a unique 3-letter code (<span className="font-mono">ABC</span>) →{' '}
-            <span className="font-mono">abc@charusat.ac.in</span> for login.
+            sign in with institutional email (
+            <span className="font-mono">nishatshaikh.it@charusat.ac.in</span>).
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -318,7 +321,7 @@ const AccountInvites = () => {
             bulkRole === 'COORDINATOR'
               ? 'coordinator@charusat.ac.in'
               : bulkRole === 'TEACHER'
-                ? 'ABC\nDEF\nGHI'
+                ? 'nishatshaikh.it@charusat.ac.in\npriyankapatel.it@charusat.ac.in'
                 : '24IT093\n24IT094\n24IT095'
           }
           className="w-full border border-outline-variant rounded-md px-3 py-2 text-sm font-mono focus:ring-primary/20 focus:border-primary outline-none"
@@ -360,28 +363,25 @@ const AccountInvites = () => {
         </h3>
         <form onSubmit={handleSingleAdd} className="flex flex-col gap-3">
           <div className="flex flex-col sm:flex-row gap-3">
-            {addRole !== 'COORDINATOR' ? (
+            {addRole === 'STUDENT' ? (
               <input
                 type="text"
                 required
-                placeholder={addRole === 'TEACHER' ? 'Code (ABC)' : 'Roll (24IT093)'}
-                maxLength={addRole === 'TEACHER' ? 3 : undefined}
+                placeholder="Roll (24IT093)"
                 className="w-full sm:w-40 px-3 py-2 border border-outline-variant rounded-md text-sm font-mono uppercase"
                 value={identifier}
-                onChange={(e) =>
-                  setIdentifier(
-                    addRole === 'TEACHER'
-                      ? normalizeTeacherCodeInput(e.target.value)
-                      : e.target.value.toUpperCase(),
-                  )
-                }
+                onChange={(e) => setIdentifier(e.target.value.toUpperCase())}
                 disabled={addLoading}
               />
             ) : (
               <input
                 type="email"
                 required
-                placeholder="coordinator@charusat.ac.in"
+                placeholder={
+                  addRole === 'TEACHER'
+                    ? 'nishatshaikh.it@charusat.ac.in'
+                    : 'coordinator@charusat.ac.in'
+                }
                 className="flex-1 px-3 py-2 border border-outline-variant rounded-md text-sm"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -406,7 +406,7 @@ const AccountInvites = () => {
               {addLoading ? 'Adding...' : 'Add'}
             </button>
           </div>
-          {previewEmail && addRole !== 'COORDINATOR' && (
+          {previewEmail && addRole === 'STUDENT' && (
             <p className="text-sm text-on-surface-variant">
               Email will be: <span className="font-mono text-on-surface">{previewEmail}</span>
             </p>

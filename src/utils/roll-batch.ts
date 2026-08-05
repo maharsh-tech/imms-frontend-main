@@ -1,7 +1,7 @@
 import type { Student } from '../api/students'
 
 export const parseRollBatchPrefix = (rollNumber: string): string => {
-  const match = rollNumber.trim().match(/^(\d{2}[A-Za-z]{2})/)
+  const match = rollNumber.trim().match(/^((?:D)?\d{2}[A-Za-z]{2})/)
   return match ? match[1].toUpperCase() : 'OTHER'
 }
 
@@ -38,8 +38,10 @@ export const groupStudentsByBatch = (students: Student[]): BatchGroup[] => {
 
       return { prefix, semesterLabel, count: sorted.length, students: sorted }
     })
-    .sort((a, b) => b.prefix.localeCompare(a.prefix, undefined, { numeric: true }))
+    .sort((a, b) => a.prefix.localeCompare(b.prefix, undefined, { numeric: true }))
 }
 
-export const formatBatchOptionLabel = (group: BatchGroup): string =>
-  `${group.prefix} (${group.semesterLabel} · ${group.count} students)`
+export const formatBatchOptionLabel = (group: BatchGroup): string => {
+  const diplomaTag = group.prefix.startsWith('D') ? ' · Diploma' : ''
+  return `${group.prefix} (${group.semesterLabel} · ${group.count} students${diplomaTag})`
+}

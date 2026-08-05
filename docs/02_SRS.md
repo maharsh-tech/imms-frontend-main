@@ -75,7 +75,9 @@ IMMS operates in three phases per semester:
 
 **FR-COORD-01: Student Import**
 - The Coordinator shall upload an Excel file (.xlsx) containing student data.
-- Required columns: Roll Number, Full Name, Email, Department, Semester, Batch/Year.
+- **CSPIT format:** `Roll No`, `Student Name` (optional `Sr No` column ignored). Department and semester come from import defaults in the UI; batch auto-derives from roll (`24IT` → `2024-2028`, `D25IT` → `D2025-2028` diploma).
+- Also accepts legacy columns: Department, Semester, Batch, Email when present.
+- Roll numbers: regular `24IT093` and diploma `D25IT131`.
 - The system shall validate the file structure before processing.
 - The import process shall act as an 'upsert'. If a Roll Number already exists, it will update their `Semester` and other details. This acts as the semester promotion mechanism.
 - **NE (Not Eligible) is not imported via Excel.** NE is flagged per exam by the Coordinator before each internal (see FR-COORD-06).
@@ -83,7 +85,8 @@ IMMS operates in three phases per semester:
 
 **FR-COORD-02: Faculty Import**
 - The Coordinator shall upload an Excel file (.xlsx) containing faculty data.
-- Required columns: Faculty ID, Full Name, Email, Department.
+- **CSPIT format:** single-column name list (`DR./MR./MS.` prefixes stripped) matched to existing teacher accounts by name; department defaults to IT unless overridden.
+- **Structured format:** Email slug (e.g. `nishatshaikh.it`), Full Name, optional Department.
 - Same validation rules as student import apply.
 
 **FR-COORD-03: Subject Management**

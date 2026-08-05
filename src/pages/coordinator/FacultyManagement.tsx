@@ -8,8 +8,8 @@ import {
 } from '../../api/import'
 import ExcelImportCard from '../../components/shared/ExcelImportCard'
 import {
-  isValidTeacherCode,
-  normalizeTeacherCodeInput,
+  isValidTeacherSlug,
+  teacherSlugFromEmailInput,
 } from '../../utils/identifier-patterns'
 import { BookOpen, ChevronDown, ChevronUp, Search, UserPlus } from 'lucide-react'
 
@@ -23,11 +23,6 @@ const apiErrorMessage = (err: unknown, fallback: string): string => {
   return err instanceof Error ? err.message : fallback
 }
 
-const buildPreviewEmail = (code: string): string => {
-  const normalized = normalizeTeacherCodeInput(code)
-  return normalized ? `${normalized.toLowerCase()}@charusat.ac.in` : ''
-}
-
 const FacultyManagement = () => {
   const [faculty, setFaculty] = useState<Faculty[]>([])
   const [loading, setLoading] = useState(true)
@@ -37,7 +32,7 @@ const FacultyManagement = () => {
   const [showImport, setShowImport] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [addLoading, setAddLoading] = useState(false)
-  const [teacherCode, setTeacherCode] = useState('')
+  const [teacherEmail, setTeacherEmail] = useState('')
   const [name, setName] = useState('')
   const [department, setDepartment] = useState('IT')
 
@@ -78,24 +73,24 @@ const FacultyManagement = () => {
       .sort((a, b) => a.facultyCode.localeCompare(b.facultyCode))
   }, [faculty, search, deptFilter])
 
-  const previewEmail = buildPreviewEmail(teacherCode)
+  const previewSlug = teacherSlugFromEmailInput(teacherEmail)
 
   const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault()
-    const code = normalizeTeacherCodeInput(teacherCode)
-    if (!isValidTeacherCode(code)) {
-      setError('Teacher code must be exactly 3 letters')
+    const slug = teacherSlugFromEmailInput(teacherEmail)
+    if (!isValidTeacherSlug(slug)) {
+      setError('Teacher email must match firstnamelastname.dept (e.g. nishatshaikh.it@charusat.ac.in)')
       return
     }
     setAddLoading(true)
     setError('')
     try {
       await createFaculty({
-        facultyCode: code,
+        facultyCode: slug,
         name: name.trim(),
         department: department.trim(),
       })
-      setTeacherCode('')
+      setTeacherEmail('')
       setName('')
       await loadFaculty()
       setShowAdd(false)
@@ -114,14 +109,13 @@ const FacultyManagement = () => {
       </h3>
       <form onSubmit={handleAddTeacher} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <input
-          type="text"
+          type="email"
           required
-          maxLength={3}
-          placeholder="Code (ABC)"
-          value={teacherCode}
-          onChange={(e) => setTeacherCode(normalizeTeacherCodeInput(e.target.value))}
-          className="px-3 py-2 border border-outline-variant rounded-md text-sm font-mono uppercase"
-          aria-label="Teacher code"
+          placeholder="nishatshaikh.it@charusat.ac.in"
+          value={teacherEmail}
+          onChange={(e) => setTeacherEmail(e.target.value)}
+          className="px-3 py-2 border border-outline-variant rounded-md text-sm sm:col-span-2"
+          aria-label="Teacher email"
         />
         <input
           type="text"
@@ -149,10 +143,11 @@ const FacultyManagement = () => {
           {addLoading ? 'Adding…' : 'Add teacher'}
         </button>
       </form>
-      {previewEmail && (
+      {previewSlug && isValidTeacherSlug(previewSlug) && (
         <p className="text-xs text-on-surface-variant mt-2">
-          Login email: <span className="font-mono text-on-surface">{previewEmail}</span> · account must
-          exist in Account Management first
+          Login email:{' '}
+          <span className="font-mono text-on-surface">{previewSlug}@charusat.ac.in</span> · account
+          must exist in Account Management first
         </p>
       )}
     </div>
@@ -167,8 +162,8 @@ const FacultyManagement = () => {
             Faculty
           </h2>
           <p className="text-sm text-on-surface-variant mt-1">
-            All teachers in the database. Each has a unique 3-letter teacher code. Sign in with
-            @charusat.ac.in email and password.
+            All teachers in the database. Sign in with institutional email (
+            <span className="font-mono">firstname.lastname.dept@charusat.ac.in</span>) and password.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -194,13 +189,27 @@ const FacultyManagement = () => {
       {showAdd && addForm}
 
       {showImport && (
-        <ExcelImportCard
-          title="Faculty Import"
-          description="Upload .xlsx — Teacher Code column (3 letters). Account must exist in Account Management first."
-          onDownloadTemplate={downloadFacultyTemplate}
-          onImport={importFaculty}
-          onImportComplete={loadFaculty}
-        />
+        <div className="space-y-4">
+          <div className="bg-surface-container-low border border-outline-variant rounded-lg p-4 max-w-xs">
+            <label className="text-sm block">
+              <span className="block text-xs font-medium text-on-surface-variant mb-1">Department (import default)</span>
+              <input
+                type="text"
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
+                aria-label="Import department default"
+              />
+            </label>
+          </div>
+          <ExcelImportCard
+            title="Faculty Import"
+            description="Upload CSPIT staff list (.xlsx): single-column names (DR./MR./MS.) matched to Account Management, or structured sheet with Teacher Code. Account must exist first."
+            onDownloadTemplate={downloadFacultyTemplate}
+            onImport={(file) => importFaculty(file, { department: department.trim() })}
+            onImportComplete={loadFaculty}
+          />
+        </div>
       )}
 
       {error && (
@@ -217,7 +226,7 @@ const FacultyManagement = () => {
           <div className="bg-surface-container-lowest shadow rounded-lg p-8 border border-outline-variant text-center">
             <p className="text-on-surface-variant">No teachers yet.</p>
             <p className="text-sm text-on-surface-variant mt-2">
-              Create accounts in Account Management with 3-letter codes, then add a teacher above or import Excel.
+              Create accounts in Account Management with teacher emails, then add a teacher above or import Excel.
             </p>
           </div>
         </div>
@@ -233,7 +242,7 @@ const FacultyManagement = () => {
                 <input
                   id="faculty-search"
                   type="search"
-                  placeholder="Code, name, email, or department…"
+                  placeholder="Email slug, name, or department…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="block w-full pl-9 pr-3 py-2 border border-outline-variant rounded-md text-sm focus:ring-primary/20 focus:border-primary"
@@ -267,13 +276,10 @@ const FacultyManagement = () => {
               <thead className="bg-surface-container-low">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">
-                    Teacher Code
+                    Email
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">
                     Name
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">
-                    Email
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">
                     Department
@@ -283,16 +289,15 @@ const FacultyManagement = () => {
               <tbody className="divide-y divide-surface-variant">
                 {filteredRows.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-sm text-on-surface-variant text-center">
+                    <td colSpan={3} className="px-4 py-6 text-sm text-on-surface-variant text-center">
                       No teachers match your filters.
                     </td>
                   </tr>
                 ) : (
                   filteredRows.map((member) => (
                     <tr key={member.id} className="hover:bg-surface-container-low">
-                      <td className="px-4 py-2 text-sm font-mono font-medium">{member.facultyCode}</td>
+                      <td className="px-4 py-2 text-sm font-mono font-medium">{member.email}</td>
                       <td className="px-4 py-2 text-sm text-on-surface">{member.name}</td>
-                      <td className="px-4 py-2 text-sm text-on-surface-variant">{member.email}</td>
                       <td className="px-4 py-2 text-sm text-on-surface-variant">{member.department}</td>
                     </tr>
                   ))

@@ -366,21 +366,25 @@ The system does not calculate grades, pass/fail status, or percentages, as its s
 > Edit `templateHeader` / `headers` arrays there when the college changes format. Templates regenerate automatically.
 
 ### Students Excel Template
-| Column | Field | Required |
+| Column | Field | Required in file |
 |---|---|---|
-| Roll Number | rollNumber | Yes |
-| Full Name | name | Yes |
-| Email | email | Yes |
-| Department | department | Yes |
-| Semester | semester | Yes |
-| Batch | batch | Yes |
+| Roll No | rollNumber | Yes |
+| Student Name | name | Yes |
+| Department | department | No — import default (UI) |
+| Semester | semester | No — import default (UI) |
+| Batch | batch | No — auto from roll (`24IT`→`2024-2028`, `D25IT`→`D2025-2028`) |
+| Email | email | No — auto from roll number |
+
+**Roll formats:** `24IT093` (B.Tech), `D25IT131` (diploma).
 
 > **NE is not an import column.** Coordinator flags NE per exam in the marks workflow (Milestone 2). Stored on each `marks` row (`flag = NE`), not on the student profile.
 
 ### Faculty Excel Template
-| Column | Field | Required |
+| Column | Field | Required in file |
 |---|---|---|
-| Faculty ID | facultyCode | Yes |
-| Full Name | name | Yes |
-| Email | email | Yes |
-| Department | department | Yes |
+| Email slug | facultyCode | Yes (structured format only) |
+| Full Name / name list | name | Yes |
+| Department | department | No — import default (UI, default IT) |
+| Email | email | No — auto from slug (`slug@charusat.ac.in`) |
+
+**Name-list format:** first column only (e.g. `CSPIT-IT STAFF.xlsx`) — no headers; names matched to Account Management teacher accounts.

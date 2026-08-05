@@ -159,6 +159,12 @@ Database seed runs in **backend only**: `cd imms-backend && npx prisma db seed`
 
 Create student/teacher/coordinator accounts, bulk paste IDs, filter by role, copy activation links (manual delivery — no automated email UI). Roster import/add requires account first (activation not required).
 
+**Student Excel:** CSPIT `Roll No` + `Student Name` (regular `24IT…` and diploma `D25IT…`). Set department/semester in import panel; batch auto from roll.
+
+**Faculty Excel:** CSPIT name list (single column) matched to accounts by name, or structured sheet with email slug + name.
+
+**Teacher accounts:** institutional email `firstnamelastname.dept@charusat.ac.in` (e.g. `nishatshaikh.it@charusat.ac.in`) — not 3-letter codes. Bulk paste one email per line.
+
 ## Subjects: Core vs Elective
 
 - **Core** — all students in same department + semester appear on marks grid automatically
@@ -171,9 +177,11 @@ Subjects tab: check "Elective subject" → roster modal (Excel or paste) → ass
 | Role | Login | Password |
 |------|-------|----------|
 | Coordinator | coordinator@charusat.ac.in | password123 |
-| Teacher | dev@charusat.ac.in | password123 |
+| Teacher | dev.it@charusat.ac.in | password123 |
 | Student | 23IT001 | password123 |
 
 ## Last Updated
+
+**CSPIT Excel import, teacher email slugs, Account Management UI** (2026-08-05)
 
 **Student portal UI, auth pages, coordinator/teacher StaffShell + design tokens** (2026-08-03)

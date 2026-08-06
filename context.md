@@ -185,6 +185,12 @@ Subjects tab: check "Elective subject" → roster modal (Excel or paste) → ass
 
 ## Last Updated
 
+**Consolidated Save Action, Floating Actions Panel, & Toast Notifications** (2026-08-06):
+- Consolidated individual "Save Marks" and "Save NE Flags" buttons into a single "Save Changes" action button.
+- Designed a responsive, floating actions panel positioned fixed at the middle right on desktop (utilizing padding-right offset on the page wrapper to avoid overlapping table content), and as a sticky bottom bar on mobile viewports.
+- Introduced custom animated self-dismissing Toast notifications to notify the user of successful or failed actions.
+- Styled Excel and PDF exports with custom background fill colors: soft blue for NE, soft red for AB, and soft purple for combined AB+NE.
+
 **Staff portal layout restructuring to vertical left-hand sidebar** (2026-08-05):
 - Converted `StaffTabBar` into `StaffSidebar` rendering vertical navigation links.
 - Updated `StaffShell` layout to render a sticky left vertical sidebar (260px wide) on desktop (>= 1024px) and a minimal top bar + slide-in drawer on mobile.

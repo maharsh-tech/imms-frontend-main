@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { ArrowLeft, ArrowRight, CheckCircle, KeyRound, Lock } from 'lucide-react'
-import { useSearchParams, useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import apiClient from '../api/client'
 import { AuthAlert, AuthCard, AuthShell, PasswordField } from '../components/auth'
+import { consumeActivationTokenFromUrl } from '../utils/activation-token'
 
 const getStrengthLevel = (password: string): number => {
   if (password.length === 0) return 0
@@ -13,10 +14,8 @@ const getStrengthLevel = (password: string): number => {
 }
 
 const ActivateAccount = () => {
-  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const token = searchParams.get('token') ?? ''
-
+  const [token, setToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
@@ -25,10 +24,13 @@ const ActivateAccount = () => {
   const strengthLevel = useMemo(() => getStrengthLevel(newPassword), [newPassword])
 
   useEffect(() => {
-    if (!token) {
-      setError('Invalid activation link. Ask your coordinator for a new one.')
+    const parsed = consumeActivationTokenFromUrl()
+    if (parsed) {
+      setToken(parsed)
+      return
     }
-  }, [token])
+    setError('Invalid activation link. Ask your coordinator for a new one.')
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

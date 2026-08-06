@@ -10,21 +10,12 @@ import {
 import { setNEVisibility } from '../../api/marks';
 import type { SubjectAssignment, Subject, Faculty } from '../../api/subjects';
 import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge';
+import { apiErrorMessage } from '../../utils/api-errors';
 
 const defaultAcademicYear = () => {
   const y = new Date().getFullYear();
   const m = new Date().getMonth();
   return m >= 6 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
-};
-
-const apiErrorMessage = (err: unknown, fallback: string): string => {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const message = (err as { response?: { data?: { message?: string | string[] } } }).response?.data
-      ?.message;
-    if (Array.isArray(message)) return message[0] ?? fallback;
-    if (message) return message;
-  }
-  return err instanceof Error ? err.message : fallback;
 };
 
 const AssignmentsManagement = () => {

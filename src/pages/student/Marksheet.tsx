@@ -23,14 +23,24 @@ const StudentMarksheet = () => {
   const loadMarksheet = async (silent = false) => {
     if (!silent) setLoading(true)
     try {
-      const me = await apiClient.get('/auth/me')
-      setStudentState(me.data.studentState)
-      if (me.data.studentState === 'NO_RECORD') {
+      const [meRes, sheetRes] = await Promise.allSettled([
+        apiClient.get('/auth/me'),
+        getMyMarksheet()
+      ])
+
+      const me = meRes.status === 'fulfilled' ? meRes.value : null
+      const studentState = me?.data?.studentState
+      setStudentState(studentState ?? null)
+
+      if (studentState === 'NO_RECORD') {
         setData(null)
         return
       }
-      const sheet = await getMyMarksheet()
-      setData(sheet as MarksheetData)
+
+      const sheet = sheetRes.status === 'fulfilled' ? sheetRes.value : null
+      if (sheet) {
+        setData(sheet as MarksheetData)
+      }
     } finally {
       if (!silent) setLoading(false)
     }

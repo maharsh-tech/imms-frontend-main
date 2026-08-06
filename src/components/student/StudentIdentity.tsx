@@ -10,9 +10,9 @@ type StudentIdentityProps = {
 const StudentIdentity = ({ name, rollNumber, semester }: StudentIdentityProps) => {
   return (
     <section className="mb-xl">
-      <h1 className="mb-1 text-headline-lg-mobile text-primary lg:text-headline-lg">
+      <h2 className="mb-1 text-headline-lg-mobile text-primary lg:text-headline-lg">
         My Marksheet
-      </h1>
+      </h2>
       <div className="flex flex-wrap items-center gap-2 text-on-surface-variant">
         <span className="rounded-full bg-secondary-container px-3 py-1 text-label-md text-on-secondary-container">
           {name.toUpperCase()}

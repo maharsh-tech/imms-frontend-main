@@ -5,12 +5,11 @@ import {
   bulkCreateAccountInvites,
   deleteAccountInvite,
   regenerateActivationLink,
-  regenerateAllPendingLinks,
 } from '../../api/allowedUsers'
 import type { AccountInvite, BulkCreateResult } from '../../types'
 import { createStudent } from '../../api/students'
 import { Trash2, UserPlus, Copy, Check, X } from 'lucide-react'
-import ExcelJS from 'exceljs'
+import { apiErrorMessage } from '../../utils/api-errors'
 
 type RoleFilter = 'ALL' | 'STUDENT' | 'TEACHER' | 'COORDINATOR'
 
@@ -47,16 +46,6 @@ const parseBulkLines = (
   return entries
 }
 
-
-const apiErrorMessage = (err: unknown, fallback: string): string => {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const message = (err as { response?: { data?: { message?: string | string[] } } }).response?.data
-      ?.message
-    if (Array.isArray(message)) return message[0] ?? fallback
-    if (message) return message
-  }
-  return err instanceof Error ? err.message : fallback
-}
 
 const AccountInvites = () => {
   const [invites, setInvites] = useState<AccountInvite[]>([])
@@ -96,7 +85,11 @@ const AccountInvites = () => {
 
   const fetchInvites = async (pageNum = page) => {
     try {
-      const result = await getAccountInvites({ page: pageNum, limit: pageSize })
+      const params: PaginationParams & { role?: string } = { page: pageNum, limit: pageSize }
+      if (roleFilter !== 'ALL') {
+        params.role = roleFilter
+      }
+      const result = await getAccountInvites(params)
       setInvites(result.data)
       setTotalInvites(result.total)
       setTotalPages(Math.max(1, Math.ceil(result.total / result.limit)))
@@ -114,7 +107,7 @@ const AccountInvites = () => {
 
   useEffect(() => {
     fetchInvites(1)
-  }, [])
+  }, [roleFilter])
 
   const handlePageChange = (nextPage: number) => {
     if (nextPage < 1 || nextPage > totalPages) return
@@ -122,24 +115,19 @@ const AccountInvites = () => {
     void fetchInvites(nextPage)
   }
 
-  const pendingRosterCount = useMemo(
-    () =>
-      invites.filter(
-        (i) =>
-          (i.role === 'STUDENT' || i.role === 'TEACHER') && i.rosterLinked === false,
-      ).length,
-    [invites],
-  )
+  const pendingRosterCount = useMemo(() => {
+    return invites.filter(
+      (i) => (i.role === 'STUDENT' || i.role === 'TEACHER') && i.rosterLinked === false,
+    ).length
+  }, [invites])
 
   const filteredInvites = useMemo(() => {
-    const list =
-      roleFilter === 'ALL' ? invites : invites.filter((i) => i.role === roleFilter)
-    return [...list].sort((a, b) =>
+    return [...invites].sort((a, b) =>
       (a.identifier ?? a.email).localeCompare(b.identifier ?? b.email, undefined, {
         numeric: true,
       }),
     )
-  }, [invites, roleFilter])
+  }, [invites])
 
 
 
@@ -147,23 +135,6 @@ const AccountInvites = () => {
     await navigator.clipboard.writeText(value)
     setCopiedKey(key)
     setTimeout(() => setCopiedKey(null), 2000)
-  }
-
-  const handleCopyAllPending = async () => {
-    setLinkLoadingId('all-pending')
-    setError('')
-    try {
-      const { links } = await regenerateAllPendingLinks()
-      const lines = links.map(
-        (l) => `${l.identifier ?? '—'}\t${l.email}\t${l.activationLink}`,
-      )
-      await handleCopy(lines.join('\n'), 'all-pending')
-      await fetchInvites(page)
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Failed to generate activation links'))
-    } finally {
-      setLinkLoadingId(null)
-    }
   }
 
   const handleCopyActivationLink = async (invite: AccountInvite) => {
@@ -191,6 +162,7 @@ const AccountInvites = () => {
   }
 
   const downloadInviteLinksExcel = async (createdInvites: AccountInvite[]) => {
+    const ExcelJS = (await import('exceljs')).default
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet('Activation Links')
 
@@ -375,9 +347,7 @@ const AccountInvites = () => {
             Account Management
           </h2>
           <p className="text-sm text-on-surface-variant mt-1">
-            Students sign in with roll number (<span className="font-mono">24IT093</span>). Teachers
-            sign in with institutional email (
-            <span className="font-mono">nishatshaikh.it@charusat.ac.in</span>).
+            Students sign in with their roll number. Teachers and coordinators sign in with their institutional email.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -404,26 +374,6 @@ const AccountInvites = () => {
             }`}
           >
             {showSingleForm ? 'Close Add Single' : 'Add Single'}
-          </button>
-          <button
-            type="button"
-            onClick={handleCopyAllPending}
-            disabled={linkLoadingId === 'all-pending'}
-            className="inline-flex items-center px-3 py-2 text-sm font-semibold text-primary bg-primary-fixed/30 rounded-md hover:bg-surface-container disabled:opacity-60 cursor-pointer"
-          >
-            {copiedKey === 'all-pending' ? (
-              <>
-                <Check className="w-4 h-4 mr-2" />
-                Copied all pending links
-              </>
-            ) : linkLoadingId === 'all-pending' ? (
-              'Generating links...'
-            ) : (
-              <>
-                <Copy className="w-4 h-4 mr-2" />
-                Copy all pending links
-              </>
-            )}
           </button>
         </div>
       </div>

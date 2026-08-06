@@ -21,17 +21,27 @@ const StudentProfile = () => {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const me = await apiClient.get('/auth/me')
-        if (me.data.studentState === 'NO_RECORD') {
+        const [meRes, sheetRes] = await Promise.allSettled([
+          apiClient.get('/auth/me'),
+          getMyMarksheet()
+        ])
+
+        const me = meRes.status === 'fulfilled' ? meRes.value : null
+        if (me?.data?.studentState === 'NO_RECORD') {
           setDetails(null)
           return
         }
-        const sheet = await getMyMarksheet()
-        setDetails({
-          rollNumber: sheet.rollNumber || '—',
-          semester: sheet.semester ?? null,
-          studentName: sheet.studentName || user?.name || '—',
-        })
+
+        const sheet = sheetRes.status === 'fulfilled' ? sheetRes.value : null
+        if (sheet) {
+          setDetails({
+            rollNumber: sheet.rollNumber || '—',
+            semester: sheet.semester ?? null,
+            studentName: sheet.studentName || user?.name || '—',
+          })
+        } else {
+          setDetails(null)
+        }
       } finally {
         setLoading(false)
       }

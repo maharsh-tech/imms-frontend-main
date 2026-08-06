@@ -18,27 +18,18 @@ import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge
 import { StaffShell } from '../../components/staff'
 import apiClient from '../../api/client'
 import { FileText, FileSpreadsheet } from 'lucide-react'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import ExcelJS from 'exceljs'
 import { MarksGridRow, type MarksGridRowState } from './MarksGridRow'
+import { apiErrorMessage } from '../../utils/api-errors'
+import { usePageTitle } from '../../hooks/usePageTitle'
 
 type RowState = MarksGridRowState
-
-const apiErrorMessage = (err: unknown, fallback: string): string => {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const message = (err as { response?: { data?: { message?: string | string[] } } }).response?.data?.message
-    if (Array.isArray(message)) return message[0] ?? fallback
-    if (message) return message
-  }
-  return err instanceof Error ? err.message : fallback
-}
 
 type NeFilter = 'all' | 'ne' | 'not-ne'
 
 const MarksGridPage = () => {
+  usePageTitle('Marks Grid')
   const { assignmentId, assessmentId } = useParams<{ assignmentId: string; assessmentId: string }>()
-  const { user, logout } = useAuthStore()
+  const { user } = useAuthStore()
   const isCoordinator = user?.role === 'COORDINATOR'
   const isTeacher = user?.role === 'TEACHER'
 
@@ -275,6 +266,7 @@ const MarksGridPage = () => {
 
   const handleDownloadExcel = async () => {
     if (!grid) return
+    const ExcelJS = (await import('exceljs')).default
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet('Marks')
 
@@ -375,8 +367,14 @@ const MarksGridPage = () => {
     URL.revokeObjectURL(url)
   }
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     if (!grid) return
+    const [jsPDFMod, autoTableMod] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable')
+    ])
+    const jsPDF = jsPDFMod.default
+    const autoTable = autoTableMod.default
     const doc = new jsPDF()
 
     doc.setFontSize(18)

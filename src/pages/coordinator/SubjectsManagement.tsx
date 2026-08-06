@@ -16,16 +16,8 @@ import {
 import type { Assessment, Subject, SubjectEnrollment } from '../../api/subjects';
 import type { ImportResult } from '../../types';
 import ExcelImportCard from '../../components/shared/ExcelImportCard';
-
-const apiErrorMessage = (err: unknown, fallback: string): string => {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const message = (err as { response?: { data?: { message?: string | string[] } } }).response?.data
-      ?.message;
-    if (Array.isArray(message)) return message[0] ?? fallback;
-    if (message) return message;
-  }
-  return err instanceof Error ? err.message : fallback;
-};
+import apiClient from '../../api/client';
+import { apiErrorMessage } from '../../utils/api-errors';
 
 const formatExamDate = (value?: string | null) => {
   if (!value) return '';

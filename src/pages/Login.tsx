@@ -3,9 +3,11 @@ import { Mail, Lock } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import apiClient from '../api/client'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { AuthAlert, AuthCard, AuthShell, PasswordField } from '../components/auth'
 
 const Login = () => {
+  usePageTitle('Sign In')
   const [searchParams] = useSearchParams()
   const [loginId, setLoginId] = useState(searchParams.get('email') ?? '')
   const [password, setPassword] = useState('')
@@ -65,11 +67,11 @@ const Login = () => {
     <AuthShell>
       <AuthCard>
         <div className="mb-xxl text-center">
-          <h2 className="mb-base text-headline-lg-mobile font-semibold text-primary lg:text-headline-lg">
+          <h1 className="mb-base text-headline-lg-mobile font-semibold text-primary lg:text-headline-lg">
             Welcome Back
-          </h2>
+          </h1>
           <p className="text-body-md text-on-surface-variant">
-            Sign in to your Academic Core account
+            Sign in to your IMMS account
           </p>
         </div>
 
@@ -94,12 +96,12 @@ const Login = () => {
                 required
                 value={loginId}
                 onChange={(e) => setLoginId(e.target.value)}
-                placeholder="24IT093 or nishatshaikh.it@charusat.ac.in"
+                placeholder="Roll number or email"
                 className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest py-3 pl-10 pr-4 text-body-md transition-all outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <p className="text-label-sm text-on-surface-variant">
-              Students: roll number only (e.g. 24IT093) · Staff: @charusat.ac.in email
+              Students: roll number · Staff: institutional email
             </p>
           </div>
 

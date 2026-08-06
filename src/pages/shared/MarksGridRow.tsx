@@ -83,18 +83,19 @@ export const MarksGridRow = memo(function MarksGridRow({
         </td>
       )}
       {(isTeacher || isCoordinator) && (
-        <td className="px-4 py-2 text-center">
+        <td className="relative z-[1] px-4 py-2 text-center">
           <input
             type="checkbox"
             checked={row.isAb}
-            disabled={!isDraft || (isTeacher && row.isNe)}
+            disabled={!isDraft}
             onChange={(e) =>
               onUpdateRow({
                 isAb: e.target.checked,
                 marksObtained: e.target.checked ? '' : row.marksObtained,
               })
             }
-            aria-label={`AB ${row.name}`}
+            className="h-4 w-4 cursor-pointer disabled:cursor-not-allowed"
+            aria-label={`Mark ${row.name} absent (AB)`}
           />
         </td>
       )}

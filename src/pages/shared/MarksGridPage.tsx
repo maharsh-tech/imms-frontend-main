@@ -425,8 +425,10 @@ const MarksGridPage = () => {
     doc.save(filename)
   }
 
-  const updateRow = useCallback((index: number, patch: Partial<RowState>) => {
-    setRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)))
+  const updateRow = useCallback((studentId: string, patch: Partial<RowState>) => {
+    setRows((prev) =>
+      prev.map((r) => (r.studentId === studentId ? { ...r, ...patch } : r)),
+    )
   }, [])
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -530,10 +532,8 @@ const MarksGridPage = () => {
 
         {isTeacher && isDraft && (
           <div className="mt-4 bg-primary-fixed/30 border border-primary-fixed rounded-lg p-3 text-sm text-primary">
-            Students marked <strong>NE</strong> by the coordinator are flagged but you can still enter marks.
-            After publish, NE students see <strong>NE</strong> by default. Enable{' '}
-            <strong>Show Marks to NE Students</strong> on the Assignments page to reveal their entered
-            marks instead.
+            Tick <strong>AB</strong> for absent students (works for NE students too — they will show{' '}
+            <strong>AB+NE</strong> after save). Click <strong>Save Changes</strong> before submitting.
           </div>
         )}
 
@@ -601,7 +601,15 @@ const MarksGridPage = () => {
 
         <div className="imms-card mt-4 overflow-x-auto">
           <div ref={scrollRef} className="max-h-[min(60vh,640px)] overflow-y-auto">
-          <table className="min-w-full divide-y divide-surface-variant">
+          <table className="min-w-full table-fixed divide-y divide-surface-variant">
+            <colgroup>
+              <col className="w-12" />
+              <col className="w-28" />
+              <col />
+              <col className="w-28" />
+              <col className="w-16" />
+              <col className="w-16" />
+            </colgroup>
             <thead className="bg-surface-container-low sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">Sr</th>
@@ -631,7 +639,7 @@ const MarksGridPage = () => {
                 rowVirtualizer.getVirtualItems().map((virtualRow) => {
                   const item = filteredRows[virtualRow.index]
                   if (!item) return null
-                  const { row, index } = item
+                  const { row } = item
                   return (
                     <MarksGridRow
                       key={row.studentId}
@@ -641,7 +649,7 @@ const MarksGridPage = () => {
                       isCoordinator={isCoordinator}
                       isTeacher={isTeacher}
                       maxMarks={maxMarks}
-                      onUpdateRow={(patch) => updateRow(index, patch)}
+                      onUpdateRow={(patch) => updateRow(row.studentId, patch)}
                       style={{
                         position: 'absolute',
                         top: 0,

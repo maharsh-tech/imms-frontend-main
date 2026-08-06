@@ -7,7 +7,7 @@ import {
 } from '../../api/import'
 import ExcelImportCard from '../../components/shared/ExcelImportCard'
 import { groupStudentsByBatch, formatBatchOptionLabel } from '../../utils/roll-batch'
-import { isValidRollNumber, normalizeRollInput, deriveBatchFromRollNumber } from '../../utils/identifier-patterns'
+import { isValidRollNumber, normalizeRollInput, deriveBatchFromRollNumber, deriveDepartmentFromRollNumber } from '../../utils/identifier-patterns'
 import { GraduationCap, ChevronDown, ChevronUp, Search, UserPlus } from 'lucide-react'
 import { apiErrorMessage } from '../../utils/api-errors'
 import { useStudents, useStudentsInvalidator } from '../../hooks/useStudents'
@@ -22,8 +22,8 @@ const StudentsManagement = () => {
   const [showAdd, setShowAdd] = useState(false)
   const [rollNumber, setRollNumber] = useState('')
   const [name, setName] = useState('')
-  const [department, setDepartment] = useState('IT')
-  const [semester, setSemester] = useState('5')
+  const [department, setDepartment] = useState('')
+  const [semester, setSemester] = useState('')
   const [batch, setBatch] = useState('')
 
   const invalidateStudents = useStudentsInvalidator()
@@ -79,6 +79,14 @@ const StudentsManagement = () => {
     invalidateStudents()
   }
 
+  const handleRollNumberChange = (value: string) => {
+    const roll = normalizeRollInput(value)
+    setRollNumber(roll)
+    if (!isValidRollNumber(roll)) return
+    setBatch(deriveBatchFromRollNumber(roll))
+    setDepartment(deriveDepartmentFromRollNumber(roll))
+  }
+
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault()
     const roll = normalizeRollInput(rollNumber)
@@ -90,7 +98,7 @@ const StudentsManagement = () => {
     createMutation.mutate({
       rollNumber: roll,
       name: name.trim(),
-      department: department.trim(),
+      department: department.trim() || deriveDepartmentFromRollNumber(roll),
       semester: Number.parseInt(semester, 10),
       batch: batch.trim() || deriveBatchFromRollNumber(roll),
     })
@@ -108,7 +116,7 @@ const StudentsManagement = () => {
           required
           placeholder="Roll number"
           value={rollNumber}
-          onChange={(e) => setRollNumber(e.target.value.toUpperCase())}
+          onChange={(e) => handleRollNumberChange(e.target.value)}
           className="px-3 py-2 border border-outline-variant rounded-md text-sm font-mono"
           aria-label="Roll number"
         />
@@ -143,8 +151,7 @@ const StudentsManagement = () => {
         />
         <input
           type="text"
-          required
-          placeholder="Batch (optional — auto from roll)"
+          placeholder="Batch (auto from roll)"
           value={batch}
           onChange={(e) => setBatch(e.target.value)}
           className="px-3 py-2 border border-outline-variant rounded-md text-sm"

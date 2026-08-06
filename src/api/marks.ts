@@ -20,6 +20,8 @@ export interface MarksGrid {
     semester: number;
     academicYear: string;
     subjectType?: 'CORE' | 'ELECTIVE';
+    startRollNumber?: string | null;
+    endRollNumber?: string | null;
   };
   assessment: { id: string; name: string; maxMarks: number };
   submission: { status: string; submittedAt?: string | null; publishedAt?: string | null };

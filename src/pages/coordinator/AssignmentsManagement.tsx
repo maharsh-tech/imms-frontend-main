@@ -35,6 +35,8 @@ const AssignmentsManagement = () => {
   const [facultyId, setFacultyId] = useState('');
   const [semester, setSemester] = useState(5);
   const [academicYear, setAcademicYear] = useState(defaultAcademicYear);
+  const [startRollNumber, setStartRollNumber] = useState('');
+  const [endRollNumber, setEndRollNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -101,10 +103,19 @@ const AssignmentsManagement = () => {
     setError('');
     setMessage('');
     try {
-      await createAssignment({ subjectId, facultyId, semester, academicYear });
+      await createAssignment({
+        subjectId,
+        facultyId,
+        semester,
+        academicYear,
+        startRollNumber: startRollNumber.trim() || undefined,
+        endRollNumber: endRollNumber.trim() || undefined,
+      });
       setMessage('Teacher assigned successfully');
       setSubjectId('');
       setFacultyId('');
+      setStartRollNumber('');
+      setEndRollNumber('');
       load();
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Failed to create assignment'));
@@ -217,12 +228,26 @@ const AssignmentsManagement = () => {
             aria-label="Semester"
           />
           <input
-            required
             placeholder="Academic year (2025-2026)"
             value={academicYear}
             onChange={(e) => setAcademicYear(e.target.value)}
             className="border rounded px-3 py-2"
             aria-label="Academic year"
+            required
+          />
+          <input
+            placeholder="Start Roll Number (e.g. 24IT001)"
+            value={startRollNumber}
+            onChange={(e) => setStartRollNumber(e.target.value)}
+            className="border rounded px-3 py-2"
+            aria-label="Start Roll Number"
+          />
+          <input
+            placeholder="End Roll Number (e.g. 24IT065)"
+            value={endRollNumber}
+            onChange={(e) => setEndRollNumber(e.target.value)}
+            className="border rounded px-3 py-2"
+            aria-label="End Roll Number"
           />
           <button
             type="submit"
@@ -277,6 +302,7 @@ const AssignmentsManagement = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Teacher</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Sem</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Year</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Range</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Assessments (NE / Marks)</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Actions</th>
               </tr>
@@ -289,6 +315,15 @@ const AssignmentsManagement = () => {
                     <td className="px-4 py-3 text-sm">{a.faculty.name}</td>
                     <td className="px-4 py-3 text-sm">{a.semester}</td>
                     <td className="px-4 py-3 text-sm">{a.academicYear}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {a.startRollNumber && a.endRollNumber ? (
+                        <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
+                          {a.startRollNumber} - {a.endRollNumber}
+                        </span>
+                      ) : (
+                        <span className="text-on-surface-variant text-xs font-medium">All Students</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <button
                         onClick={() => setExpandedId(expandedId === a.id ? null : a.id)}
@@ -311,7 +346,7 @@ const AssignmentsManagement = () => {
                   </tr>
                   {expandedId === a.id && (
                     <tr className="bg-surface-container-low/50">
-                      <td colSpan={6} className="px-8 py-4">
+                      <td colSpan={7} className="px-8 py-4">
                         {a.subject.assessments?.length === 0 ? (
                           <p className="text-sm text-on-surface-variant italic">No exams defined for this subject.</p>
                         ) : (

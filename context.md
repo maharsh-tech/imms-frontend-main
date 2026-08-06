@@ -190,6 +190,8 @@ Subjects tab: check "Elective subject" → roster modal (Excel or paste) → ass
 - Removed elective enrollment count from Subjects & Exams table row badge; the count is now only visible inside the opened Roster modal view.
 - Added a Publish toggle switch next to "Open Marks" in the assignments expanded row, supporting browser confirmations, error notifications in the page-level alert banner, and disabled states for draft assessments.
 - Disabled up/down spin buttons on all numeric inputs globally in base CSS styles.
+- Added input fields to configure `Start Roll Number` and `End Roll Number` range filters when assigning subjects to teachers.
+- Rendered assigned ranges in a new "Range" column in the assignments listing and as a "Grading Range" metadata badge in the Marks Grid page header.
 
 **Consolidated Save Action, Floating Actions Panel, & Toast Notifications** (2026-08-06):
 - Consolidated individual "Save Marks" and "Save NE Flags" buttons into a single "Save Changes" action button.

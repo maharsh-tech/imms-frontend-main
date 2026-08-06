@@ -51,6 +51,8 @@ export interface SubjectAssignment {
   facultyId: string;
   semester: number;
   academicYear: string;
+  startRollNumber?: string | null;
+  endRollNumber?: string | null;
   subject: Subject;
   faculty: Faculty;
   assessmentSubmissions?: { assessmentId: string; status: string; showNEToStudents: boolean }[];
@@ -112,6 +114,8 @@ export const createAssignment = (data: {
   facultyId: string;
   semester: number;
   academicYear: string;
+  startRollNumber?: string;
+  endRollNumber?: string;
 }) => apiClient.post<SubjectAssignment>('/subject-assignments', data).then((r) => r.data);
 export const deleteAssignment = (id: string) => apiClient.delete(`/subject-assignments/${id}`);
 

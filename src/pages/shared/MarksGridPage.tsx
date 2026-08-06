@@ -491,6 +491,11 @@ const MarksGridPage = () => {
           {grid.assignment.faculty.name} · Max {maxMarks} marks
         </span>
         <SubmissionStatusBadge status={status} />
+        {grid.assignment.startRollNumber && grid.assignment.endRollNumber && (
+          <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
+            Grading Range: {grid.assignment.startRollNumber} - {grid.assignment.endRollNumber}
+          </span>
+        )}
       </p>
 
         {isCoordinator && isDraft && (

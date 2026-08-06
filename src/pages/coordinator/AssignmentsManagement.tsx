@@ -7,7 +7,7 @@ import {
   getSubjects,
   getFaculty,
 } from '../../api/subjects';
-import { setNEVisibility, publishMarks, unpublishMarks } from '../../api/marks';
+import { setNEVisibility } from '../../api/marks';
 import type { SubjectAssignment, Subject, Faculty } from '../../api/subjects';
 import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge';
 
@@ -150,35 +150,6 @@ const AssignmentsManagement = () => {
       await load();
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Failed to toggle NE visibility'));
-    }
-  };
-
-  const handlePublishToggle = async (
-    assignmentId: string,
-    assessmentId: string,
-    examName: string,
-    isPublished: boolean,
-  ) => {
-    const actionText = isPublished ? 'Unpublish' : 'Publish';
-    const confirmMessage = isPublished
-      ? `Unpublish results for ${examName}? Students will no longer see these marks.`
-      : `Publish results for ${examName}? Students will be able to see marks.`;
-
-    if (!confirm(confirmMessage)) return;
-
-    setError('');
-    setMessage('');
-    try {
-      if (isPublished) {
-        await unpublishMarks(assignmentId, assessmentId);
-        setMessage(`Results for ${examName} unpublished successfully`);
-      } else {
-        await publishMarks(assignmentId, assessmentId);
-        setMessage(`Results for ${examName} published successfully`);
-      }
-      await load();
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, `Failed to ${actionText.toLowerCase()} marks`));
     }
   };
 
@@ -363,7 +334,6 @@ const AssignmentsManagement = () => {
                               <tbody className="divide-y divide-gray-100">
                                 {a.subject.assessments?.map((ass) => {
                                   const sub = a.assessmentSubmissions?.find((s) => s.assessmentId === ass.id);
-                                  const isPublished = sub?.status === 'PUBLISHED';
                                   const canToggleNE =
                                     sub?.status === 'SUBMITTED' || sub?.status === 'PUBLISHED';
                                   return (
@@ -401,34 +371,12 @@ const AssignmentsManagement = () => {
                                         )}
                                       </td>
                                       <td className="px-4 py-2">
-                                        <div className="flex items-center gap-4">
-                                          <Link
-                                            to={`/coordinator/marks/${a.id}/${ass.id}`}
-                                            className="text-sm text-primary hover:underline inline-flex items-center gap-1 shrink-0"
-                                          >
-                                            Open Marks ↗
-                                          </Link>
-                                          <div className="flex items-center gap-1.5">
-                                            <button
-                                              onClick={() => handlePublishToggle(a.id, ass.id, ass.name, isPublished)}
-                                              disabled={sub?.status === 'DRAFT'}
-                                              title={sub?.status === 'DRAFT' ? "Assessment must be submitted by teacher before publishing" : isPublished ? "Unpublish results" : "Publish results"}
-                                              className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                                sub?.status === 'DRAFT' ? 'bg-gray-200 cursor-not-allowed' : isPublished ? 'bg-green-600 cursor-pointer' : 'bg-gray-400 cursor-pointer'
-                                              }`}
-                                              aria-label={`Toggle publish for ${ass.name}`}
-                                            >
-                                              <span
-                                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-surface-container-lowest shadow ring-0 transition duration-200 ease-in-out ${
-                                                  isPublished ? 'translate-x-4' : 'translate-x-0'
-                                                }`}
-                                              />
-                                            </button>
-                                            <span className="text-[10px] uppercase font-semibold text-on-surface-variant/80 select-none">
-                                              {isPublished ? 'Published' : 'Unpublished'}
-                                            </span>
-                                          </div>
-                                        </div>
+                                        <Link
+                                          to={`/coordinator/marks/${a.id}/${ass.id}`}
+                                          className="text-sm text-primary hover:underline inline-flex items-center gap-1 shrink-0"
+                                        >
+                                          Open Marks ↗
+                                        </Link>
                                       </td>
                                     </tr>
                                   );

@@ -372,18 +372,28 @@ const AssignmentsManagement = () => {
                                       </td>
                                       <td className="px-4 py-2">
                                         {isPublished ? (
-                                          <button
-                                            onClick={() => handleToggleNE(a.id, ass.id, !!sub?.showNEToStudents)}
-                                            className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                              sub?.showNEToStudents ? 'bg-primary' : 'bg-gray-200'
-                                            }`}
-                                          >
-                                            <span
-                                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-surface-container-lowest shadow ring-0 transition duration-200 ease-in-out ${
-                                                sub?.showNEToStudents ? 'translate-x-4' : 'translate-x-0'
+                                          <div className="flex items-center gap-1.5">
+                                            <button
+                                              onClick={() => handleToggleNE(a.id, ass.id, !!sub?.showNEToStudents)}
+                                              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                                sub?.showNEToStudents ? 'bg-primary' : 'bg-gray-200'
                                               }`}
-                                            />
-                                          </button>
+                                              aria-label={
+                                                sub?.showNEToStudents
+                                                  ? `Hide NE marks from NE students for ${ass.name}`
+                                                  : `Show NE marks to NE students for ${ass.name}`
+                                              }
+                                            >
+                                              <span
+                                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-surface-container-lowest shadow ring-0 transition duration-200 ease-in-out ${
+                                                  sub?.showNEToStudents ? 'translate-x-4' : 'translate-x-0'
+                                                }`}
+                                              />
+                                            </button>
+                                            <span className="text-[10px] uppercase font-semibold text-on-surface-variant/80 select-none">
+                                              {sub?.showNEToStudents ? 'NE marks published' : 'NE shows'}
+                                            </span>
+                                          </div>
                                         ) : (
                                           <span className="text-xs text-outline">—</span>
                                         )}

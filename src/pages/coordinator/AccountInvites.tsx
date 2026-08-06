@@ -5,6 +5,7 @@ import {
   bulkCreateAccountInvites,
   deleteAccountInvite,
   regenerateActivationLink,
+  regenerateAllPendingLinks,
 } from '../../api/allowedUsers'
 import type { AccountInvite, BulkCreateResult } from '../../types'
 import { createStudent } from '../../api/students'
@@ -60,6 +61,10 @@ const apiErrorMessage = (err: unknown, fallback: string): string => {
 const AccountInvites = () => {
   const [invites, setInvites] = useState<AccountInvite[]>([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalInvites, setTotalInvites] = useState(0)
+  const pageSize = 50
   const [error, setError] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('STUDENT')
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
@@ -89,10 +94,13 @@ const AccountInvites = () => {
     return buildPreviewEmail(identifier, addRole)
   }, [identifier, addRole, email])
 
-  const fetchInvites = async () => {
+  const fetchInvites = async (pageNum = page) => {
     try {
-      const data = await getAccountInvites()
-      setInvites(data)
+      const result = await getAccountInvites({ page: pageNum, limit: pageSize })
+      setInvites(result.data)
+      setTotalInvites(result.total)
+      setTotalPages(Math.max(1, Math.ceil(result.total / result.limit)))
+      setPage(result.page)
     } catch (err: unknown) {
       const message =
         err && typeof err === 'object' && 'response' in err
@@ -105,8 +113,14 @@ const AccountInvites = () => {
   }
 
   useEffect(() => {
-    fetchInvites()
+    fetchInvites(1)
   }, [])
+
+  const handlePageChange = (nextPage: number) => {
+    if (nextPage < 1 || nextPage > totalPages) return
+    setLoading(true)
+    void fetchInvites(nextPage)
+  }
 
   const pendingRosterCount = useMemo(
     () =>
@@ -136,18 +150,15 @@ const AccountInvites = () => {
   }
 
   const handleCopyAllPending = async () => {
-    const pending = filteredInvites.filter((i) => !i.isActivated)
-    if (pending.length === 0) return
     setLinkLoadingId('all-pending')
     setError('')
     try {
-      const lines = await Promise.all(
-        pending.map(async (invite) => {
-          const updated = await regenerateActivationLink(invite.id)
-          return `${invite.identifier ?? '—'}\t${invite.email}\t${updated.activationLink ?? ''}`
-        }),
+      const { links } = await regenerateAllPendingLinks()
+      const lines = links.map(
+        (l) => `${l.identifier ?? '—'}\t${l.email}\t${l.activationLink}`,
       )
       await handleCopy(lines.join('\n'), 'all-pending')
+      await fetchInvites(page)
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Failed to generate activation links'))
     } finally {
@@ -669,6 +680,31 @@ const AccountInvites = () => {
             )}
           </tbody>
         </table>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-outline-variant bg-surface-container-low text-sm">
+            <span className="text-on-surface-variant">
+              Page {page} of {totalPages} · {totalInvites} accounts
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page <= 1 || loading}
+                className="px-3 py-1 rounded-md border border-outline-variant disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= totalPages || loading}
+                className="px-3 py-1 rounded-md border border-outline-variant disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {rosterInvite && (

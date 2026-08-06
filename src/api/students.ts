@@ -1,4 +1,5 @@
 import apiClient from './client'
+import type { PaginatedResult, PaginationParams } from '../types/pagination'
 
 export interface Student {
   id: string
@@ -12,8 +13,12 @@ export interface Student {
   userId?: string | null
 }
 
-export const getStudents = (params?: { semester?: number; department?: string }) =>
-  apiClient.get<Student[]>('/students', { params }).then((r) => r.data)
+export const getStudents = (
+  params?: PaginationParams & { semester?: number; department?: string },
+) =>
+  apiClient
+    .get<PaginatedResult<Student>>('/students', { params })
+    .then((r) => r.data)
 
 export type CreateStudentPayload = {
   rollNumber: string

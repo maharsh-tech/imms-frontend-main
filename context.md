@@ -217,3 +217,16 @@ Subjects tab: check "Elective subject" → roster modal (Excel or paste) → ass
 **Post-audit bugfixes** (2026-08-05): Account Management copy-link flow via regenerate endpoint; activation password validation aligned (10 chars + letter + digit); logout no longer requires valid access cookie.
 
 **Student portal UI, auth pages, coordinator/teacher StaffShell + design tokens** (2026-08-03)
+
+## Known Issues & Performance
+
+Phase 1 fixes shipped 2026-08-06. Remaining frontend items:
+
+| Priority | Issue | Location |
+|---|---|---|
+| **Medium** | React Query installed but unused | all pages |
+| **Medium** | No Error Boundaries | entire `src/` |
+| **Medium** | Heavy export libs statically imported | `MarksGridPage.tsx` |
+| **Medium** | No CSP / security headers on Vercel | `vercel.json` |
+
+**Resolved in Phase 1:** bulk activation links (1 POST), paginated lists, virtualized marks grid rows.

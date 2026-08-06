@@ -59,7 +59,7 @@ IMMS follows a **3-tier web architecture** with a clear separation between:
 |---|---|---|
 | Frontend | React 19 + Vite | Fast HMR, industry standard, excellent ecosystem |
 | Styling | Tailwind CSS v4 | Design tokens in `index.css`; Academic Core student/auth UI |
-| State Management | Zustand + React Query | Lightweight, server-state friendly |
+| State Management | Zustand + React Query | Lightweight; React Query provider wired — migration to hooks pending |
 | Backend | NestJS (Node.js) | Structured modules, built-in DI, ideal for role-based systems |
 | Language | TypeScript (full stack) | Type safety, shared types possible |
 | ORM | Prisma | Type-safe DB access, migrations, schema as code |
@@ -230,11 +230,40 @@ All state transitions validated server-side in `MarksService`.
 | Rate Limiting | @nestjs/throttler on auth endpoints |
 | HTTP Headers | helmet() |
 
+### Open security items (audit 2026-08-06)
+
+See [`../../AUDIT_REPORT.md`](../../AUDIT_REPORT.md) for full details.
+
+| Item | Status |
+|---|---|
+| Access token not re-validated against DB (15-min window after logout) | Open |
+| IP spoofing in audit logs via `x-forwarded-for` | Open |
+| JWT secret strength not enforced at boot | Open |
+| No CSP / security headers on Vercel frontend | Open |
+| Activation token passed in URL query string | Open |
+| Unpatched `xlsx@0.18.5` on Excel import parser | Open |
+
 ---
 
-## 10. Scalability Considerations
+## 10. Scalability & Performance Considerations
 
 - **Horizontal scaling:** NestJS is stateless; multiple instances can run behind a load balancer (Railway supports this)
 - **DB connections:** Supabase PgBouncer (port 6543) handles connection pooling for up to 800 concurrent users without exhausting Postgres connections
-- **Caching:** Not required at this scale; add Redis if needed in v2
+- **Caching:** React Query is installed on the frontend but not yet used for data fetching — adoption would reduce duplicate API calls on tab switches
 - **PDF generation:** Synchronous for individual; async queue for bulk (M4)
+
+### Known performance gaps (audit 2026-08-06)
+
+These will cause slowdowns as cohort size grows beyond ~100 students:
+
+| Area | Issue | Fix direction |
+|---|---|---|
+| `PUT /marks/bulk` | N+1: 2–3 DB ops per student in loop | Batch fetch + bulk audit insert |
+| `PATCH /marks/flag-ne` | Scans entire cohort even for small NE changes | Diff-only updates |
+| `GET /allowed-users` | N+1 token existence check per pending invite | Single `IN` query on `one_time_tokens` |
+| Excel import | Per-row upsert | Batch lookup + `createMany` |
+| List endpoints | No pagination on students/faculty/subjects | Add `?page=&limit=` |
+| Marks grid (FE) | Full DOM table, no virtualization | `@tanstack/react-virtual` |
+| Copy all pending links (FE) | N API calls to regenerate | Bulk backend endpoint |
+
+Full report: [`../../AUDIT_REPORT.md`](../../AUDIT_REPORT.md)

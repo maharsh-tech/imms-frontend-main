@@ -50,10 +50,14 @@ const AssignmentsManagement = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const [a, s, f] = await Promise.all([getAssignments(), getSubjects(), getFaculty()]);
+      const [a, s, f] = await Promise.all([
+        getAssignments(),
+        getSubjects({ limit: 500 }),
+        getFaculty({ limit: 500 }),
+      ]);
       setAssignments(a);
-      setSubjects(s);
-      setFaculty(f);
+      setSubjects(s.data);
+      setFaculty(f.data);
     } catch {
       setError('Failed to load assignments');
     } finally {

@@ -1,5 +1,6 @@
 import apiClient from './client';
 import type { ImportResult } from '../types';
+import type { PaginatedResult, PaginationParams } from '../types/pagination';
 
 export type SubjectType = 'CORE' | 'ELECTIVE';
 
@@ -77,8 +78,10 @@ export type CreateAssessmentPayload = {
 
 export type UpdateAssessmentPayload = Partial<CreateAssessmentPayload>;
 
-export const getSubjects = (params?: { semester?: number; department?: string }) =>
-  apiClient.get<Subject[]>('/subjects', { params }).then((r) => r.data);
+export const getSubjects = (
+  params?: PaginationParams & { semester?: number; department?: string },
+) =>
+  apiClient.get<PaginatedResult<Subject>>('/subjects', { params }).then((r) => r.data);
 
 export const createSubject = (data: CreateSubjectPayload) =>
   apiClient.post<Subject>('/subjects', data).then((r) => r.data);
@@ -103,7 +106,8 @@ export const updateAssessment = (
 export const deleteAssessment = (subjectId: string, assessmentId: string) =>
   apiClient.delete(`/subjects/${subjectId}/assessments/${assessmentId}`);
 
-export const getFaculty = () => apiClient.get<Faculty[]>('/faculty').then((r) => r.data);
+export const getFaculty = (params?: PaginationParams) =>
+  apiClient.get<PaginatedResult<Faculty>>('/faculty', { params }).then((r) => r.data);
 
 export const getAssignments = (params?: { academicYear?: string; semester?: number }) =>
   apiClient.get<SubjectAssignment[]>('/subject-assignments', { params }).then((r) => r.data);

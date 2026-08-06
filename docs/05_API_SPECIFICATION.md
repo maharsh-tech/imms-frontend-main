@@ -213,24 +213,29 @@ Domain rules: `STUDENT` → `@charusat.edu.in`; `TEACHER`/`COORDINATOR` → `@ch
 
 ### 2.2 List Allowed Users
 ```
-GET /allowed-users
+GET /allowed-users?page=1&limit=50
 Roles: COORDINATOR
 ```
-**Response 200:** Array of account rows. Pending users include `hasActivationToken` (whether an unused token exists) but **`activationLink` is always `null`** — links are not rotated on list load.
+**Response 200:** Paginated account rows. Pending users include `hasActivationToken` (whether an unused token exists) but **`activationLink` is always `null`** — links are not rotated on list load.
 
 ```json
-[
-  {
-    "id": "cuid123",
-    "email": "24it093@charusat.edu.in",
-    "role": "STUDENT",
-    "identifier": "24IT093",
-    "isActivated": false,
-    "activationLink": null,
-    "hasActivationToken": true,
-    "rosterLinked": false
-  }
-]
+{
+  "data": [
+    {
+      "id": "cuid123",
+      "email": "24it093@charusat.edu.in",
+      "role": "STUDENT",
+      "identifier": "24IT093",
+      "isActivated": false,
+      "activationLink": null,
+      "hasActivationToken": true,
+      "rosterLinked": false
+    }
+  ],
+  "total": 120,
+  "page": 1,
+  "limit": 50
+}
 ```
 
 ---
@@ -243,6 +248,29 @@ Roles: COORDINATOR
 Issues a fresh activation link for a pending account. Invalidates any previous unused activation token for that user.
 
 **Response 200:** Same shape as create response, with `activationLink` populated.
+
+---
+
+### 2.3b Regenerate All Pending Activation Links
+```
+POST /allowed-users/regenerate-all-pending
+Roles: COORDINATOR
+```
+Issues fresh activation links for **all** pending accounts in one transaction. Replaces N per-row regenerate calls.
+
+**Response 200:**
+```json
+{
+  "links": [
+    {
+      "id": "cuid123",
+      "identifier": "24IT093",
+      "email": "24it093@charusat.edu.in",
+      "activationLink": "https://app.example.com/activate?token=..."
+    }
+  ]
+}
+```
 
 ---
 

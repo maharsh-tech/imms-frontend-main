@@ -20,8 +20,14 @@ All architectural and design documentation for both the frontend and backend is 
 - **Framework:** React 19 + TypeScript + Vite
 - **Styling:** TailwindCSS v4
 - **Routing:** React Router v7
-- **State Management:** Zustand
-- **API Client:** Axios
+- **State Management:** Zustand (user profile only — tokens in httpOnly cookies)
+- **API Client:** Axios with `withCredentials: true`
+- **Server state:** `@tanstack/react-query` installed (provider wired; migration to hooks pending)
+
+## 🔍 Audit & Known Issues
+
+See **[`../AUDIT_REPORT.md`](../AUDIT_REPORT.md)** for security, N+1 performance, and code quality findings.  
+Living dev context: **[`context.md`](./context.md)** (includes known-issues summary).
 
 ## 🛠️ Getting Started
 

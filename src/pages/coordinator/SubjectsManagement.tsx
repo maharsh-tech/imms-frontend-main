@@ -109,8 +109,8 @@ const SubjectsManagement = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const data = await getSubjects();
-      setSubjects(data);
+      const result = await getSubjects({ limit: 500 });
+      setSubjects(result.data);
     } catch {
       setError('Failed to load subjects');
     } finally {

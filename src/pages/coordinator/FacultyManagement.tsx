@@ -26,6 +26,10 @@ const apiErrorMessage = (err: unknown, fallback: string): string => {
 const FacultyManagement = () => {
   const [faculty, setFaculty] = useState<Faculty[]>([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalFaculty, setTotalFaculty] = useState(0)
+  const pageSize = 50
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [deptFilter, setDeptFilter] = useState('ALL')
@@ -36,12 +40,15 @@ const FacultyManagement = () => {
   const [name, setName] = useState('')
   const [department, setDepartment] = useState('IT')
 
-  const loadFaculty = async () => {
+  const loadFaculty = async (pageNum = page) => {
     setLoading(true)
     setError('')
     try {
-      const data = await getFaculty()
-      setFaculty(data)
+      const result = await getFaculty({ page: pageNum, limit: pageSize })
+      setFaculty(result.data)
+      setTotalFaculty(result.total)
+      setTotalPages(Math.max(1, Math.ceil(result.total / result.limit)))
+      setPage(result.page)
     } catch {
       setError('Failed to load faculty')
     } finally {
@@ -50,8 +57,13 @@ const FacultyManagement = () => {
   }
 
   useEffect(() => {
-    loadFaculty()
+    loadFaculty(1)
   }, [])
+
+  const handlePageChange = (nextPage: number) => {
+    if (nextPage < 1 || nextPage > totalPages) return
+    void loadFaculty(nextPage)
+  }
 
   const departments = useMemo(() => {
     const set = new Set(faculty.map((f) => f.department))
@@ -306,8 +318,29 @@ const FacultyManagement = () => {
             </table>
           </div>
 
-          <div className="px-4 py-3 bg-surface-container-low border-t border-outline-variant text-xs text-on-surface-variant">
-            {filteredRows.length} of {faculty.length} teachers
+          <div className="px-4 py-3 bg-surface-container-low border-t border-outline-variant text-xs text-on-surface-variant flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <span>{filteredRows.length} on page · {totalFaculty} total</span>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <span>Page {page} of {totalPages}</span>
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(page - 1)}
+                  disabled={page <= 1 || loading}
+                  className="px-2 py-1 rounded border border-outline-variant disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={page >= totalPages || loading}
+                  className="px-2 py-1 rounded border border-outline-variant disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

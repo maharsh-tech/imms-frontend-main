@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { getStudents, createStudent } from '../../api/students'
+import { getStudents, createStudent, type Student } from '../../api/students'
 import {
   downloadStudentTemplate,
   importStudents,
@@ -20,8 +20,12 @@ const apiErrorMessage = (err: unknown, fallback: string): string => {
 }
 
 const StudentsManagement = () => {
-  const [students, setStudents] = useState<Awaited<ReturnType<typeof getStudents>>>([])
+  const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalStudents, setTotalStudents] = useState(0)
+  const pageSize = 50
   const [error, setError] = useState('')
   const [selectedPrefix, setSelectedPrefix] = useState('')
   const [search, setSearch] = useState('')
@@ -34,12 +38,15 @@ const StudentsManagement = () => {
   const [semester, setSemester] = useState('5')
   const [batch, setBatch] = useState('')
 
-  const loadStudents = async () => {
+  const loadStudents = async (pageNum = page) => {
     setLoading(true)
     setError('')
     try {
-      const data = await getStudents()
-      setStudents(data)
+      const result = await getStudents({ page: pageNum, limit: pageSize })
+      setStudents(result.data)
+      setTotalStudents(result.total)
+      setTotalPages(Math.max(1, Math.ceil(result.total / result.limit)))
+      setPage(result.page)
     } catch {
       setError('Failed to load students')
     } finally {
@@ -48,8 +55,13 @@ const StudentsManagement = () => {
   }
 
   useEffect(() => {
-    loadStudents()
+    loadStudents(1)
   }, [])
+
+  const handlePageChange = (nextPage: number) => {
+    if (nextPage < 1 || nextPage > totalPages) return
+    void loadStudents(nextPage)
+  }
 
   const batchGroups = useMemo(() => groupStudentsByBatch(students), [students])
 
@@ -368,9 +380,33 @@ const StudentsManagement = () => {
             </table>
           </div>
 
-          <div className="px-4 py-3 bg-surface-container-low border-t border-outline-variant text-xs text-on-surface-variant">
-            {filteredRows.length} of {activeGroup?.count ?? 0} in {selectedPrefix} · {students.length}{' '}
-            total
+          <div className="px-4 py-3 bg-surface-container-low border-t border-outline-variant text-xs text-on-surface-variant flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <span>
+              {filteredRows.length} shown on page · {totalStudents} total
+            </span>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <span>
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(page - 1)}
+                  disabled={page <= 1 || loading}
+                  className="px-2 py-1 rounded border border-outline-variant disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={page >= totalPages || loading}
+                  className="px-2 py-1 rounded border border-outline-variant disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

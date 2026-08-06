@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { useParams, Link } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
 import {
@@ -20,15 +21,9 @@ import { FileText, FileSpreadsheet } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import ExcelJS from 'exceljs'
+import { MarksGridRow, type MarksGridRowState } from './MarksGridRow'
 
-type RowState = {
-  studentId: string
-  rollNumber: string
-  name: string
-  marksObtained: string
-  isAb: boolean
-  isNe: boolean
-}
+type RowState = MarksGridRowState
 
 const apiErrorMessage = (err: unknown, fallback: string): string => {
   if (err && typeof err === 'object' && 'response' in err) {
@@ -432,9 +427,17 @@ const MarksGridPage = () => {
     doc.save(filename)
   }
 
-  const updateRow = (index: number, patch: Partial<RowState>) => {
+  const updateRow = useCallback((index: number, patch: Partial<RowState>) => {
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)))
-  }
+  }, [])
+
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const rowVirtualizer = useVirtualizer({
+    count: filteredRows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 48,
+    overscan: 8,
+  })
 
   const handleLogout = async () => {
     try {
@@ -599,8 +602,9 @@ const MarksGridPage = () => {
         </div>
 
         <div className="imms-card mt-4 overflow-x-auto">
+          <div ref={scrollRef} className="max-h-[min(60vh,640px)] overflow-y-auto">
           <table className="min-w-full divide-y divide-surface-variant">
-            <thead className="bg-surface-container-low">
+            <thead className="bg-surface-container-low sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">Sr</th>
                 <th className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">Student ID</th>
@@ -611,7 +615,10 @@ const MarksGridPage = () => {
                 {(isTeacher || isCoordinator) && <th className="px-4 py-3 text-center text-label-sm uppercase text-on-surface-variant">AB</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-surface-variant">
+            <tbody
+              className="divide-y divide-surface-variant relative"
+              style={{ height: filteredRows.length > 0 ? `${rowVirtualizer.getTotalSize()}px` : undefined }}
+            >
               {filteredRows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-6 text-center text-sm text-on-surface-variant">
@@ -623,81 +630,36 @@ const MarksGridPage = () => {
                   </td>
                 </tr>
               ) : (
-                filteredRows.map(({ row, index }, displayIndex) => (
-                  <tr key={row.studentId} className={row.isNe ? 'bg-amber-50' : ''}>
-                    <td className="px-4 py-2 text-sm">{displayIndex + 1}</td>
-                    <td className="px-4 py-2 text-sm font-mono">{row.rollNumber}</td>
-                    <td className="px-4 py-2 text-sm">
-                      {row.name}
-                    </td>
-                    <td className="px-4 py-2">
-                      {(isTeacher || isCoordinator) && isDraft ? (
-                        <input
-                          type="number"
-                          min={0}
-                          max={maxMarks}
-                          value={row.isAb ? '' : row.marksObtained}
-                          disabled={row.isAb}
-                          onChange={(e) => {
-                            const val = e.target.value
-                            if (val !== '' && Number(val) < 0) return
-                            updateRow(index, { marksObtained: val })
-                          }}
-                          className="imms-input w-20 py-1 text-sm"
-                          aria-label={`Marks for ${row.name}`}
-                        />
-                      ) : (
-                        <span className="text-sm">
-                          {row.isNe && row.isAb ? 'AB+NE' : row.isAb ? 'AB' : row.marksObtained || (row.isNe ? '—' : '—')}
-                          {row.isNe && row.marksObtained && isCoordinator && (
-                            <span className="text-on-surface-variant text-xs ml-1">(NE flagged)</span>
-                          )}
-                        </span>
-                      )}
-                    </td>
-                    {isCoordinator && (
-                      <td className="px-4 py-2 text-center">
-                        <input
-                          type="checkbox"
-                          checked={row.isNe}
-                          disabled={!isDraft}
-                          onChange={(e) => updateRow(index, { isNe: e.target.checked })}
-                          aria-label={`NE ${row.name}`}
-                        />
-                      </td>
-                    )}
-                    {isTeacher && (
-                      <td className="px-4 py-2 text-center">
-                        {row.isNe ? (
-                          <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
-                            NE
-                          </span>
-                        ) : (
-                          <span className="text-xs text-outline">—</span>
-                        )}
-                      </td>
-                    )}
-                    {(isTeacher || isCoordinator) && (
-                      <td className="px-4 py-2 text-center">
-                        <input
-                          type="checkbox"
-                          checked={row.isAb}
-                          disabled={!isDraft || (isTeacher && row.isNe)}
-                          onChange={(e) =>
-                            updateRow(index, {
-                              isAb: e.target.checked,
-                              marksObtained: e.target.checked ? '' : row.marksObtained,
-                            })
-                          }
-                          aria-label={`AB ${row.name}`}
-                        />
-                      </td>
-                    )}
-                  </tr>
-                ))
+                rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const item = filteredRows[virtualRow.index]
+                  if (!item) return null
+                  const { row, index } = item
+                  return (
+                    <MarksGridRow
+                      key={row.studentId}
+                      row={row}
+                      displayIndex={virtualRow.index}
+                      isDraft={isDraft}
+                      isCoordinator={isCoordinator}
+                      isTeacher={isTeacher}
+                      maxMarks={maxMarks}
+                      onUpdateRow={(patch) => updateRow(index, patch)}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        transform: `translateY(${virtualRow.start}px)`,
+                        display: 'table',
+                        tableLayout: 'fixed',
+                      }}
+                    />
+                  )
+                })
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
         <p className="mt-3 text-sm text-on-surface-variant">

@@ -1,19 +1,15 @@
 import { useState, useMemo, useRef, Fragment } from 'react';
-import {
-  importSubjectEnrollments,
-  downloadEnrollmentTemplate,
-} from '../../api/subjects';
 import type { Assessment, Subject } from '../../api/subjects';
 import type { ImportResult } from '../../types';
-import ExcelImportCard from '../../components/shared/ExcelImportCard';
 import { apiErrorMessage } from '../../utils/api-errors';
 import {
   useSubjects,
   useSubjectEnrollments,
-  useSubjectsInvalidator,
-  useSubjectEnrollmentsInvalidator,
-  subjectMutations,
+  useSubjectMutations,
 } from '../../hooks/useSubjects';
+import AddSubjectForm from '../../components/coordinator/subjects/AddSubjectForm';
+import AddAssessmentForm from '../../components/coordinator/subjects/AddAssessmentForm';
+import ElectiveRosterModal from '../../components/coordinator/subjects/ElectiveRosterModal';
 
 const formatExamDate = (value?: string | null) => {
   if (!value) return '';
@@ -24,11 +20,27 @@ const SubjectsManagement = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const invalidateSubjects = useSubjectsInvalidator();
-  const invalidateEnrollments = useSubjectEnrollmentsInvalidator();
+  const {
+    createSubject,
+    updateSubject,
+    deleteSubject,
+    createAssessment,
+    updateAssessment,
+    deleteAssessment,
+    bulkEnroll,
+    removeEnrollment,
+    invalidateEnrollments,
+  } = useSubjectMutations();
   const { data: subjectsResult, isLoading, isFetching, error: queryError } = useSubjects({ limit: 500 });
   const subjects = subjectsResult?.data ?? [];
   const loading = isLoading || isFetching;
+  const saving =
+    createSubject.isPending ||
+    updateSubject.isPending ||
+    deleteSubject.isPending ||
+    createAssessment.isPending ||
+    updateAssessment.isPending ||
+    deleteAssessment.isPending;
 
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
@@ -39,8 +51,6 @@ const SubjectsManagement = () => {
   const [rosterSubject, setRosterSubject] = useState<Subject | null>(null);
   const { data: enrollments = [] } = useSubjectEnrollments(rosterSubject?.id);
   const [rosterPaste, setRosterPaste] = useState('');
-  const [rosterLoading, setRosterLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [rosterResult, setRosterResult] = useState<ImportResult | null>(null);
   const rosterPasteRef = useRef<HTMLTextAreaElement>(null);
 
@@ -130,106 +140,100 @@ const SubjectsManagement = () => {
     setRosterSubject(null);
     setRosterPaste('');
     setRosterResult(null);
-    refreshSubjects();
   };
 
-  const handlePasteEnroll = async () => {
+  const handlePasteEnroll = () => {
     if (!rosterSubject) return;
     const rollNumbers = rosterPaste
       .split('\n')
       .map((line) => line.trim())
       .filter(Boolean);
     if (!rollNumbers.length) return;
-    setRosterLoading(true);
     setRosterResult(null);
-    try {
-      const result = await subjectMutations.bulkEnrollStudents(rosterSubject.id, rollNumbers);
-      setRosterResult(result);
-      setRosterPaste('');
-      invalidateEnrollments(rosterSubject.id);
-      refreshSubjects();
-      setMessage(`Enrolled ${result.imported} student(s) in ${rosterSubject.code}`);
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Failed to enroll students'));
-    } finally {
-      setRosterLoading(false);
-    }
+    bulkEnroll.mutate(
+      { subjectId: rosterSubject.id, rollNumbers },
+      {
+        onSuccess: (result) => {
+          setRosterResult(result);
+          setRosterPaste('');
+          setMessage(`Enrolled ${result.imported} student(s) in ${rosterSubject.code}`);
+        },
+        onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to enroll students')),
+      },
+    );
   };
 
-  const handleRemoveEnrollment = async (studentId: string) => {
+  const handleRemoveEnrollment = (studentId: string) => {
     if (!rosterSubject) return;
-    setRosterLoading(true);
-    try {
-      await subjectMutations.removeSubjectEnrollment(rosterSubject.id, studentId);
-      invalidateEnrollments(rosterSubject.id);
-      refreshSubjects();
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Failed to remove student'));
-    } finally {
-      setRosterLoading(false);
-    }
+    removeEnrollment.mutate(
+      { subjectId: rosterSubject.id, studentId },
+      {
+        onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to remove student')),
+      },
+    );
   };
 
-  const refreshSubjects = () => invalidateSubjects();
-
-  const handleCreateSubject = async (e: React.FormEvent) => {
+  const handleCreateSubject = (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
     setError('');
     setMessage('');
-    try {
-      const created = await subjectMutations.createSubject({
+    createSubject.mutate(
+      {
         code,
         name,
         department,
         semester,
         subjectType: isElective ? 'ELECTIVE' : 'CORE',
-      });
-      setCode('');
-      setName('');
-      setIsElective(false);
-      setMessage(
-        created.subjectType === 'ELECTIVE'
-          ? `${created.code} created — import the elective roster next`
-          : 'Subject created',
-      );
-      refreshSubjects();
-      if (created.subjectType === 'ELECTIVE') {
-        handleOpenRoster(created);
-      }
-      setShowAddSubject(false);
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Failed to create subject'));
-    } finally {
-      setSaving(false);
-    }
+      },
+      {
+        onSuccess: (created) => {
+          setCode('');
+          setName('');
+          setIsElective(false);
+          setMessage(
+            created.subjectType === 'ELECTIVE'
+              ? `${created.code} created — import the elective roster next`
+              : 'Subject created',
+          );
+          if (created.subjectType === 'ELECTIVE') {
+            handleOpenRoster(created);
+          }
+          setShowAddSubject(false);
+        },
+        onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to create subject')),
+      },
+    );
   };
 
-  const handleAddAssessment = async (e: React.FormEvent) => {
+  const handleAddAssessment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSubjectId) return;
     if (!maxMarks || maxMarks <= 0) {
       setError('Max marks must be greater than zero');
       return;
     }
-    setSaving(true);
     setError('');
     setMessage('');
-    try {
-      await subjectMutations.createAssessment(selectedSubjectId, {
-        name: assessmentName,
-        maxMarks: Number(maxMarks),
-        ...(examDate ? { examDate } : {}),
-        ...(examTime ? { examTime } : {}),
-      });
-      setMessage('Assessment added — go to Assignments tab, click the exam link, and set NE students before marks entry.');
-      refreshSubjects();
-      setShowAddAssessment(false);
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Failed to add assessment'));
-    } finally {
-      setSaving(false);
-    }
+    createAssessment.mutate(
+      {
+        subjectId: selectedSubjectId,
+        data: {
+          name: assessmentName,
+          maxMarks: Number(maxMarks),
+          ...(examDate ? { examDate } : {}),
+          ...(examTime ? { examTime } : {}),
+        },
+      },
+      {
+        onSuccess: () => {
+          setMessage(
+            'Assessment added — go to Assignments tab, click the exam link, and set NE students before marks entry.',
+          );
+          setShowAddAssessment(false);
+        },
+        onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to add assessment')),
+      },
+    );
   };
 
   const startEditSubject = (subject: Subject) => {
@@ -239,40 +243,32 @@ const SubjectsManagement = () => {
     setEditSemester(subject.semester);
   };
 
-  const handleSaveSubject = async (subjectId: string) => {
-    setSaving(true);
+  const handleSaveSubject = (subjectId: string) => {
     setError('');
     setMessage('');
-    try {
-      await subjectMutations.updateSubject(subjectId, {
-        name: editName,
-        department: editDepartment,
-        semester: editSemester,
-      });
-      setEditingSubjectId(null);
-      setMessage('Subject updated');
-      refreshSubjects();
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Failed to update subject'));
-    } finally {
-      setSaving(false);
-    }
+    updateSubject.mutate(
+      {
+        id: subjectId,
+        data: { name: editName, department: editDepartment, semester: editSemester },
+      },
+      {
+        onSuccess: () => {
+          setEditingSubjectId(null);
+          setMessage('Subject updated');
+        },
+        onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to update subject')),
+      },
+    );
   };
 
-  const handleDeleteSubject = async (subject: Subject) => {
+  const handleDeleteSubject = (subject: Subject) => {
     if (!confirm(`Delete ${subject.code} — ${subject.name}? This cannot be undone.`)) return;
-    setSaving(true);
     setError('');
     setMessage('');
-    try {
-      await subjectMutations.deleteSubject(subject.id);
-      setMessage('Subject deleted');
-      refreshSubjects();
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Failed to delete subject'));
-    } finally {
-      setSaving(false);
-    }
+    deleteSubject.mutate(subject.id, {
+      onSuccess: () => setMessage('Subject deleted'),
+      onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to delete subject')),
+    });
   };
 
   const startEditAssessment = (subjectId: string, assessment: Assessment) => {
@@ -283,53 +279,50 @@ const SubjectsManagement = () => {
     setEditExamTime(assessment.examTime ?? '');
   };
 
-  const handleSaveAssessment = async () => {
+  const handleSaveAssessment = () => {
     if (!editingAssessment) return;
     if (!editMaxMarks || editMaxMarks <= 0) {
       setError('Max marks must be greater than zero');
       return;
     }
-    setSaving(true);
     setError('');
     setMessage('');
-    try {
-      await subjectMutations.updateAssessment(
-        editingAssessment.subjectId,
-        editingAssessment.assessment.id,
-        {
+    updateAssessment.mutate(
+      {
+        subjectId: editingAssessment.subjectId,
+        assessmentId: editingAssessment.assessment.id,
+        data: {
           name: editAssessmentName,
           maxMarks: Number(editMaxMarks),
           examDate: editExamDate || undefined,
           examTime: editExamTime || undefined,
         },
-      );
-      setEditingAssessment(null);
-      setMessage('Assessment updated');
-      refreshSubjects();
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Failed to update assessment'));
-    } finally {
-      setSaving(false);
-    }
+      },
+      {
+        onSuccess: () => {
+          setEditingAssessment(null);
+          setMessage('Assessment updated');
+        },
+        onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to update assessment')),
+      },
+    );
   };
 
-  const handleDeleteAssessment = async (subjectId: string, assessment: Assessment) => {
+  const handleDeleteAssessment = (subjectId: string, assessment: Assessment) => {
     if (!confirm(`Delete assessment "${assessment.name}"?`)) return;
-    setSaving(true);
     setError('');
     setMessage('');
-    try {
-      await subjectMutations.deleteAssessment(subjectId, assessment.id);
-      setMessage('Assessment deleted');
-      refreshSubjects();
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Failed to delete assessment'));
-    } finally {
-      setSaving(false);
-    }
+    deleteAssessment.mutate(
+      { subjectId, assessmentId: assessment.id },
+      {
+        onSuccess: () => setMessage('Assessment deleted'),
+        onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to delete assessment')),
+      },
+    );
   };
 
-  const actionLoading = loading || saving;
+  const actionLoading = loading || saving || bulkEnroll.isPending || removeEnrollment.isPending;
+  const rosterBusy = bulkEnroll.isPending || removeEnrollment.isPending;
 
   return (
     <div className="space-y-6">
@@ -368,48 +361,38 @@ const SubjectsManagement = () => {
       </div>
 
       {showAddSubject && (
-        <div className="bg-surface-container-lowest rounded-lg shadow p-6 border border-outline-variant">
-          <h3 className="text-lg font-semibold mb-4">Add Subject</h3>
-          <form onSubmit={handleCreateSubject} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <input required placeholder="Code (IT301)" value={code} onChange={(e) => setCode(e.target.value)} className="border rounded px-3 py-2" />
-            <input required placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} className="border rounded px-3 py-2" />
-            <input required placeholder="Department" value={department} onChange={(e) => setDepartment(e.target.value)} className="border rounded px-3 py-2" />
-            <input required type="number" placeholder="Semester" value={semester} onChange={(e) => setSemester(Number(e.target.value))} className="border rounded px-3 py-2" />
-            <label className="flex items-center gap-2 text-sm text-on-surface border rounded px-3 py-2 sm:col-span-2">
-              <input
-                type="checkbox"
-                checked={isElective}
-                onChange={(e) => setIsElective(e.target.checked)}
-                className="rounded border-outline-variant"
-              />
-              Elective subject (import student roster after create)
-            </label>
-            <button type="submit" disabled={actionLoading} className="bg-primary text-white rounded px-4 py-2 hover:bg-primary-container disabled:opacity-50 sm:col-span-2 lg:col-span-1 cursor-pointer">
-              Add Subject
-            </button>
-          </form>
-        </div>
+        <AddSubjectForm
+          code={code}
+          name={name}
+          department={department}
+          semester={semester}
+          isElective={isElective}
+          isPending={actionLoading}
+          onCodeChange={setCode}
+          onNameChange={setName}
+          onDepartmentChange={setDepartment}
+          onSemesterChange={setSemester}
+          onElectiveChange={setIsElective}
+          onSubmit={handleCreateSubject}
+        />
       )}
 
       {showAddAssessment && (
-        <div className="bg-surface-container-lowest rounded-lg shadow p-6 border border-outline-variant">
-          <h3 className="text-lg font-semibold mb-4">Add Assessment</h3>
-          <form onSubmit={handleAddAssessment} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <select required value={selectedSubjectId} onChange={(e) => setSelectedSubjectId(e.target.value)} className="border rounded px-3 py-2 bg-surface-container-lowest">
-              <option value="">Select subject</option>
-              {subjects.map((s) => (
-                <option key={s.id} value={s.id}>{s.code} — {s.name}</option>
-              ))}
-            </select>
-            <input required placeholder="Assessment name" value={assessmentName} onChange={(e) => setAssessmentName(e.target.value)} className="border rounded px-3 py-2" />
-            <input required type="number" placeholder="Max marks" value={maxMarks} onChange={(e) => setMaxMarks(e.target.value === '' ? '' : Number(e.target.value))} className="border rounded px-3 py-2" />
-            <input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} className="border rounded px-3 py-2" aria-label="Exam date" />
-            <input placeholder="Exam time (e.g. 10:00 AM)" value={examTime} onChange={(e) => setExamTime(e.target.value)} className="border rounded px-3 py-2" />
-            <button type="submit" disabled={actionLoading} className="bg-green-600 text-white rounded px-4 py-2 hover:bg-green-700 disabled:opacity-50 cursor-pointer">
-              Add Assessment
-            </button>
-          </form>
-        </div>
+        <AddAssessmentForm
+          subjects={subjects}
+          selectedSubjectId={selectedSubjectId}
+          assessmentName={assessmentName}
+          maxMarks={maxMarks}
+          examDate={examDate}
+          examTime={examTime}
+          isPending={actionLoading}
+          onSubjectChange={setSelectedSubjectId}
+          onNameChange={setAssessmentName}
+          onMaxMarksChange={setMaxMarks}
+          onExamDateChange={setExamDate}
+          onExamTimeChange={setExamTime}
+          onSubmit={handleAddAssessment}
+        />
       )}
 
       <div className="bg-surface-container-lowest rounded-lg shadow p-4 border border-outline-variant flex flex-wrap gap-3">
@@ -582,92 +565,19 @@ const SubjectsManagement = () => {
       </div>
 
       {rosterSubject && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-surface-container-lowest rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-outline-variant">
-            <div className="p-6 border-b border-outline-variant">
-              <h3 className="text-lg font-semibold text-on-surface">
-                Elective roster — {rosterSubject.code} ({rosterSubject.name})
-              </h3>
-              <p className="text-sm text-on-surface-variant mt-1">
-                Only these students appear when a teacher is assigned to this elective.
-              </p>
-            </div>
-            <div className="p-6 space-y-6">
-              <ExcelImportCard
-                title="Import roll numbers"
-                description="One roll number per row. Students must already exist in the student roster."
-                onDownloadTemplate={() => downloadEnrollmentTemplate(rosterSubject.id, rosterSubject.code)}
-                onImport={(file) => importSubjectEnrollments(rosterSubject.id, file)}
-                onImportComplete={() => rosterSubject && invalidateEnrollments(rosterSubject.id)}
-              />
-              <div>
-                <h4 className="text-sm font-medium text-on-surface mb-2">Or paste roll numbers</h4>
-                <textarea
-                  ref={rosterPasteRef}
-                  value={rosterPaste}
-                  onChange={(e) => setRosterPaste(e.target.value)}
-                  rows={5}
-                  placeholder={'24ABC123\n24ABC124\n24ABC125'}
-                  className="w-full border border-outline-variant rounded-md px-3 py-2 text-sm font-mono"
-                  aria-label="Paste roll numbers for elective enrollment"
-                />
-                <button
-                  type="button"
-                  onClick={handlePasteEnroll}
-                  disabled={rosterLoading || !rosterPaste.trim()}
-                  className="mt-2 bg-purple-600 text-white rounded px-4 py-2 text-sm hover:bg-purple-700 disabled:opacity-50"
-                >
-                  Add pasted students
-                </button>
-              </div>
-              {rosterResult && (
-                <p className="text-sm text-on-surface-variant">
-                  Enrolled {rosterResult.imported}, skipped {rosterResult.skipped}
-                  {rosterResult.errors.length > 0 && `, ${rosterResult.errors.length} error(s)`}
-                </p>
-              )}
-              <div>
-                <h4 className="text-sm font-medium text-on-surface mb-2">
-                  Enrolled students ({enrollments.length})
-                </h4>
-                {rosterLoading && enrollments.length === 0 ? (
-                  <p className="text-sm text-on-surface-variant">Loading...</p>
-                ) : enrollments.length === 0 ? (
-                  <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">
-                    No students enrolled yet. Import or paste roll numbers before assigning a teacher.
-                  </p>
-                ) : (
-                  <ul className="divide-y divide-gray-100 border border-outline-variant rounded-md max-h-48 overflow-y-auto">
-                    {enrollments.map((row) => (
-                      <li key={row.id} className="flex items-center justify-between px-3 py-2 text-sm">
-                        <span>
-                          <span className="font-mono text-on-surface">{row.student.rollNumber}</span>
-                          <span className="text-on-surface-variant ml-2">{row.student.name}</span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveEnrollment(row.studentId)}
-                          className="text-red-600 hover:underline text-xs"
-                        >
-                          Remove
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-            <div className="p-6 border-t border-outline-variant flex justify-end">
-              <button
-                type="button"
-                onClick={handleCloseRoster}
-                className="px-4 py-2 text-on-surface hover:bg-surface-container-low rounded-md border border-outline-variant"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
+        <ElectiveRosterModal
+          subject={rosterSubject}
+          enrollments={enrollments}
+          rosterPaste={rosterPaste}
+          rosterResult={rosterResult}
+          rosterLoading={rosterBusy}
+          rosterPasteRef={rosterPasteRef}
+          onPasteChange={setRosterPaste}
+          onPasteEnroll={handlePasteEnroll}
+          onRemoveEnrollment={handleRemoveEnrollment}
+          onImportComplete={() => invalidateEnrollments(rosterSubject.id)}
+          onClose={handleCloseRoster}
+        />
       )}
 
       {editingAssessment && (

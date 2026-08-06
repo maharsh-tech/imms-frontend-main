@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { createStudent } from '../../api/students'
 import {
   accountInviteMutations,
   useAccountInvites,
@@ -7,45 +8,17 @@ import {
   ACCOUNT_INVITES_KEY,
 } from '../../hooks/useAccountInvites'
 import type { AccountInvite, BulkCreateResult } from '../../types'
-import { createStudent } from '../../api/students'
-import { Trash2, UserPlus, Copy, Check, X } from 'lucide-react'
 import { apiErrorMessage } from '../../utils/api-errors'
-
-type RoleFilter = 'ALL' | 'STUDENT' | 'TEACHER' | 'COORDINATOR'
-
-const buildPreviewEmail = (identifier: string, role: string): string => {
-  const id = identifier.trim().toLowerCase()
-  if (!id) return ''
-  const domain = role === 'STUDENT' ? 'charusat.edu.in' : 'charusat.ac.in'
-  if (id.includes('@')) return id
-  return `${id}@${domain}`
-}
-
-const parseBulkLines = (
-  text: string,
-  role: string,
-): { identifier?: string; email?: string }[] => {
-  const entries: { identifier?: string; email?: string }[] = []
-  for (const line of text.split('\n')) {
-    const trimmed = line.trim()
-    if (!trimmed) continue
-    if (role === 'COORDINATOR' || role === 'TEACHER') {
-      if (trimmed.includes('@')) {
-        entries.push({ email: trimmed.toLowerCase() })
-      } else if (role === 'TEACHER') {
-        entries.push({ identifier: trimmed.toLowerCase() })
-      } else {
-        entries.push({ email: trimmed.toLowerCase() })
-      }
-      continue
-    }
-    const id = trimmed.split(/[,\t\s]+/)[0]?.trim()
-    if (!id) continue
-    entries.push({ identifier: id.toUpperCase() })
-  }
-  return entries
-}
-
+import BulkInviteForm from '../../components/coordinator/account-invites/BulkInviteForm'
+import SingleInviteForm from '../../components/coordinator/account-invites/SingleInviteForm'
+import InviteTable from '../../components/coordinator/account-invites/InviteTable'
+import RosterDialog from '../../components/coordinator/account-invites/RosterDialog'
+import {
+  buildPreviewEmail,
+  parseBulkLines,
+  downloadInviteLinksExcel,
+  type RoleFilter,
+} from '../../components/coordinator/account-invites/account-invite-utils'
 
 const AccountInvites = () => {
   const [page, setPage] = useState(1)
@@ -67,7 +40,6 @@ const AccountInvites = () => {
   const [rosterDepartment, setRosterDepartment] = useState('IT')
   const [rosterSemester, setRosterSemester] = useState('5')
   const [rosterBatch, setRosterBatch] = useState('2023-2027')
-  const [rosterLoading, setRosterLoading] = useState(false)
 
   const queryClient = useQueryClient()
   const invalidateInvites = useAccountInvitesInvalidator()
@@ -98,7 +70,7 @@ const AccountInvites = () => {
       setBulkText('')
       invalidateInvites()
       if (result.invites && result.invites.length > 0) {
-        await downloadInviteLinksExcel(result.invites)
+        await downloadInviteLinksExcel(result.invites, bulkRole)
       }
       setShowBulkForm(false)
     },
@@ -143,6 +115,15 @@ const AccountInvites = () => {
     onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to generate activation link')),
   })
 
+  const rosterMutation = useMutation({
+    mutationFn: createStudent,
+    onSuccess: () => {
+      setRosterInvite(null)
+      setRosterName('')
+      invalidateInvites()
+    },
+    onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to add student to roster')),
+  })
 
   const previewEmail = useMemo(() => {
     if (addRole === 'COORDINATOR' || addRole === 'TEACHER') {
@@ -151,26 +132,23 @@ const AccountInvites = () => {
     return buildPreviewEmail(identifier, addRole)
   }, [identifier, addRole, email])
 
-  const handlePageChange = (nextPage: number) => {
-    if (nextPage < 1 || nextPage > totalPages) return
-    setPage(nextPage)
-  }
+  const pendingRosterCount = useMemo(
+    () =>
+      invites.filter(
+        (i) => (i.role === 'STUDENT' || i.role === 'TEACHER') && i.rosterLinked === false,
+      ).length,
+    [invites],
+  )
 
-  const pendingRosterCount = useMemo(() => {
-    return invites.filter(
-      (i) => (i.role === 'STUDENT' || i.role === 'TEACHER') && i.rosterLinked === false,
-    ).length
-  }, [invites])
-
-  const filteredInvites = useMemo(() => {
-    return [...invites].sort((a, b) =>
-      (a.identifier ?? a.email).localeCompare(b.identifier ?? b.email, undefined, {
-        numeric: true,
-      }),
-    )
-  }, [invites])
-
-
+  const filteredInvites = useMemo(
+    () =>
+      [...invites].sort((a, b) =>
+        (a.identifier ?? a.email).localeCompare(b.identifier ?? b.email, undefined, {
+          numeric: true,
+        }),
+      ),
+    [invites],
+  )
 
   const handleCopy = async (value: string, key: string) => {
     await navigator.clipboard.writeText(value)
@@ -195,66 +173,7 @@ const AccountInvites = () => {
     }
   }
 
-  const downloadInviteLinksExcel = async (createdInvites: AccountInvite[]) => {
-    const ExcelJS = (await import('exceljs')).default
-    const workbook = new ExcelJS.Workbook()
-    const worksheet = workbook.addWorksheet('Activation Links')
-
-    worksheet.columns = [
-      { header: 'Student/Faculty/Coordinator ID', key: 'idOrEmail', width: 35 },
-      { header: 'Activation Link', key: 'link', width: 60 }
-    ]
-
-    const headerRow = worksheet.getRow(1)
-    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } }
-    headerRow.eachCell((cell) => {
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FF1A365D' }
-      }
-      cell.alignment = { vertical: 'middle', horizontal: 'left' }
-      cell.border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' }
-      }
-    })
-    headerRow.height = 25
-
-    createdInvites.forEach((invite) => {
-      const idOrEmail = invite.identifier || invite.email
-      const addedRow = worksheet.addRow({
-        idOrEmail,
-        link: invite.activationLink || '—'
-      })
-
-      addedRow.eachCell((cell) => {
-        cell.border = {
-          top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-          left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-          bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-          right: { style: 'thin', color: { argb: 'FFCCCCCC' } }
-        }
-        cell.alignment = { vertical: 'middle', horizontal: 'left' }
-      })
-      addedRow.height = 20
-    })
-
-    const buffer = await workbook.xlsx.writeBuffer()
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `activation_links_${bulkRole.toLowerCase()}s.xlsx`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
-
-  const handleBulkAdd = async () => {
+  const handleBulkAdd = () => {
     const entries = parseBulkLines(bulkText, bulkRole)
     if (entries.length === 0) {
       setError(
@@ -271,7 +190,7 @@ const AccountInvites = () => {
     bulkCreateMutation.mutate({ role: bulkRole, entries })
   }
 
-  const handleSingleAdd = async (e: React.FormEvent) => {
+  const handleSingleAdd = (e: React.FormEvent) => {
     e.preventDefault()
     if ((addRole === 'COORDINATOR' || addRole === 'TEACHER') && !email.trim()) return
     if (addRole === 'STUDENT' && !identifier.trim()) return
@@ -286,7 +205,7 @@ const AccountInvites = () => {
     })
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!window.confirm('Revoke this account? They will not be able to activate.')) return
     deleteMutation.mutate(id)
   }
@@ -300,31 +219,17 @@ const AccountInvites = () => {
     setError('')
   }
 
-  const handleCloseRoster = () => {
-    setRosterInvite(null)
-    setRosterName('')
-  }
-
-  const handleAddToRoster = async (e: React.FormEvent) => {
+  const handleAddToRoster = (e: React.FormEvent) => {
     e.preventDefault()
     if (!rosterInvite?.identifier) return
-    setRosterLoading(true)
     setError('')
-    try {
-      await createStudent({
-        rollNumber: rosterInvite.identifier,
-        name: rosterName.trim(),
-        department: rosterDepartment.trim(),
-        semester: Number.parseInt(rosterSemester, 10),
-        batch: rosterBatch.trim(),
-      })
-      handleCloseRoster()
-      invalidateInvites()
-    } catch (err) {
-      setError(apiErrorMessage(err, 'Failed to add student to roster'))
-    } finally {
-      setRosterLoading(false)
-    }
+    rosterMutation.mutate({
+      rollNumber: rosterInvite.identifier,
+      name: rosterName.trim(),
+      department: rosterDepartment.trim(),
+      semester: Number.parseInt(rosterSemester, 10),
+      batch: rosterBatch.trim(),
+    })
   }
 
   if (loading) {
@@ -335,11 +240,10 @@ const AccountInvites = () => {
     <div className="bg-surface-container-lowest shadow rounded-lg p-6">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-on-surface">
-            Account Management
-          </h2>
+          <h2 className="text-2xl font-bold text-on-surface">Account Management</h2>
           <p className="text-sm text-on-surface-variant mt-1">
-            Students sign in with their roll number. Teachers and coordinators sign in with their institutional email.
+            Students sign in with their roll number. Teachers and coordinators sign in with their
+            institutional email.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -350,7 +254,9 @@ const AccountInvites = () => {
               setShowSingleForm(false)
             }}
             className={`inline-flex items-center px-3 py-2 text-sm font-semibold rounded-md border border-outline-variant cursor-pointer transition-colors ${
-              showBulkForm ? 'bg-primary text-white hover:bg-primary-container' : 'bg-surface-container-low text-primary hover:bg-surface-container'
+              showBulkForm
+                ? 'bg-primary text-white hover:bg-primary-container'
+                : 'bg-surface-container-low text-primary hover:bg-surface-container'
             }`}
           >
             {showBulkForm ? 'Close Bulk Invite' : 'Bulk Invite'}
@@ -362,15 +268,15 @@ const AccountInvites = () => {
               setShowBulkForm(false)
             }}
             className={`inline-flex items-center px-3 py-2 text-sm font-semibold rounded-md border border-outline-variant cursor-pointer transition-colors ${
-              showSingleForm ? 'bg-primary text-white hover:bg-primary-container' : 'bg-surface-container-low text-primary hover:bg-surface-container'
+              showSingleForm
+                ? 'bg-primary text-white hover:bg-primary-container'
+                : 'bg-surface-container-low text-primary hover:bg-surface-container'
             }`}
           >
             {showSingleForm ? 'Close Add Single' : 'Add Single'}
           </button>
         </div>
       </div>
-
-
 
       {pendingRosterCount > 0 && (
         <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6">
@@ -389,368 +295,62 @@ const AccountInvites = () => {
       )}
 
       {showBulkForm && (
-        <div className="bg-surface-container-low p-4 rounded-md mb-6 border border-outline-variant">
-          <h3 className="text-lg font-medium text-on-surface mb-3">Bulk invite (paste student IDs)</h3>
-          <p className="text-xs text-on-surface-variant mb-2">
-            {bulkRole === 'COORDINATOR'
-              ? 'One coordinator email per line'
-              : bulkRole === 'STUDENT'
-                ? 'One roll number per line — college email is generated automatically'
-                : 'One ID per line — email is generated automatically'}
-          </p>
-          <textarea
-            value={bulkText}
-            onChange={(e) => setBulkText(e.target.value)}
-            rows={5}
-            placeholder={
-              bulkRole === 'COORDINATOR'
-                ? 'coordinator@charusat.ac.in'
-                : bulkRole === 'TEACHER'
-                  ? 'teacher1@charusat.ac.in\nteacher2@charusat.ac.in'
-                  : '24ABC123\n24ABC124\n24ABC125'
-            }
-            className="w-full border border-outline-variant rounded-md px-3 py-2 text-sm font-mono focus:ring-primary/20 focus:border-primary outline-none"
-            aria-label="Bulk account creation"
-          />
-          <div className="flex flex-wrap gap-3 mt-3">
-            <select
-              value={bulkRole}
-              onChange={(e) => setBulkRole(e.target.value)}
-              className="px-3 py-2 border border-outline-variant rounded-md text-sm bg-surface-container-lowest"
-            >
-              <option value="STUDENT">Students</option>
-              <option value="TEACHER">Teachers</option>
-              <option value="COORDINATOR">Coordinators</option>
-            </select>
-            <button
-              type="button"
-              onClick={handleBulkAdd}
-              disabled={bulkCreateMutation.isPending}
-              className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-container disabled:opacity-50 cursor-pointer"
-            >
-              {bulkCreateMutation.isPending ? 'Creating...' : 'Create accounts & download Excel'}
-            </button>
-          </div>
-          {bulkResult && (
-            <p className="mt-3 text-sm text-on-surface">
-              Created: {bulkResult.created} · Skipped: {bulkResult.skipped}
-              {bulkResult.errors.length > 0 && (
-                <span className="text-red-600"> · {bulkResult.errors.length} errors</span>
-              )}
-            </p>
-          )}
-        </div>
+        <BulkInviteForm
+          bulkText={bulkText}
+          bulkRole={bulkRole}
+          bulkResult={bulkResult}
+          isPending={bulkCreateMutation.isPending}
+          onBulkTextChange={setBulkText}
+          onBulkRoleChange={setBulkRole}
+          onSubmit={handleBulkAdd}
+        />
       )}
 
       {showSingleForm && (
-        <div className="bg-surface-container-low p-4 rounded-md mb-8 border border-outline-variant">
-          <h3 className="text-lg font-medium text-on-surface mb-4 flex items-center">
-            <UserPlus className="w-5 h-5 mr-2 text-primary" />
-            Add single account
-          </h3>
-          <form onSubmit={handleSingleAdd} className="flex flex-col gap-3">
-            <div className="flex flex-col sm:flex-row gap-3">
-              {addRole === 'STUDENT' ? (
-                <input
-                  type="text"
-                  required
-                  placeholder="Roll number (e.g. 24ABC123)"
-                  className="w-full sm:w-40 px-3 py-2 border border-outline-variant rounded-md text-sm font-mono uppercase"
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value.toUpperCase())}
-                  disabled={createMutation.isPending}
-                />
-              ) : (
-                <input
-                  type="email"
-                  required
-                  placeholder={
-                    addRole === 'TEACHER'
-                      ? 'teacher@charusat.ac.in'
-                      : 'coordinator@charusat.ac.in'
-                  }
-                  className="flex-1 px-3 py-2 border border-outline-variant rounded-md text-sm"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={createMutation.isPending}
-                />
-              )}
-              <select
-                className="w-full sm:w-40 px-3 py-2 border border-outline-variant rounded-md text-sm bg-surface-container-lowest"
-                value={addRole}
-                onChange={(e) => setAddRole(e.target.value)}
-                disabled={createMutation.isPending}
-              >
-                <option value="STUDENT">Student</option>
-                <option value="TEACHER">Teacher</option>
-                <option value="COORDINATOR">Coordinator</option>
-              </select>
-              <button
-                type="submit"
-                disabled={createMutation.isPending}
-                className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-container disabled:opacity-50 cursor-pointer"
-              >
-                {createMutation.isPending ? 'Adding...' : 'Add'}
-              </button>
-            </div>
-            {previewEmail && addRole === 'STUDENT' && (
-              <p className="text-sm text-on-surface-variant">
-                Email will be: <span className="font-mono text-on-surface">{previewEmail}</span>
-              </p>
-            )}
-          </form>
-        </div>
+        <SingleInviteForm
+          addRole={addRole}
+          identifier={identifier}
+          email={email}
+          previewEmail={previewEmail}
+          isPending={createMutation.isPending}
+          onAddRoleChange={setAddRole}
+          onIdentifierChange={setIdentifier}
+          onEmailChange={setEmail}
+          onSubmit={handleSingleAdd}
+        />
       )}
 
-      <div className="flex gap-2 mb-4">
-        {(['STUDENT', 'TEACHER', 'COORDINATOR', 'ALL'] as RoleFilter[]).map((role) => (
-          <button
-            key={role}
-            type="button"
-            onClick={() => setRoleFilter(role)}
-            className={`px-3 py-1 text-xs font-medium rounded-full ${
-              roleFilter === role
-                ? 'bg-primary text-white'
-                : 'bg-background text-on-surface-variant hover:bg-gray-200'
-            }`}
-          >
-            {role === 'ALL' ? 'All' : role.charAt(0) + role.slice(1).toLowerCase() + 's'}
-          </button>
-        ))}
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-surface-variant">
-          <thead className="bg-surface-container-low">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">ID</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Email</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Role</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Roster</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Account</th>
-
-              <th className="px-4 py-3 text-right text-xs font-medium text-on-surface-variant uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-surface-container-lowest divide-y divide-surface-variant">
-            {filteredInvites.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-sm text-on-surface-variant">
-                  No accounts in this category.
-                </td>
-              </tr>
-            ) : (
-              filteredInvites.map((invite) => (
-                <tr key={invite.id} className="hover:bg-surface-container-low">
-                  <td className="px-4 py-3 text-sm font-mono font-medium text-on-surface">
-                    {invite.identifier ?? '—'}
-                  </td>
-                  <td className="px-4 py-3 text-sm font-mono text-on-surface">{invite.email}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <span
-                      className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
-                        invite.role === 'COORDINATOR'
-                          ? 'bg-purple-100 text-purple-800'
-                          : invite.role === 'TEACHER'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-blue-100 text-primary'
-                      }`}
-                    >
-                      {invite.role}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {invite.role === 'COORDINATOR' ? (
-                      <span className="text-outline">—</span>
-                    ) : invite.rosterLinked ? (
-                      <span className="text-green-700 font-medium">In roster</span>
-                    ) : (
-                      <span className="text-amber-700 font-medium">Not in roster</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {invite.isActivated ? (
-                      <span className="text-green-700 font-medium">Active</span>
-                    ) : (
-                      <span className="text-amber-700 font-medium">Pending activation</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right text-sm space-x-2">
-                    {invite.role === 'STUDENT' && !invite.rosterLinked && invite.identifier && (
-                      <button
-                        type="button"
-                        onClick={() => handleOpenRoster(invite)}
-                        className="inline-flex items-center text-green-700 hover:text-green-900 text-xs font-medium"
-                      >
-                        <UserPlus className="w-4 h-4 mr-1" />
-                        Add to roster
-                      </button>
-                    )}
-                    {!invite.isActivated && (
-                      <button
-                        type="button"
-                        onClick={() => handleCopyActivationLink(invite)}
-                        disabled={linkLoadingId === invite.id}
-                        className="inline-flex items-center text-primary hover:text-primary text-xs disabled:opacity-60"
-                      >
-                        {copiedKey === invite.id ? (
-                          <>
-                            <Check className="w-4 h-4 mr-1" />
-                            Copied
-                          </>
-                        ) : linkLoadingId === invite.id ? (
-                          'Generating...'
-                        ) : (
-                          <>
-                            <Copy className="w-4 h-4 mr-1" />
-                            {invite.hasActivationToken ? 'Copy new link' : 'Copy activation link'}
-                          </>
-                        )}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(invite.id)}
-                      className="inline-flex items-center text-red-600 hover:text-red-800 p-1"
-                      title="Revoke"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-outline-variant bg-surface-container-low text-sm">
-            <span className="text-on-surface-variant">
-              Page {page} of {totalPages} · {totalInvites} accounts
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => handlePageChange(page - 1)}
-                disabled={page <= 1 || loading}
-                className="px-3 py-1 rounded-md border border-outline-variant disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                onClick={() => handlePageChange(page + 1)}
-                disabled={page >= totalPages || loading}
-                className="px-3 py-1 rounded-md border border-outline-variant disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      <InviteTable
+        invites={filteredInvites}
+        roleFilter={roleFilter}
+        page={page}
+        totalPages={totalPages}
+        totalInvites={totalInvites}
+        loading={loading}
+        linkLoadingId={linkLoadingId}
+        copiedKey={copiedKey}
+        onRoleFilterChange={setRoleFilter}
+        onPageChange={setPage}
+        onCopyActivationLink={handleCopyActivationLink}
+        onDelete={handleDelete}
+        onOpenRoster={handleOpenRoster}
+      />
 
       {rosterInvite && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div
-            className="bg-surface-container-lowest rounded-lg shadow-xl max-w-md w-full p-6 border border-outline-variant"
-            role="dialog"
-            aria-labelledby="roster-dialog-title"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 id="roster-dialog-title" className="text-lg font-semibold text-on-surface">
-                  Add to roster
-                </h3>
-                <p className="text-sm text-on-surface-variant mt-1">
-                  Invite exists for{' '}
-                  <span className="font-mono font-medium">{rosterInvite.identifier}</span> — student
-                  does not need to activate first.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleCloseRoster}
-                className="text-outline hover:text-on-surface-variant"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleAddToRoster} className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-on-surface-variant mb-1">Roll number</label>
-                <input
-                  type="text"
-                  readOnly
-                  value={rosterInvite.identifier ?? ''}
-                  className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm font-mono bg-surface-container-low"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-on-surface-variant mb-1">Full name</label>
-                <input
-                  type="text"
-                  required
-                  value={rosterName}
-                  onChange={(e) => setRosterName(e.target.value)}
-                  className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
-                  autoFocus
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-on-surface-variant mb-1">Department</label>
-                  <input
-                    type="text"
-                    required
-                    value={rosterDepartment}
-                    onChange={(e) => setRosterDepartment(e.target.value)}
-                    className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-on-surface-variant mb-1">Semester</label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    max={12}
-                    value={rosterSemester}
-                    onChange={(e) => setRosterSemester(e.target.value)}
-                    className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-on-surface-variant mb-1">Batch</label>
-                <input
-                  type="text"
-                  required
-                  value={rosterBatch}
-                  onChange={(e) => setRosterBatch(e.target.value)}
-                  placeholder="2023-2027"
-                  className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
-                />
-              </div>
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="submit"
-                  disabled={rosterLoading}
-                  className="flex-1 px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-container disabled:opacity-50"
-                >
-                  {rosterLoading ? 'Adding…' : 'Add student'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCloseRoster}
-                  className="px-4 py-2 text-sm text-on-surface border border-outline-variant rounded-md hover:bg-surface-container-low"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <RosterDialog
+          invite={rosterInvite}
+          rosterName={rosterName}
+          rosterDepartment={rosterDepartment}
+          rosterSemester={rosterSemester}
+          rosterBatch={rosterBatch}
+          isPending={rosterMutation.isPending}
+          onNameChange={setRosterName}
+          onDepartmentChange={setRosterDepartment}
+          onSemesterChange={setRosterSemester}
+          onBatchChange={setRosterBatch}
+          onSubmit={handleAddToRoster}
+          onClose={() => setRosterInvite(null)}
+        />
       )}
     </div>
   )

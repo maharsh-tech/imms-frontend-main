@@ -12,7 +12,7 @@ export {
   useSubjectEnrollments,
   useSubjectsInvalidator,
   useSubjectEnrollmentsInvalidator,
-  subjectMutations,
+  useSubjectMutations,
   SUBJECTS_KEY,
   SUBJECT_ENROLLMENTS_KEY,
 } from './useSubjects'

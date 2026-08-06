@@ -55,6 +55,14 @@ const MarksGridPage = () => {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message: msg, type })
+    setTimeout(() => {
+      setToast(null)
+    }, 3000)
+  }
 
   const load = async () => {
     if (!assignmentId || !assessmentId) return
@@ -68,8 +76,8 @@ const MarksGridPage = () => {
           rollNumber: s.rollNumber,
           name: s.name,
           marksObtained: s.mark?.marksObtained != null ? String(s.mark.marksObtained) : '',
-          isAb: s.mark?.flag === FlagType.AB,
-          isNe: s.mark?.flag === FlagType.NE,
+          isAb: s.mark?.flag === FlagType.AB || s.mark?.flag === FlagType.AB_NE,
+          isNe: s.mark?.flag === FlagType.NE || s.mark?.flag === FlagType.AB_NE,
         })),
       )
     } catch (err) {
@@ -116,45 +124,46 @@ const MarksGridPage = () => {
     return { entered, ab, ne, blank }
   }, [rows])
 
-  const handleSaveMarks = async () => {
+  const handleSaveAll = async () => {
     if (!assignmentId || !assessmentId) return
     setSaving(true)
     setError('')
     setMessage('')
     try {
-      await saveMarksBulk({
-        subjectAssignmentId: assignmentId,
-        assessmentId,
-        marks: rows.map((r) => ({
-          studentId: r.studentId,
-          marksObtained: r.isAb ? null : r.marksObtained === '' ? null : Number(r.marksObtained),
-          flag: r.isAb ? FlagType.AB : FlagType.NONE,
-        })),
-      })
-      setMessage('Marks saved')
+      if (isCoordinator) {
+        await Promise.all([
+          saveMarksBulk({
+            subjectAssignmentId: assignmentId,
+            assessmentId,
+            marks: rows.map((r) => ({
+              studentId: r.studentId,
+              marksObtained: r.isAb ? null : r.marksObtained === '' ? null : Number(r.marksObtained),
+              flag: r.isAb ? FlagType.AB : FlagType.NONE,
+            })),
+          }),
+          flagNe({
+            subjectAssignmentId: assignmentId,
+            assessmentId,
+            neStudentIds: rows.filter((r) => r.isNe).map((r) => r.studentId),
+          })
+        ])
+      } else {
+        await saveMarksBulk({
+          subjectAssignmentId: assignmentId,
+          assessmentId,
+          marks: rows.map((r) => ({
+            studentId: r.studentId,
+            marksObtained: r.isAb ? null : r.marksObtained === '' ? null : Number(r.marksObtained),
+            flag: r.isAb ? FlagType.AB : FlagType.NONE,
+          })),
+        })
+      }
+      showToast('All changes saved successfully!', 'success')
       load()
     } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Save failed'))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleSaveNe = async () => {
-    if (!assignmentId || !assessmentId) return
-    setSaving(true)
-    setError('')
-    setMessage('')
-    try {
-      await flagNe({
-        subjectAssignmentId: assignmentId,
-        assessmentId,
-        neStudentIds: rows.filter((r) => r.isNe).map((r) => r.studentId),
-      })
-      setMessage('NE flags saved')
-      load()
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Failed to save NE flags'))
+      const errMsg = apiErrorMessage(err, 'Save failed')
+      setError(errMsg)
+      showToast(errMsg, 'error')
     } finally {
       setSaving(false)
     }
@@ -180,10 +189,12 @@ const MarksGridPage = () => {
         })),
       })
       await submitMarks(assignmentId, assessmentId)
-      setMessage('Marks submitted successfully')
+      showToast('Marks submitted successfully!', 'success')
       load()
     } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Submit failed'))
+      const errMsg = apiErrorMessage(err, 'Submit failed')
+      setError(errMsg)
+      showToast(errMsg, 'error')
     } finally {
       setSaving(false)
     }
@@ -201,10 +212,12 @@ const MarksGridPage = () => {
     setMessage('')
     try {
       await lockMarks(assignmentId, assessmentId)
-      setMessage('Marks locked')
+      showToast('Marks locked successfully!', 'success')
       load()
     } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Lock failed'))
+      const errMsg = apiErrorMessage(err, 'Lock failed')
+      setError(errMsg)
+      showToast(errMsg, 'error')
     }
   }
 
@@ -214,10 +227,12 @@ const MarksGridPage = () => {
     setMessage('')
     try {
       await unlockMarks(assignmentId, assessmentId)
-      setMessage('Unlocked')
+      showToast('Marks unlocked successfully!', 'success')
       load()
     } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Unlock failed'))
+      const errMsg = apiErrorMessage(err, 'Unlock failed')
+      setError(errMsg)
+      showToast(errMsg, 'error')
     }
   }
 
@@ -233,10 +248,12 @@ const MarksGridPage = () => {
     setMessage('')
     try {
       await publishMarks(assignmentId, assessmentId)
-      setMessage('Published — students can now see results')
+      showToast('Results published successfully!', 'success')
       load()
     } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Publish failed'))
+      const errMsg = apiErrorMessage(err, 'Publish failed')
+      setError(errMsg)
+      showToast(errMsg, 'error')
     }
   }
 
@@ -252,10 +269,12 @@ const MarksGridPage = () => {
     setMessage('')
     try {
       await unpublishMarks(assignmentId, assessmentId)
-      setMessage('Unpublished — hidden from students')
+      showToast('Results unpublished successfully!', 'success')
       load()
     } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Unpublish failed'))
+      const errMsg = apiErrorMessage(err, 'Unpublish failed')
+      setError(errMsg)
+      showToast(errMsg, 'error')
     }
   }
 
@@ -291,7 +310,9 @@ const MarksGridPage = () => {
 
     rows.forEach((row, index) => {
       let markText: string | number = row.marksObtained === '' ? '—' : Number(row.marksObtained)
-      if (row.isNe) {
+      if (row.isNe && row.isAb) {
+        markText = 'AB+NE'
+      } else if (row.isNe) {
         markText = 'NE'
       } else if (row.isAb) {
         markText = 'AB'
@@ -305,16 +326,29 @@ const MarksGridPage = () => {
       })
 
       const markCell = addedRow.getCell('marks')
-      if (row.isNe) {
+      if (row.isNe && row.isAb) {
         markCell.fill = {
           type: 'pattern',
           pattern: 'solid',
-          fgColor: { argb: 'FFD1ECF1' }
+          fgColor: { argb: 'FFF3E8FF' } // soft purple
         }
-        markCell.font = { bold: true, color: { argb: 'FF0C5460' } }
+        markCell.font = { bold: true, color: { argb: 'FF6B21A8' } } // dark purple
+        markCell.alignment = { horizontal: 'center' }
+      } else if (row.isNe) {
+        markCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFD1ECF1' } // soft blue
+        }
+        markCell.font = { bold: true, color: { argb: 'FF0C5460' } } // dark blue
         markCell.alignment = { horizontal: 'center' }
       } else if (row.isAb) {
-        markCell.font = { bold: true, color: { argb: 'FFE53E3E' } }
+        markCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFEE2E2' } // soft red
+        }
+        markCell.font = { bold: true, color: { argb: 'FF991B1B' } } // dark red
         markCell.alignment = { horizontal: 'center' }
       } else {
         markCell.alignment = { horizontal: 'left' }
@@ -366,17 +400,22 @@ const MarksGridPage = () => {
         String(i + 1),
         r.rollNumber,
         r.name,
-        r.isNe ? 'NE' : r.isAb ? 'AB' : r.marksObtained || '—'
+        r.isNe && r.isAb ? 'AB+NE' : r.isNe ? 'NE' : r.isAb ? 'AB' : r.marksObtained || '—'
       ]),
       didParseCell: (data) => {
         if (data.section === 'body' && data.column.index === 3) {
           const val = data.cell.text[0]
-          if (val === 'NE') {
-            data.cell.styles.fillColor = [209, 236, 241]
-            data.cell.styles.textColor = [12, 84, 96]
+          if (val === 'AB+NE') {
+            data.cell.styles.fillColor = [243, 232, 255] // soft purple
+            data.cell.styles.textColor = [107, 33, 168] // dark purple
+            data.cell.styles.fontStyle = 'bold'
+          } else if (val === 'NE') {
+            data.cell.styles.fillColor = [209, 236, 241] // soft blue
+            data.cell.styles.textColor = [12, 84, 96] // dark blue
             data.cell.styles.fontStyle = 'bold'
           } else if (val === 'AB') {
-            data.cell.styles.textColor = [229, 62, 62]
+            data.cell.styles.fillColor = [254, 226, 226] // soft red
+            data.cell.styles.textColor = [153, 27, 27] // dark red
             data.cell.styles.fontStyle = 'bold'
           }
         }
@@ -440,9 +479,10 @@ const MarksGridPage = () => {
       onLogout={handleLogout}
       wide
     >
-      <Link to={backLink} className="text-label-md text-primary hover:underline">
-        ← Back to dashboard
-      </Link>
+      <div className="md:pr-52 pb-20 md:pb-0 relative">
+        <Link to={backLink} className="text-label-md text-primary hover:underline">
+          ← Back to dashboard
+        </Link>
       <h1 className="mt-2 text-headline-lg-mobile font-semibold text-primary lg:text-headline-lg">
         {grid.assignment.subject.code} — {grid.assessment.name}
       </h1>
@@ -603,7 +643,7 @@ const MarksGridPage = () => {
                         />
                       ) : (
                         <span className="text-sm">
-                          {row.isAb ? 'AB' : row.marksObtained || (row.isNe ? '—' : '—')}
+                          {row.isNe && row.isAb ? 'AB+NE' : row.isAb ? 'AB' : row.marksObtained || (row.isNe ? '—' : '—')}
                           {row.isNe && row.marksObtained && isCoordinator && (
                             <span className="text-on-surface-variant text-xs ml-1">(NE flagged)</span>
                           )}
@@ -637,7 +677,7 @@ const MarksGridPage = () => {
                         <input
                           type="checkbox"
                           checked={row.isAb}
-                          disabled={!isDraft || row.isNe}
+                          disabled={!isDraft || (isTeacher && row.isNe)}
                           onChange={(e) =>
                             updateRow(index, {
                               isAb: e.target.checked,
@@ -659,78 +699,92 @@ const MarksGridPage = () => {
           {summary.entered} entered · {summary.ab} AB · {summary.ne} NE · {summary.blank} blank
         </p>
 
-        <div className="mt-4 flex flex-wrap gap-3">
-          {isCoordinator && isDraft && (
-            <>
+        </div> {/* closing wrapper */}
+        
+        {/* Floating Actions Panel */}
+        {(isDraft || isSubmitted || isPublished) && (
+          <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around gap-2 p-3 bg-surface-container-low border-t border-outline-variant shadow-[0_-4px_12px_rgba(0,0,0,0.05)] md:bottom-auto md:left-auto md:right-6 md:top-1/2 md:-translate-y-1/2 md:w-44 md:flex-col md:border md:rounded-xl md:shadow-xl md:p-4 md:bg-surface-container-lowest">
+            <p className="hidden md:block text-xs font-semibold text-on-surface-variant text-center border-b border-outline-variant pb-2 mb-1 w-full">
+              Actions
+            </p>
+            
+            {isDraft && (
+              <>
+                <button
+                  onClick={handleSaveAll}
+                  disabled={saving}
+                  className="flex-1 md:flex-none md:w-full bg-primary text-on-primary px-3 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer text-center"
+                >
+                  Save Changes
+                </button>
+                
+                {isCoordinator && (
+                  <button
+                    onClick={handleLock}
+                    disabled={saving}
+                    className="flex-1 md:flex-none md:w-full bg-error text-on-error px-3 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer text-center"
+                  >
+                    Lock Marks
+                  </button>
+                )}
+                
+                {isTeacher && (
+                  <button
+                    onClick={handleSubmit}
+                    disabled={saving}
+                    className="flex-1 md:flex-none md:w-full bg-green-700 hover:bg-green-800 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer text-center"
+                  >
+                    Submit
+                  </button>
+                )}
+              </>
+            )}
+
+            {isCoordinator && isSubmitted && (
+              <>
+                <button
+                  onClick={handleUnlock}
+                  disabled={saving}
+                  className="flex-1 md:flex-none md:w-full bg-secondary text-on-secondary px-3 py-2 rounded-lg text-sm font-semibold hover:opacity-95 transition-opacity disabled:opacity-50 cursor-pointer text-center"
+                >
+                  Unlock
+                </button>
+                <button
+                  onClick={handlePublish}
+                  disabled={saving}
+                  className="flex-1 md:flex-none md:w-full bg-green-700 hover:bg-green-800 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer text-center"
+                >
+                  Publish
+                </button>
+              </>
+            )}
+
+            {isCoordinator && isPublished && (
               <button
-                onClick={handleSaveMarks}
+                onClick={handleUnpublish}
                 disabled={saving}
-                className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-container disabled:opacity-50"
+                className="flex-1 md:flex-none md:w-full bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer text-center"
               >
-                Save Marks
+                Unpublish
               </button>
-              <button
-                onClick={handleSaveNe}
-                disabled={saving}
-                className="bg-amber-600 text-white px-4 py-2 rounded hover:bg-amber-700 disabled:opacity-50"
-              >
-                Save NE Flags
-              </button>
-              <button
-                onClick={handleLock}
-                disabled={saving}
-                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50"
-              >
-                Lock Marks
-              </button>
-            </>
-          )}
-          {isTeacher && isDraft && (
-            <>
-              <button
-                onClick={handleSaveMarks}
-                disabled={saving}
-                className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-container disabled:opacity-50"
-              >
-                Save Draft
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={saving}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
-              >
-                Submit to Coordinator
-              </button>
-            </>
-          )}
-          {isCoordinator && isSubmitted && (
-            <>
-              <button
-                onClick={handleUnlock}
-                disabled={saving}
-                className="bg-secondary text-on-secondary rounded-lg px-4 py-2 text-label-md font-semibold hover:opacity-90 disabled:opacity-50"
-              >
-                Unlock for Teacher
-              </button>
-              <button
-                onClick={handlePublish}
-                disabled={saving}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
-              >
-                Publish Results
-              </button>
-            </>
-          )}
-          {isCoordinator && isPublished && (
-            <button
-              onClick={handleUnpublish}
-              disabled={saving}
-              className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 disabled:opacity-50"
-            >
-              Unpublish Results
-            </button>
-          )}
-        </div>
+            )}
+          </div>
+        )}
+
+        {/* Custom Toast Notification */}
+        {toast && (
+          <div
+            className={`fixed bottom-20 md:bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-2xl border transition-all duration-300 transform translate-y-0 scale-100 animate-in fade-in slide-in-from-bottom-5 ${
+              toast.type === 'success'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200'
+                : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950 dark:border-red-800 dark:text-red-200'
+            }`}
+            role="status"
+          >
+            <div className={`w-2 h-2 rounded-full ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+            <span className="text-sm font-medium">{toast.message}</span>
+          </div>
+        )}
     </StaffShell>
   )
 }

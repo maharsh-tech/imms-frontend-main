@@ -19,6 +19,7 @@ export const FlagType = {
   AB: 'AB',
   NE: 'NE',
   NONE: 'NONE',
+  AB_NE: 'AB_NE',
 } as const;
 export type FlagType = (typeof FlagType)[keyof typeof FlagType];
 

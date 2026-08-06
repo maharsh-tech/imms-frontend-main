@@ -239,9 +239,7 @@ All state transitions validated server-side in `MarksService`.
 | Rate Limiting | @nestjs/throttler on auth endpoints |
 | HTTP Headers | helmet() |
 
-### Open security items (audit 2026-08-06)
-
-See [`../../AUDIT_REPORT.md`](../../AUDIT_REPORT.md) for full details.
+### Open security items
 
 | Item | Status |
 |---|---|
@@ -274,5 +272,3 @@ These will cause slowdowns as cohort size grows beyond ~100 students:
 | List endpoints | No pagination on students/faculty/subjects | Add `?page=&limit=` | **Resolved** — paginated list endpoints |
 | Marks grid (FE) | Full DOM table, no virtualization | `@tanstack/react-virtual` | **Resolved** |
 | Copy all pending links (FE) | N API calls to regenerate | Bulk backend endpoint | **Resolved** — `POST /allowed-users/regenerate-all-pending` |
-
-Full report: [`../../AUDIT_REPORT.md`](../../AUDIT_REPORT.md)

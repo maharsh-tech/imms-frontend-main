@@ -192,7 +192,7 @@ IMMS operates in three phases per semester:
 - PDF generation: < 5 seconds for individual, < 30 seconds for semester-batch
 - Excel import: handle up to 1000 rows without timeout (async processing if needed)
 
-> **Current gaps (audit 2026-08-06):** Mark bulk save and NE flag operations use per-student DB loops (N+1). List endpoints lack pagination. Excel import is row-by-row. See [`../../AUDIT_REPORT.md`](../../AUDIT_REPORT.md).
+> **Resolved (2026-08-06–07):** Mark bulk batching, list pagination, React Query caching, marks grid virtualization. Remaining: Excel import row-by-row on very large files.
 
 ### 4.2 Security
 - All API endpoints require valid JWT

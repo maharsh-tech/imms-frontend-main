@@ -26,8 +26,7 @@ All architectural and design documentation for both the frontend and backend is 
 
 ## 🔍 Audit & Known Issues
 
-See **[`../AUDIT_REPORT.md`](../AUDIT_REPORT.md)** for security, N+1 performance, and code quality findings.  
-Living dev context: **[`context.md`](./context.md)** (includes known-issues summary).
+Living dev context and known issues: **[`context.md`](./context.md)**
 
 ## 🛠️ Getting Started
 

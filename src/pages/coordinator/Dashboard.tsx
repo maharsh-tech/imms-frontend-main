@@ -13,7 +13,7 @@ type Tab = 'invites' | 'students' | 'faculty' | 'subjects' | 'assignments'
 
 export default function CoordinatorDashboard() {
   const { user, logout } = useAuthStore()
-  const [tab, setTab] = useState<Tab>('invites')
+  const [tab, setTab] = useState<Tab>('subjects')
 
   const handleLogout = async () => {
     try {
@@ -24,11 +24,11 @@ export default function CoordinatorDashboard() {
   }
 
   const tabs = [
+    { id: 'subjects' as const, label: 'Subjects & Exams', shortLabel: 'Subjects', icon: Layers },
+    { id: 'assignments' as const, label: 'Assignments', icon: Link2 },
     { id: 'invites' as const, label: 'Account Management', shortLabel: 'Accounts', icon: Users },
     { id: 'students' as const, label: 'Students', icon: GraduationCap },
     { id: 'faculty' as const, label: 'Faculty', icon: BookOpen },
-    { id: 'subjects' as const, label: 'Subjects & Exams', shortLabel: 'Subjects', icon: Layers },
-    { id: 'assignments' as const, label: 'Assignments', icon: Link2 },
   ]
 
   return (

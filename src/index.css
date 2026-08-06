@@ -182,4 +182,14 @@
     background-color: var(--color-background);
     color: var(--color-on-background);
   }
+
+  /* Hide up/down spin buttons on number inputs globally */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
 }

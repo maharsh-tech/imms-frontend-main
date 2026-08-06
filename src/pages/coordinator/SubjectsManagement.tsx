@@ -505,7 +505,7 @@ const SubjectsManagement = () => {
                         <td className="px-4 py-3 text-sm">
                           {s.subjectType === 'ELECTIVE' ? (
                             <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
-                              Elective · {s.enrollmentCount ?? 0}
+                              Elective
                             </span>
                           ) : (
                             <span className="text-on-surface-variant text-xs">Core</span>

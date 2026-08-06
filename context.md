@@ -185,6 +185,12 @@ Subjects tab: check "Elective subject" → roster modal (Excel or paste) → ass
 
 ## Last Updated
 
+**Coordinator Enhancements & Spinners Removal** (2026-08-06):
+- Reordered coordinator sidebar navigation tabs (Subjects & Exams is now the first landing tab).
+- Removed elective enrollment count from Subjects & Exams table row badge; the count is now only visible inside the opened Roster modal view.
+- Added a Publish toggle switch next to "Open Marks" in the assignments expanded row, supporting browser confirmations, error notifications in the page-level alert banner, and disabled states for draft assessments.
+- Disabled up/down spin buttons on all numeric inputs globally in base CSS styles.
+
 **Consolidated Save Action, Floating Actions Panel, & Toast Notifications** (2026-08-06):
 - Consolidated individual "Save Marks" and "Save NE Flags" buttons into a single "Save Changes" action button.
 - Designed a responsive, floating actions panel positioned fixed at the middle right on desktop (utilizing padding-right offset on the page wrapper to avoid overlapping table content), and as a sticky bottom bar on mobile viewports.

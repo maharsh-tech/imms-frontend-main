@@ -1,6 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
-import { getFaculty } from '../../api/subjects'
-import type { Faculty } from '../../api/subjects'
+import { useState, useMemo } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { createFaculty } from '../../api/faculty'
 import {
   downloadFacultyTemplate,
@@ -13,47 +12,41 @@ import {
 } from '../../utils/identifier-patterns'
 import { BookOpen, ChevronDown, ChevronUp, Search, UserPlus } from 'lucide-react'
 import { apiErrorMessage } from '../../utils/api-errors'
+import { useFaculty, useFacultyInvalidator } from '../../hooks/useFaculty'
 
 const FacultyManagement = () => {
-  const [faculty, setFaculty] = useState<Faculty[]>([])
-  const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalFaculty, setTotalFaculty] = useState(0)
   const pageSize = 50
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [deptFilter, setDeptFilter] = useState('ALL')
   const [showImport, setShowImport] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
-  const [addLoading, setAddLoading] = useState(false)
   const [teacherEmail, setTeacherEmail] = useState('')
   const [name, setName] = useState('')
   const [department, setDepartment] = useState('IT')
 
-  const loadFaculty = async (pageNum = page) => {
-    setLoading(true)
-    setError('')
-    try {
-      const result = await getFaculty({ page: pageNum, limit: pageSize })
-      setFaculty(result.data)
-      setTotalFaculty(result.total)
-      setTotalPages(Math.max(1, Math.ceil(result.total / result.limit)))
-      setPage(result.page)
-    } catch {
-      setError('Failed to load faculty')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const invalidateFaculty = useFacultyInvalidator()
+  const { data, isLoading, isFetching, error: queryError } = useFaculty({ page, limit: pageSize })
+  const faculty = data?.data ?? []
+  const totalFaculty = data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalFaculty / pageSize))
+  const loading = isLoading || isFetching
 
-  useEffect(() => {
-    loadFaculty(1)
-  }, [])
+  const createMutation = useMutation({
+    mutationFn: createFaculty,
+    onSuccess: () => {
+      setTeacherEmail('')
+      setName('')
+      setShowAdd(false)
+      invalidateFaculty()
+    },
+    onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to add teacher')),
+  })
 
   const handlePageChange = (nextPage: number) => {
     if (nextPage < 1 || nextPage > totalPages) return
-    void loadFaculty(nextPage)
+    setPage(nextPage)
   }
 
   const departments = useMemo(() => {
@@ -85,23 +78,12 @@ const FacultyManagement = () => {
       setError('Teacher email must match institutional format')
       return
     }
-    setAddLoading(true)
     setError('')
-    try {
-      await createFaculty({
-        facultyCode: slug,
-        name: name.trim(),
-        department: department.trim(),
-      })
-      setTeacherEmail('')
-      setName('')
-      await loadFaculty()
-      setShowAdd(false)
-    } catch (err) {
-      setError(apiErrorMessage(err, 'Failed to add teacher'))
-    } finally {
-      setAddLoading(false)
-    }
+    createMutation.mutate({
+      facultyCode: slug,
+      name: name.trim(),
+      department: department.trim(),
+    })
   }
 
   const addForm = (
@@ -140,10 +122,10 @@ const FacultyManagement = () => {
         />
         <button
           type="submit"
-          disabled={addLoading}
+          disabled={createMutation.isPending}
           className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-container disabled:opacity-50"
         >
-          {addLoading ? 'Adding…' : 'Add teacher'}
+          {createMutation.isPending ? 'Adding…' : 'Add teacher'}
         </button>
       </form>
       {previewSlug && isValidTeacherSlug(previewSlug) && (
@@ -210,14 +192,14 @@ const FacultyManagement = () => {
             description="Upload CSPIT staff list (.xlsx): single-column names (DR./MR./MS.) matched to Account Management, or structured sheet with Teacher Code. Account must exist first."
             onDownloadTemplate={downloadFacultyTemplate}
             onImport={(file) => importFaculty(file, { department: department.trim() })}
-            onImportComplete={loadFaculty}
+            onImportComplete={invalidateFaculty}
           />
         </div>
       )}
 
-      {error && (
+      {(error || queryError) && (
         <div className="bg-red-50 border-l-4 border-red-400 p-4">
-          <p className="text-sm text-red-700">{error}</p>
+          <p className="text-sm text-red-700">{error || 'Failed to load faculty'}</p>
         </div>
       )}
 

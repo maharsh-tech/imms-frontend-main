@@ -1,16 +1,15 @@
-import { Fragment, useState, useEffect, useMemo } from 'react';
+import { Fragment, useState, useMemo } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import {
-  getAssignments,
-  createAssignment,
-  deleteAssignment,
-  getSubjects,
-  getFaculty,
-} from '../../api/subjects';
 import { setNEVisibility } from '../../api/marks';
-import type { SubjectAssignment, Subject, Faculty } from '../../api/subjects';
+import type { SubjectAssignment } from '../../api/subjects';
 import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge';
 import { apiErrorMessage } from '../../utils/api-errors';
+import {
+  useAssignmentsBundle,
+  useAssignmentsInvalidator,
+  assignmentMutations,
+} from '../../hooks/useAssignments';
 
 const defaultAcademicYear = () => {
   const y = new Date().getFullYear();
@@ -19,16 +18,12 @@ const defaultAcademicYear = () => {
 };
 
 const AssignmentsManagement = () => {
-  const [assignments, setAssignments] = useState<SubjectAssignment[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [faculty, setFaculty] = useState<Faculty[]>([]);
   const [subjectId, setSubjectId] = useState('');
   const [facultyId, setFacultyId] = useState('');
   const [semester, setSemester] = useState(5);
   const [academicYear, setAcademicYear] = useState(defaultAcademicYear);
   const [startRollNumber, setStartRollNumber] = useState('');
   const [endRollNumber, setEndRollNumber] = useState('');
-  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -38,27 +33,36 @@ const AssignmentsManagement = () => {
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const [a, s, f] = await Promise.all([
-        getAssignments(),
-        getSubjects({ limit: 500 }),
-        getFaculty({ limit: 500 }),
-      ]);
-      setAssignments(a);
-      setSubjects(s.data);
-      setFaculty(f.data);
-    } catch {
-      setError('Failed to load assignments');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const invalidateAssignments = useAssignmentsInvalidator();
+  const { data, isLoading, isFetching, error: queryError } = useAssignmentsBundle();
+  const assignments = data?.assignments ?? [];
+  const subjects = data?.subjects ?? [];
+  const faculty = data?.faculty ?? [];
+  const loading = isLoading || isFetching;
 
-  useEffect(() => {
-    load();
-  }, []);
+  const createMutation = useMutation({
+    mutationFn: assignmentMutations.create,
+    onSuccess: () => {
+      setMessage('Teacher assigned successfully');
+      setSubjectId('');
+      setFacultyId('');
+      setStartRollNumber('');
+      setEndRollNumber('');
+      invalidateAssignments();
+    },
+    onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to create assignment')),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: assignmentMutations.delete,
+    onSuccess: () => {
+      setMessage('Assignment deleted');
+      invalidateAssignments();
+    },
+    onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to delete assignment')),
+  });
+
+  const actionLoading = loading || createMutation.isPending || deleteMutation.isPending;
 
   const academicYears = useMemo(
     () => [...new Set(assignments.map((a) => a.academicYear))].sort(),
@@ -94,45 +98,23 @@ const AssignmentsManagement = () => {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
     setMessage('');
-    try {
-      await createAssignment({
-        subjectId,
-        facultyId,
-        semester,
-        academicYear,
-        startRollNumber: startRollNumber.trim() || undefined,
-        endRollNumber: endRollNumber.trim() || undefined,
-      });
-      setMessage('Teacher assigned successfully');
-      setSubjectId('');
-      setFacultyId('');
-      setStartRollNumber('');
-      setEndRollNumber('');
-      load();
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Failed to create assignment'));
-    } finally {
-      setLoading(false);
-    }
+    createMutation.mutate({
+      subjectId,
+      facultyId,
+      semester,
+      academicYear,
+      startRollNumber: startRollNumber.trim() || undefined,
+      endRollNumber: endRollNumber.trim() || undefined,
+    });
   };
 
   const handleDelete = async (assignment: SubjectAssignment) => {
     if (!confirm(`Delete assignment for ${assignment.subject.code} — ${assignment.faculty.name}?`)) return;
-    setLoading(true);
     setError('');
     setMessage('');
-    try {
-      await deleteAssignment(assignment.id);
-      setMessage('Assignment deleted');
-      load();
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Failed to delete assignment'));
-    } finally {
-      setLoading(false);
-    }
+    deleteMutation.mutate(assignment.id);
   };
 
   const handleToggleNE = async (assignmentId: string, assessmentId: string, current: boolean) => {
@@ -142,7 +124,7 @@ const AssignmentsManagement = () => {
         assessmentId,
         showNEToStudents: !current,
       });
-      await load();
+      invalidateAssignments();
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Failed to toggle NE visibility'));
     }
@@ -153,9 +135,9 @@ const AssignmentsManagement = () => {
       {message && (
         <div className="bg-green-50 border-l-4 border-green-400 p-3 text-sm text-green-700">{message}</div>
       )}
-      {error && (
-        <div className="bg-red-50 border-l-4 border-red-400 p-3 text-sm text-red-700">{error}</div>
-      )}
+      {error || queryError ? (
+        <div className="bg-red-50 border-l-4 border-red-400 p-3 text-sm text-red-700">{error || 'Failed to load assignments'}</div>
+      ) : null}
 
       <div className="bg-surface-container-lowest rounded-lg shadow p-6 border border-outline-variant">
         <h3 className="text-lg font-semibold mb-4">Assign Teacher to Subject</h3>
@@ -217,7 +199,7 @@ const AssignmentsManagement = () => {
           />
           <button
             type="submit"
-            disabled={loading}
+            disabled={actionLoading}
             className="bg-primary text-white rounded px-4 py-2 hover:bg-primary-container disabled:opacity-50"
           >
             Assign
@@ -303,7 +285,7 @@ const AssignmentsManagement = () => {
                       <button
                         type="button"
                         onClick={() => handleDelete(a)}
-                        disabled={loading}
+                        disabled={actionLoading}
                         className="text-red-600 hover:underline disabled:opacity-50"
                       >
                         Delete

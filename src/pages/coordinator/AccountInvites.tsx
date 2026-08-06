@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  getAccountInvites,
-  createAccountInvite,
-  bulkCreateAccountInvites,
-  deleteAccountInvite,
-  regenerateActivationLink,
-} from '../../api/allowedUsers'
+  accountInviteMutations,
+  useAccountInvites,
+  useAccountInvitesInvalidator,
+  ACCOUNT_INVITES_KEY,
+} from '../../hooks/useAccountInvites'
 import type { AccountInvite, BulkCreateResult } from '../../types'
-import type { PaginationParams } from '../../types/pagination'
 import { createStudent } from '../../api/students'
 import { Trash2, UserPlus, Copy, Check, X } from 'lucide-react'
 import { apiErrorMessage } from '../../utils/api-errors'
@@ -49,11 +48,7 @@ const parseBulkLines = (
 
 
 const AccountInvites = () => {
-  const [invites, setInvites] = useState<AccountInvite[]>([])
-  const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalInvites, setTotalInvites] = useState(0)
   const pageSize = 50
   const [error, setError] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('STUDENT')
@@ -61,12 +56,10 @@ const AccountInvites = () => {
   const [linkLoadingId, setLinkLoadingId] = useState<string | null>(null)
   const [bulkText, setBulkText] = useState('')
   const [bulkRole, setBulkRole] = useState('STUDENT')
-  const [bulkLoading, setBulkLoading] = useState(false)
   const [bulkResult, setBulkResult] = useState<BulkCreateResult | null>(null)
   const [identifier, setIdentifier] = useState('')
   const [email, setEmail] = useState('')
   const [addRole, setAddRole] = useState('STUDENT')
-  const [addLoading, setAddLoading] = useState(false)
   const [showBulkForm, setShowBulkForm] = useState(false)
   const [showSingleForm, setShowSingleForm] = useState(false)
   const [rosterInvite, setRosterInvite] = useState<AccountInvite | null>(null)
@@ -76,6 +69,80 @@ const AccountInvites = () => {
   const [rosterBatch, setRosterBatch] = useState('2023-2027')
   const [rosterLoading, setRosterLoading] = useState(false)
 
+  const queryClient = useQueryClient()
+  const invalidateInvites = useAccountInvitesInvalidator()
+
+  useEffect(() => {
+    setPage(1)
+  }, [roleFilter])
+
+  const inviteParams = useMemo(
+    () => ({
+      page,
+      limit: pageSize,
+      ...(roleFilter !== 'ALL' ? { role: roleFilter } : {}),
+    }),
+    [page, roleFilter, pageSize],
+  )
+
+  const { data, isLoading, isFetching, error: queryError } = useAccountInvites(inviteParams)
+  const invites = data?.data ?? []
+  const totalInvites = data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalInvites / pageSize))
+  const loading = isLoading || isFetching
+
+  const bulkCreateMutation = useMutation({
+    mutationFn: accountInviteMutations.bulkCreate,
+    onSuccess: async (result) => {
+      setBulkResult(result)
+      setBulkText('')
+      invalidateInvites()
+      if (result.invites && result.invites.length > 0) {
+        await downloadInviteLinksExcel(result.invites)
+      }
+      setShowBulkForm(false)
+    },
+    onError: (err: unknown) => setError(apiErrorMessage(err, 'Bulk create failed')),
+  })
+
+  const createMutation = useMutation({
+    mutationFn: accountInviteMutations.create,
+    onSuccess: () => {
+      setEmail('')
+      setIdentifier('')
+      invalidateInvites()
+      setShowSingleForm(false)
+    },
+    onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to create account')),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: accountInviteMutations.delete,
+    onSuccess: () => invalidateInvites(),
+    onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to delete invite')),
+  })
+
+  const regenerateMutation = useMutation({
+    mutationFn: accountInviteMutations.regenerateLink,
+    onSuccess: (updated, inviteId) => {
+      queryClient.setQueriesData<{ data: AccountInvite[]; total: number; page: number; limit: number }>(
+        { queryKey: [ACCOUNT_INVITES_KEY] },
+        (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            data: old.data.map((i) =>
+              i.id === inviteId
+                ? { ...i, hasActivationToken: true, activationLink: updated.activationLink }
+                : i,
+            ),
+          }
+        },
+      )
+    },
+    onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to generate activation link')),
+  })
+
 
   const previewEmail = useMemo(() => {
     if (addRole === 'COORDINATOR' || addRole === 'TEACHER') {
@@ -84,36 +151,9 @@ const AccountInvites = () => {
     return buildPreviewEmail(identifier, addRole)
   }, [identifier, addRole, email])
 
-  const fetchInvites = async (pageNum = page) => {
-    try {
-      const params: PaginationParams & { role?: string } = { page: pageNum, limit: pageSize }
-      if (roleFilter !== 'ALL') {
-        params.role = roleFilter
-      }
-      const result = await getAccountInvites(params)
-      setInvites(result.data)
-      setTotalInvites(result.total)
-      setTotalPages(Math.max(1, Math.ceil(result.total / result.limit)))
-      setPage(result.page)
-    } catch (err: unknown) {
-      const message =
-        err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-          : undefined
-      setError(message || 'Failed to load accounts')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchInvites(1)
-  }, [roleFilter])
-
   const handlePageChange = (nextPage: number) => {
     if (nextPage < 1 || nextPage > totalPages) return
-    setLoading(true)
-    void fetchInvites(nextPage)
+    setPage(nextPage)
   }
 
   const pendingRosterCount = useMemo(() => {
@@ -142,21 +182,14 @@ const AccountInvites = () => {
     setLinkLoadingId(invite.id)
     setError('')
     try {
-      const updated = await regenerateActivationLink(invite.id)
+      const updated = await regenerateMutation.mutateAsync(invite.id)
       if (!updated.activationLink) {
         setError('Failed to generate activation link')
         return
       }
       await handleCopy(updated.activationLink, invite.id)
-      setInvites((prev) =>
-        prev.map((i) =>
-          i.id === invite.id
-            ? { ...i, hasActivationToken: true, activationLink: updated.activationLink }
-            : i,
-        ),
-      )
-    } catch (err: unknown) {
-      setError(apiErrorMessage(err, 'Failed to generate activation link'))
+    } catch {
+      // onError handler sets message
     } finally {
       setLinkLoadingId(null)
     }
@@ -233,71 +266,29 @@ const AccountInvites = () => {
       )
       return
     }
-    setBulkLoading(true)
     setError('')
     setBulkResult(null)
-    try {
-      const result = await bulkCreateAccountInvites({ role: bulkRole, entries })
-      setBulkResult(result)
-      setBulkText('')
-      fetchInvites()
-      if (result.invites && result.invites.length > 0) {
-        await downloadInviteLinksExcel(result.invites)
-      }
-      setShowBulkForm(false)
-    } catch (err: unknown) {
-      const message =
-        err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-          : undefined
-      setError(message || 'Bulk create failed')
-    } finally {
-      setBulkLoading(false)
-    }
+    bulkCreateMutation.mutate({ role: bulkRole, entries })
   }
 
   const handleSingleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
     if ((addRole === 'COORDINATOR' || addRole === 'TEACHER') && !email.trim()) return
     if (addRole === 'STUDENT' && !identifier.trim()) return
-    setAddLoading(true)
     setError('')
-    try {
-      await createAccountInvite({
-        role: addRole,
-        identifier: addRole === 'STUDENT' ? identifier.trim().toUpperCase() : undefined,
-        email:
-          addRole === 'COORDINATOR' || addRole === 'TEACHER'
-            ? email.trim().toLowerCase()
-            : undefined,
-      })
-      setEmail('')
-      setIdentifier('')
-      fetchInvites()
-      setShowSingleForm(false)
-    } catch (err: unknown) {
-      const message =
-        err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-          : undefined
-      setError(message || 'Failed to create account')
-    } finally {
-      setAddLoading(false)
-    }
+    createMutation.mutate({
+      role: addRole,
+      identifier: addRole === 'STUDENT' ? identifier.trim().toUpperCase() : undefined,
+      email:
+        addRole === 'COORDINATOR' || addRole === 'TEACHER'
+          ? email.trim().toLowerCase()
+          : undefined,
+    })
   }
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Revoke this account? They will not be able to activate.')) return
-    try {
-      await deleteAccountInvite(id)
-      fetchInvites()
-    } catch (err: unknown) {
-      const message =
-        err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-          : undefined
-      setError(message || 'Failed to delete invite')
-    }
+    deleteMutation.mutate(id)
   }
 
   const handleOpenRoster = (invite: AccountInvite) => {
@@ -328,7 +319,7 @@ const AccountInvites = () => {
         batch: rosterBatch.trim(),
       })
       handleCloseRoster()
-      fetchInvites()
+      invalidateInvites()
     } catch (err) {
       setError(apiErrorMessage(err, 'Failed to add student to roster'))
     } finally {
@@ -391,9 +382,9 @@ const AccountInvites = () => {
         </div>
       )}
 
-      {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
-          <p className="text-sm text-red-700">{error}</p>
+      {(error || queryError) && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
+          <p className="text-sm text-red-700">{error || 'Failed to load accounts'}</p>
         </div>
       )}
 
@@ -434,10 +425,10 @@ const AccountInvites = () => {
             <button
               type="button"
               onClick={handleBulkAdd}
-              disabled={bulkLoading}
+              disabled={bulkCreateMutation.isPending}
               className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-container disabled:opacity-50 cursor-pointer"
             >
-              {bulkLoading ? 'Creating...' : 'Create accounts & download Excel'}
+              {bulkCreateMutation.isPending ? 'Creating...' : 'Create accounts & download Excel'}
             </button>
           </div>
           {bulkResult && (
@@ -467,7 +458,7 @@ const AccountInvites = () => {
                   className="w-full sm:w-40 px-3 py-2 border border-outline-variant rounded-md text-sm font-mono uppercase"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value.toUpperCase())}
-                  disabled={addLoading}
+                  disabled={createMutation.isPending}
                 />
               ) : (
                 <input
@@ -481,14 +472,14 @@ const AccountInvites = () => {
                   className="flex-1 px-3 py-2 border border-outline-variant rounded-md text-sm"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  disabled={addLoading}
+                  disabled={createMutation.isPending}
                 />
               )}
               <select
                 className="w-full sm:w-40 px-3 py-2 border border-outline-variant rounded-md text-sm bg-surface-container-lowest"
                 value={addRole}
                 onChange={(e) => setAddRole(e.target.value)}
-                disabled={addLoading}
+                disabled={createMutation.isPending}
               >
                 <option value="STUDENT">Student</option>
                 <option value="TEACHER">Teacher</option>
@@ -496,10 +487,10 @@ const AccountInvites = () => {
               </select>
               <button
                 type="submit"
-                disabled={addLoading}
+                disabled={createMutation.isPending}
                 className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-container disabled:opacity-50 cursor-pointer"
               >
-                {addLoading ? 'Adding...' : 'Add'}
+                {createMutation.isPending ? 'Adding...' : 'Add'}
               </button>
             </div>
             {previewEmail && addRole === 'STUDENT' && (

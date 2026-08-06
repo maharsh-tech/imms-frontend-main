@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { getStudents, createStudent, type Student } from '../../api/students'
+import { useMutation } from '@tanstack/react-query'
+import { createStudent } from '../../api/students'
 import {
   downloadStudentTemplate,
   importStudents,
@@ -9,49 +10,43 @@ import { groupStudentsByBatch, formatBatchOptionLabel } from '../../utils/roll-b
 import { isValidRollNumber, normalizeRollInput, deriveBatchFromRollNumber } from '../../utils/identifier-patterns'
 import { GraduationCap, ChevronDown, ChevronUp, Search, UserPlus } from 'lucide-react'
 import { apiErrorMessage } from '../../utils/api-errors'
+import { useStudents, useStudentsInvalidator } from '../../hooks/useStudents'
 
 const StudentsManagement = () => {
-  const [students, setStudents] = useState<Student[]>([])
-  const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalStudents, setTotalStudents] = useState(0)
   const pageSize = 50
   const [error, setError] = useState('')
   const [selectedPrefix, setSelectedPrefix] = useState('')
   const [search, setSearch] = useState('')
   const [showImport, setShowImport] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
-  const [addLoading, setAddLoading] = useState(false)
   const [rollNumber, setRollNumber] = useState('')
   const [name, setName] = useState('')
   const [department, setDepartment] = useState('IT')
   const [semester, setSemester] = useState('5')
   const [batch, setBatch] = useState('')
 
-  const loadStudents = async (pageNum = page) => {
-    setLoading(true)
-    setError('')
-    try {
-      const result = await getStudents({ page: pageNum, limit: pageSize })
-      setStudents(result.data)
-      setTotalStudents(result.total)
-      setTotalPages(Math.max(1, Math.ceil(result.total / result.limit)))
-      setPage(result.page)
-    } catch {
-      setError('Failed to load students')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const invalidateStudents = useStudentsInvalidator()
+  const { data, isLoading, isFetching, error: queryError } = useStudents({ page, limit: pageSize })
+  const students = data?.data ?? []
+  const totalStudents = data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalStudents / pageSize))
+  const loading = isLoading || isFetching
 
-  useEffect(() => {
-    loadStudents(1)
-  }, [])
+  const createMutation = useMutation({
+    mutationFn: createStudent,
+    onSuccess: () => {
+      setRollNumber('')
+      setName('')
+      setShowAdd(false)
+      invalidateStudents()
+    },
+    onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to add student')),
+  })
 
   const handlePageChange = (nextPage: number) => {
     if (nextPage < 1 || nextPage > totalPages) return
-    void loadStudents(nextPage)
+    setPage(nextPage)
   }
 
   const batchGroups = useMemo(() => groupStudentsByBatch(students), [students])
@@ -81,7 +76,7 @@ const StudentsManagement = () => {
   }, [activeGroup, search])
 
   const handleImportComplete = () => {
-    loadStudents()
+    invalidateStudents()
   }
 
   const handleAddStudent = async (e: React.FormEvent) => {
@@ -91,25 +86,14 @@ const StudentsManagement = () => {
       setError('Roll number must match standard format')
       return
     }
-    setAddLoading(true)
     setError('')
-    try {
-      await createStudent({
-        rollNumber: roll,
-        name: name.trim(),
-        department: department.trim(),
-        semester: Number.parseInt(semester, 10),
-        batch: batch.trim() || deriveBatchFromRollNumber(roll),
-      })
-      setRollNumber('')
-      setName('')
-      await loadStudents()
-      setShowAdd(false)
-    } catch (err) {
-      setError(apiErrorMessage(err, 'Failed to add student'))
-    } finally {
-      setAddLoading(false)
-    }
+    createMutation.mutate({
+      rollNumber: roll,
+      name: name.trim(),
+      department: department.trim(),
+      semester: Number.parseInt(semester, 10),
+      batch: batch.trim() || deriveBatchFromRollNumber(roll),
+    })
   }
 
   const addForm = (
@@ -168,10 +152,10 @@ const StudentsManagement = () => {
         />
         <button
           type="submit"
-          disabled={addLoading}
+          disabled={createMutation.isPending}
           className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary-container disabled:opacity-50"
         >
-          {addLoading ? 'Adding…' : 'Add student'}
+          {createMutation.isPending ? 'Adding…' : 'Add student'}
         </button>
       </form>
       <p className="text-xs text-on-surface-variant mt-2">Account must exist in Account Management (activation not required).</p>
@@ -266,9 +250,9 @@ const StudentsManagement = () => {
         </div>
       )}
 
-      {error && (
+      {(error || queryError) && (
         <div className="bg-red-50 border-l-4 border-red-400 p-4">
-          <p className="text-sm text-red-700">{error}</p>
+          <p className="text-sm text-red-700">{error || 'Failed to load students'}</p>
         </div>
       )}
 

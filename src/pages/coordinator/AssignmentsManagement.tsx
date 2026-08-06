@@ -364,6 +364,8 @@ const AssignmentsManagement = () => {
                                 {a.subject.assessments?.map((ass) => {
                                   const sub = a.assessmentSubmissions?.find((s) => s.assessmentId === ass.id);
                                   const isPublished = sub?.status === 'PUBLISHED';
+                                  const canToggleNE =
+                                    sub?.status === 'SUBMITTED' || sub?.status === 'PUBLISHED';
                                   return (
                                     <tr key={ass.id}>
                                       <td className="px-4 py-2 text-sm text-on-surface">{ass.name}</td>
@@ -371,7 +373,7 @@ const AssignmentsManagement = () => {
                                         <SubmissionStatusBadge status={sub?.status || 'DRAFT'} />
                                       </td>
                                       <td className="px-4 py-2">
-                                        {isPublished ? (
+                                        {canToggleNE ? (
                                           <div className="flex items-center gap-1.5">
                                             <button
                                               onClick={() => handleToggleNE(a.id, ass.id, !!sub?.showNEToStudents)}

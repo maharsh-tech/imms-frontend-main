@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import apiClient from '../api/client'
 import { AuthAlert, AuthCard, AuthShell, PasswordField } from '../components/auth'
 import { consumeActivationTokenFromUrl } from '../utils/activation-token'
+import { activationSuccessFlash } from '../utils/auth-flash'
 
 const getStrengthLevel = (password: string): number => {
   if (password.length === 0) return 0
@@ -54,7 +55,7 @@ const ActivateAccount = () => {
 
     try {
       await apiClient.post('/auth/activate', { token, newPassword })
-      navigate('/login?activated=1', { replace: true })
+      navigate('/login', { replace: true, state: activationSuccessFlash() })
     } catch (err: unknown) {
       const message =
         err && typeof err === 'object' && 'response' in err

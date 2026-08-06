@@ -22,7 +22,7 @@ All architectural and design documentation for both the frontend and backend is 
 - **Routing:** React Router v7
 - **State Management:** Zustand (user profile only — tokens in httpOnly cookies)
 - **API Client:** Axios with `withCredentials: true`
-- **Server state:** `@tanstack/react-query` installed (provider wired; migration to hooks pending)
+- **Server state:** `@tanstack/react-query` — coordinator dashboard reads/writes via `src/hooks/` (5 min staleTime)
 
 ## 🔍 Audit & Known Issues
 
@@ -46,7 +46,7 @@ Living dev context: **[`context.md`](./context.md)** (includes known-issues summ
 | Route | File | What it does |
 |---|---|---|
 | `/login` | `src/pages/Login.tsx` | Sign in with roll number (students) or staff email + password |
-| `/activate?token=…` | `src/pages/ActivateAccount.tsx` | First-time password setup from coordinator activation link |
+| `/activate#token=…` | `src/pages/ActivateAccount.tsx` | First-time password setup from coordinator activation link (token read from hash, posted in body) |
 | `/student` | `src/pages/student/Marksheet.tsx` | Student marksheet (inside `StudentShell`) |
 | `/coordinator` | `src/pages/coordinator/Dashboard.tsx` | Coordinator dashboard |
 | `/teacher` | `src/pages/teacher/Dashboard.tsx` | Teacher dashboard |

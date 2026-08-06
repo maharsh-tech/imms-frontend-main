@@ -9,6 +9,7 @@ import {
 } from '../../hooks/useAccountInvites'
 import type { AccountInvite, BulkCreateResult } from '../../types'
 import { apiErrorMessage } from '../../utils/api-errors'
+import { deriveBatchFromRollNumber, deriveDepartmentFromRollNumber } from '../../utils/identifier-patterns'
 import BulkInviteForm from '../../components/coordinator/account-invites/BulkInviteForm'
 import SingleInviteForm from '../../components/coordinator/account-invites/SingleInviteForm'
 import InviteTable from '../../components/coordinator/account-invites/InviteTable'
@@ -37,9 +38,9 @@ const AccountInvites = () => {
   const [showSingleForm, setShowSingleForm] = useState(false)
   const [rosterInvite, setRosterInvite] = useState<AccountInvite | null>(null)
   const [rosterName, setRosterName] = useState('')
-  const [rosterDepartment, setRosterDepartment] = useState('IT')
-  const [rosterSemester, setRosterSemester] = useState('5')
-  const [rosterBatch, setRosterBatch] = useState('2023-2027')
+  const [rosterDepartment, setRosterDepartment] = useState('')
+  const [rosterSemester, setRosterSemester] = useState('')
+  const [rosterBatch, setRosterBatch] = useState('')
 
   const queryClient = useQueryClient()
   const invalidateInvites = useAccountInvitesInvalidator()
@@ -211,11 +212,12 @@ const AccountInvites = () => {
   }
 
   const handleOpenRoster = (invite: AccountInvite) => {
+    const roll = invite.identifier ?? ''
     setRosterInvite(invite)
     setRosterName('')
-    setRosterDepartment('IT')
-    setRosterSemester('5')
-    setRosterBatch('2023-2027')
+    setRosterDepartment(roll ? deriveDepartmentFromRollNumber(roll) : '')
+    setRosterSemester('')
+    setRosterBatch(roll ? deriveBatchFromRollNumber(roll) : '')
     setError('')
   }
 
@@ -223,12 +225,13 @@ const AccountInvites = () => {
     e.preventDefault()
     if (!rosterInvite?.identifier) return
     setError('')
+    const roll = rosterInvite.identifier
     rosterMutation.mutate({
-      rollNumber: rosterInvite.identifier,
+      rollNumber: roll,
       name: rosterName.trim(),
-      department: rosterDepartment.trim(),
+      department: rosterDepartment.trim() || deriveDepartmentFromRollNumber(roll),
       semester: Number.parseInt(rosterSemester, 10),
-      batch: rosterBatch.trim(),
+      batch: rosterBatch.trim() || deriveBatchFromRollNumber(roll),
     })
   }
 

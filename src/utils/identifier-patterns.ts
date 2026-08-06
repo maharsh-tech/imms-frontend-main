@@ -32,7 +32,7 @@ export const deriveBatchFromRollNumber = (rollNumber: string): string => {
   const diploma = roll.match(/^D(\d{2})[A-Z]{2}/)
   if (diploma?.[1]) {
     const year = 2000 + Number.parseInt(diploma[1], 10)
-    return `D${year}-${year + 3}`
+    return `${year}-${year + 3}`
   }
   const regular = roll.match(/^(\d{2})[A-Z]{2}/)
   if (regular?.[1]) {
@@ -40,6 +40,12 @@ export const deriveBatchFromRollNumber = (rollNumber: string): string => {
     return `${year}-${year + 4}`
   }
   return 'Unknown'
+}
+
+/** Department code embedded in roll (e.g. 24IT093 → IT, D25IT131 → IT). */
+export const deriveDepartmentFromRollNumber = (rollNumber: string): string => {
+  const match = rollNumber.trim().toUpperCase().match(/^(?:D)?\d{2}([A-Z]{2})\d+$/)
+  return match?.[1] ?? ''
 }
 
 export const teacherSlugFromEmailInput = (value: string): string => {

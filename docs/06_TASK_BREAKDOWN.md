@@ -22,6 +22,18 @@
 
 **Milestone 1: Complete** (pending your testing)
 
+### Handoff / Phase 2 status (2026-08-07)
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Activation token security | ✅ Done | Hash fragment `#token=`; POST body consumption; strip from URL |
+| React Query coordinator dashboard | ✅ Done | `useAccountInvites`, `useStudents`, `useFaculty`, `useSubjects`, `useAssignmentsBundle` + mutations |
+| Component split (AccountInvites, Subjects) | ✅ Done | `account-invites/*`, `subjects/*` subcomponents |
+| Roll-derived roster defaults | ✅ Done | `deriveBatchFromRollNumber`, `deriveDepartmentFromRollNumber` — no hardcoded batch/dept |
+| Login activation flash | ✅ Done | Router state via `auth-flash.ts` — not `?activated=1` URL param |
+| Backend subjects service split | ✅ Done | `subjects.service`, `faculty.service`, `students.service` |
+| Bulk DTO array caps | ✅ Done | `@ArrayMaxSize(500)` on bulk enroll / NE flag DTOs |
+
 ---
 
 ### Epic 1.1 — Project Scaffolding
@@ -70,7 +82,7 @@ est new imms-backend) | 1h | Backend |
 | 1.3.9 | `GET /auth/me` endpoint | 0.5h | Backend |
 | 1.3.10 | `POST /auth/logout` endpoint | 0.5h | Backend |
 | 1.3.11 | Frontend: Login page (email/password) | 1h | Frontend |
-| 1.3.12 | Frontend: Activate account page (`/activate?token=…`) | 1.5h | Frontend |
+| 1.3.12 | Frontend: Activate account page (`/activate#token=…`) | 1.5h | Frontend |
 | 1.3.13 | Frontend: Axios interceptor for auto-refresh on 401 | 1.5h | Frontend |
 | 1.3.14 | Frontend: PrivateRoute and RoleRoute components | 1h | Frontend |
 | 1.3.15 | Frontend: Zustand auth store (user state, logout) | 1h | Frontend |

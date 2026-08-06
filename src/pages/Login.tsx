@@ -1,13 +1,19 @@
 import { useState, useEffect } from 'react'
 import { Mail, Lock } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import apiClient from '../api/client'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { AuthAlert, AuthCard, AuthShell, PasswordField } from '../components/auth'
+import {
+  ACTIVATION_SUCCESS_MESSAGE,
+  type AuthFlashState,
+} from '../utils/auth-flash'
 
 const Login = () => {
   usePageTitle('Sign In')
+  const location = useLocation()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [loginId, setLoginId] = useState(searchParams.get('email') ?? '')
   const [password, setPassword] = useState('')
@@ -16,13 +22,13 @@ const Login = () => {
   const [loading, setLoading] = useState(false)
 
   const { setUser, isAuthenticated, user } = useAuthStore()
-  const navigate = useNavigate()
 
   useEffect(() => {
-    if (searchParams.get('activated') === '1') {
-      setSuccess('Account activated. Sign in with your roll number (students) or email (staff) and password.')
-    }
-  }, [searchParams])
+    const flash = location.state as AuthFlashState | null
+    if (!flash?.activationSuccess) return
+    setSuccess(ACTIVATION_SUCCESS_MESSAGE)
+    navigate('/login', { replace: true, state: null })
+  }, [location.state, navigate])
 
   useEffect(() => {
     if (isAuthenticated && user) {

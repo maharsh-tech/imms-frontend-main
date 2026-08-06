@@ -85,6 +85,7 @@ const RosterDialog = ({
               required
               value={rosterDepartment}
               onChange={(e) => onDepartmentChange(e.target.value)}
+              placeholder="Auto from roll number"
               className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
             />
           </div>
@@ -108,7 +109,7 @@ const RosterDialog = ({
             required
             value={rosterBatch}
             onChange={(e) => onBatchChange(e.target.value)}
-            placeholder="2023-2027"
+            placeholder="Auto from roll number"
             className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
           />
         </div>

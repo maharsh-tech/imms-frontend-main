@@ -282,6 +282,7 @@ Run after every production deployment:
 - [ ] `CORS_ORIGINS` set to exact frontend URL — NOT wildcard `*`
 - [ ] Rate limiting on `/auth` endpoints enabled (`@nestjs/throttler`)
 - [ ] `DATABASE_URL` never exposed to frontend build or logs
+- [ ] Activation links use hash fragments (`/activate#token=…`) — tokens must not appear in query strings or server access logs
 - [ ] No `console.log` of tokens, passwords, or student PII in production
 - [ ] Error responses return generic messages only — no stack traces exposed
 - [ ] `.env` files listed in `.gitignore`

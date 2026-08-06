@@ -56,7 +56,7 @@ IMMS operates in three phases per semester:
 
 **FR-AUTH-03:** Role is assigned when the coordinator adds the user to the AllowedUser whitelist (`POST /allowed-users`).
 
-**FR-AUTH-04:** Login is blocked until the user completes activation (`needsPasswordChange === false`). Unactivated accounts receive 403: *"Account not activated. Use the activation link from your welcome email."*
+**FR-AUTH-04:** Login is blocked until the user completes activation (`needsPasswordChange === false`). Unactivated accounts receive 403: *"Account not activated. Use the activation link from your welcome email."* Activation status is enforced **only on the server** — URL query parameters or client-side flags cannot bypass this.
 
 **FR-AUTH-05:** JWT access token (15 min) and refresh token (7 days) are stored in **httpOnly, SameSite=Strict cookies** — never returned in JSON or client storage.
 
@@ -75,7 +75,7 @@ IMMS operates in three phases per semester:
 
 **FR-COORD-01: Student Import**
 - The Coordinator shall upload an Excel file (.xlsx) containing student data.
-- **CSPIT format:** `Roll No`, `Student Name` (optional `Sr No` column ignored). Department and semester come from import defaults in the UI; batch auto-derives from roll (`24IT` → `2024-2028`, `D25IT` → `D2025-2028` diploma).
+- **CSPIT format:** `Roll No`, `Student Name` (optional `Sr No` column ignored). Semester comes from import defaults in the UI; **department** and **batch** auto-derive from roll when omitted (`24IT093` → dept `IT`, batch `2024-2028`; `D25IT131` → dept `IT`, batch `2025-2028`).
 - Also accepts legacy columns: Department, Semester, Batch, Email when present.
 - Roll numbers: regular `24IT093` and diploma `D25IT131`.
 - The system shall validate the file structure before processing.

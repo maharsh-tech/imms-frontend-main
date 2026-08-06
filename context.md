@@ -9,6 +9,7 @@
 | Framework | React 19 + Vite |
 | Styling | Tailwind CSS v4 (Academic Core design tokens in `src/index.css`) |
 | Client State | Zustand (user profile only — **no tokens in storage**) |
+| Server State | React Query (`src/hooks/`, 5 min staleTime on coordinator dashboard) |
 | HTTP Client | Axios with `withCredentials: true` (httpOnly cookies) |
 | Routing | React Router v7 |
 | Auth | Plan A: activation link → set password → login |
@@ -35,8 +36,8 @@
 
 | File | Route | Purpose |
 |---|---|---|
-| `src/pages/Login.tsx` | `/login` | Sign-in form. Posts `{ loginId, password }` to `POST /auth/login`. Students use **roll number**; staff use **@charusat.ac.in** email. Redirects by role after success. |
-| `src/pages/ActivateAccount.tsx` | `/activate?token=…` | First-time password setup from coordinator activation link. Posts `{ token, newPassword }` to `POST /auth/activate`, then redirects to `/login?activated=1`. Password: min 10 chars, letter + digit. UI styled like “reset password”; this is **account activation**, not a forgot-password flow. |
+| `src/pages/Login.tsx` | `/login` | Sign-in form. Posts `{ loginId, password }` to `POST /auth/login`. Students use **roll number**; staff use **@charusat.ac.in** email. Redirects by role after success. Post-activation success banner uses **router state only** (`auth-flash.ts`) — never URL query params. |
+| `src/pages/ActivateAccount.tsx` | `/activate#token=…` | First-time password setup from coordinator activation link. Reads token from URL **hash** (`activation-token.ts`), strips it from the address bar, posts `{ token, newPassword }` to `POST /auth/activate`, then redirects to `/login` with router flash state. Password: min 10 chars, letter + digit. |
 
 > **Not yet in UI:** `POST /auth/request-password-reset` and `POST /auth/reset-password` exist on the backend but have no frontend pages yet. `GET /audit` (coordinator audit log viewer) is also backend-only.
 
@@ -56,9 +57,20 @@ imms-frontend/
 │   │   ├── import.ts
 │   │   ├── subjects.ts
 │   │   └── marks.ts
+│   ├── hooks/
+│   │   ├── useAccountInvites.ts   # List + create/delete/regenerate mutations
+│   │   ├── useStudents.ts, useFaculty.ts, useSubjects.ts, useAssignments.ts
+│   │   └── usePageTitle.ts
+│   ├── utils/
+│   │   ├── identifier-patterns.ts # Roll validation; deriveBatch/deriveDepartment from roll
+│   │   ├── activation-token.ts    # Consume #token= from hash; strip URL
+│   │   └── auth-flash.ts          # One-time login messages via router state
 │   ├── components/
 │   │   ├── AuthBootstrap.tsx
 │   │   ├── auth/                    # Login + activate shared UI
+│   │   ├── coordinator/
+│   │   │   ├── account-invites/     # BulkInviteForm, SingleInviteForm, InviteTable, RosterDialog
+│   │   │   └── subjects/            # AddSubjectForm, AddAssessmentForm, ElectiveRosterModal
 │   │   ├── staff/                   # StaffShell, StaffTabBar (coordinator/teacher)
 │   │   ├── student/                 # Student portal shell, SubjectCard, etc.
 │   │   └── shared/                  # SubmissionStatusBadge, ExcelImportCard
@@ -88,7 +100,7 @@ imms-frontend/
 | Path | Role | Purpose |
 |---|---|---|
 | `/login` | Public | Email/roll-number + password login |
-| `/activate?token=…` | Public | Set password from activation link |
+| `/activate#token=…` | Public | Set password from activation link (hash consumed client-side) |
 | `/coordinator` | Coordinator | Tabs: accounts, students, faculty, subjects, assignments |
 | `/coordinator/marks/:assignmentId/:assessmentId` | Coordinator | NE flags, lock, unlock, publish, unpublish |
 | `/teacher` | Teacher | Assigned subjects → marks entry links |
@@ -160,9 +172,11 @@ Database seed runs in **backend only**: `cd imms-backend && npx prisma db seed`
 
 ## Coordinator: Account Management
 
-Create student/teacher/coordinator accounts, bulk paste IDs, filter by role, copy activation links (manual delivery — no automated email UI). **Copy activation link** / **Copy all pending links** call `POST /allowed-users/:id/regenerate-activation-link`. Bulk creation button renamed to **Create accounts & download Excel**, which automatically generates and triggers a download of a native `.xlsx` sheet containing Student/Faculty/Coordinator IDs and activation links using `exceljs`. Listing accounts does not expose links — only `hasActivationToken`. Roster import/add requires account first (activation not required).
+Create student/teacher/coordinator accounts, bulk paste IDs, filter by role, copy activation links (manual delivery — no automated email UI). **Copy activation link** / **Copy all pending links** call `POST /allowed-users/:id/regenerate-activation-link`. Bulk creation button renamed to **Create accounts & download Excel**, which automatically generates and triggers a download of a native `.xlsx` sheet containing Student/Faculty/Coordinator IDs and activation links using `exceljs`. Listing accounts does not expose links — only `hasActivationToken`. **`isActivated` is server-computed** (from `needsPasswordChange`) — never trusted from URL params.
 
-**Student Excel:** CSPIT `Roll No` + `Student Name` (regular `24IT…` and diploma `D25IT…`). Set department/semester in import panel; batch auto from roll.
+**Add to roster** (student accounts not yet in master roster): department and batch **auto-derive from roll number** (`deriveDepartmentFromRollNumber`, `deriveBatchFromRollNumber`); semester must be entered manually. Activation not required before roster add.
+
+**Student Excel:** CSPIT `Roll No` + `Student Name` (regular `24IT…` and diploma `D25IT…`). Set semester in import panel; department/batch auto from roll when omitted.
 
 **Faculty Excel:** CSPIT name list (single column) matched to accounts by name, or structured sheet with email slug + name.
 
@@ -184,6 +198,16 @@ Subjects tab: check "Elective subject" → roster modal (Excel or paste) → ass
 | Student | 23IT001 | password123 |
 
 ## Last Updated
+
+**Security & roster defaults** (2026-08-07):
+- Activation links use URL hash (`/activate#token=…`); token posted in body, stripped from address bar.
+- Login post-activation message uses router state (`auth-flash.ts`), not `?activated=1`.
+- Roster dialog auto-fills department + batch from roll number; semester entered manually (no hardcoded defaults).
+- Diploma batch format: `2025-2028` (3-year); B.Tech: `2024-2028` (4-year).
+
+**Handoff Phase 2 — React Query & component split** (2026-08-07):
+- Coordinator dashboard uses React Query hooks for all tab data + mutations (`useAccountInvites`, `useStudents`, `useFaculty`, `useSubjects`, `useSubjectMutations`).
+- Split `AccountInvites.tsx` → `account-invites/*` components; `SubjectsManagement.tsx` → `subjects/*` components.
 
 **Coordinator Enhancements & Spinners Removal** (2026-08-06):
 - Reordered coordinator sidebar navigation tabs (Subjects & Exams is now the first landing tab).
@@ -220,13 +244,14 @@ Subjects tab: check "Elective subject" → roster modal (Excel or paste) → ass
 
 ## Known Issues & Performance
 
-Phase 1 fixes shipped 2026-08-06. Remaining frontend items:
+Phase 1 fixes shipped 2026-08-06. Handoff Phase 2 shipped 2026-08-07. Remaining frontend items:
 
 | Priority | Issue | Location |
 |---|---|---|
-| **Medium** | React Query installed but unused | all pages |
 | **Medium** | No Error Boundaries | entire `src/` |
 | **Medium** | Heavy export libs statically imported | `MarksGridPage.tsx` |
 | **Medium** | No CSP / security headers on Vercel | `vercel.json` |
 
 **Resolved in Phase 1:** bulk activation links (1 POST), paginated lists, virtualized marks grid rows.
+
+**Resolved in Handoff Phase 2:** React Query coordinator dashboard caching; activation token in hash; login flash via router state; roll-derived roster defaults.

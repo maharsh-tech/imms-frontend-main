@@ -154,7 +154,7 @@ Academic institutions currently manage examination marks through disconnected Ex
 |---|---|
 | Performance | Page load under 2s; PDF generation under 5s for individual marksheets |
 | Scalability | Support 500-800 concurrent users at semester end |
-| Security | HTTPS enforced; JWT with refresh tokens; no cross-role data leakage |
+| Security | HTTPS enforced; JWT in httpOnly cookies; activation tokens in URL hash only; login blocked until server confirms activation; no cross-role data leakage |
 | Availability | 99.5% uptime SLA; graceful error handling for Supabase outages |
 | Accessibility | WCAG 2.1 AA — keyboard navigable, screen reader friendly |
 | Browser Support | Chrome, Firefox, Edge (latest 2 versions each) |

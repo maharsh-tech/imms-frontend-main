@@ -57,7 +57,13 @@ Password rules: minimum 10 characters, at least one letter and one digit.
 { "message": "Account activated. You can now sign in with your new password." }
 ```
 
-Activation links are generated when coordinator creates a user (`POST /allowed-users` or bulk) or explicitly via `POST /allowed-users/:id/regenerate-activation-link`: `{FRONTEND_URL}/activate?token=...` (7-day expiry, one-time use). Listing accounts does **not** return links (only `hasActivationToken`).
+Activation links are generated when coordinator creates a user (`POST /allowed-users` or bulk) or explicitly via `POST /allowed-users/:id/regenerate-activation-link`:
+
+`{FRONTEND_URL}/activate#token=<jwt>` (7-day expiry, one-time use)
+
+The JWT lives in the **URL hash fragment** so it is not sent to the server, Referer headers, or access logs. The frontend reads `#token=`, strips it from the address bar, and sends the token in the `POST /auth/activate` JSON body. Listing accounts does **not** return links (only `hasActivationToken`).
+
+**Security note:** `isActivated` is a **read-only API field** computed server-side from `needsPasswordChange`. It is never passed in URLs. Login success messaging after activation uses React Router location state — not query parameters like `?activated=1`.
 
 ---
 
@@ -203,7 +209,7 @@ Domain rules: `STUDENT` → `@charusat.edu.in`; `TEACHER`/`COORDINATOR` → `@ch
   "role": "STUDENT",
   "identifier": "24IT093",
   "isActivated": false,
-  "activationLink": "http://localhost:5173/activate?token=...",
+  "activationLink": "http://localhost:5173/activate#token=...",
   "hasActivationToken": true,
   "rosterLinked": false
 }
@@ -266,7 +272,7 @@ Issues fresh activation links for **all** pending accounts in one transaction. R
       "id": "cuid123",
       "identifier": "24IT093",
       "email": "24it093@charusat.edu.in",
-      "activationLink": "https://app.example.com/activate?token=..."
+      "activationLink": "https://app.example.com/activate#token=..."
     }
   ]
 }
@@ -296,7 +302,8 @@ Content-Type: multipart/form-data
 **Query params (required unless noted):**
 - `department` — e.g. `IT`
 - `semester` — e.g. `5`
-- `batch` — optional; auto-derives from roll when omitted (`24IT` → `2024-2028`, `D25IT` → `D2025-2028`)
+- `batch` — optional; auto-derives from roll when omitted (`24IT` → `2024-2028`, `D25IT` → `2025-2028`)
+- `department` in file — optional; auto-derives from roll prefix when omitted (`24IT093` → `IT`)
 
 **CSPIT columns:** `Roll No`, `Student Name` (ignores `Sr No`). Supports regular and diploma rolls.
 
@@ -329,7 +336,7 @@ Roles: COORDINATOR
       "email": "jane@institution.edu",
       "department": "CS",
       "semester": 3,
-      "batch": "2023-2027"
+      "batch": "2024-2028"
     }
   ],
   "total": 245,

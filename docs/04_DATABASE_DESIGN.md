@@ -133,7 +133,7 @@ model Student {
   email      String   @unique
   department String
   semester   Int
-  batch      String // e.g. "2023-2027"
+  batch      String // e.g. "2024-2028" (B.Tech) or "2025-2028" (diploma)
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -370,9 +370,9 @@ The system does not calculate grades, pass/fail status, or percentages, as its s
 |---|---|---|
 | Roll No | rollNumber | Yes |
 | Student Name | name | Yes |
-| Department | department | No — import default (UI) |
+| Department | department | No — auto from roll prefix (`24IT`→`IT`) or import default (UI) |
 | Semester | semester | No — import default (UI) |
-| Batch | batch | No — auto from roll (`24IT`→`2024-2028`, `D25IT`→`D2025-2028`) |
+| Batch | batch | No — auto from roll (`24IT`→`2024-2028`, `D25IT`→`2025-2028`) |
 | Email | email | No — auto from roll number |
 
 **Roll formats:** `24IT093` (B.Tech), `D25IT131` (diploma).

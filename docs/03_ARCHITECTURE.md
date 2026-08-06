@@ -59,7 +59,7 @@ IMMS follows a **3-tier web architecture** with a clear separation between:
 |---|---|---|
 | Frontend | React 19 + Vite | Fast HMR, industry standard, excellent ecosystem |
 | Styling | Tailwind CSS v4 | Design tokens in `index.css`; Academic Core student/auth UI |
-| State Management | Zustand + React Query | Lightweight; React Query provider wired — migration to hooks pending |
+| State Management | Zustand + React Query | Zustand for auth profile; React Query for coordinator dashboard reads/writes (`src/hooks/`, 5 min staleTime) |
 | Backend | NestJS (Node.js) | Structured modules, built-in DI, ideal for role-based systems |
 | Language | TypeScript (full stack) | Type safety, shared types possible |
 | ORM | Prisma | Type-safe DB access, migrations, schema as code |
@@ -85,7 +85,7 @@ src/
 │   └── guards/                  # JwtAuthGuard, RolesGuard, AuthThrottleGuard
 ├── allowed-users/
 ├── import/                      # SheetJS Excel parsing
-├── subjects/                    # Subject + assessment CRUD
+├── subjects/                    # subjects.service, faculty.service, students.service
 ├── subject-assignments/
 ├── marks/                       # Grid, bulk, NE, submit/unlock/publish, marksheet
 └── prisma/
@@ -104,13 +104,21 @@ src/
 ├── api/                           # Thin HTTP client — no business logic
 │   ├── client.ts
 │   ├── allowedUsers.ts, faculty.ts, students.ts, import.ts, subjects.ts, marks.ts
+├── hooks/                         # React Query — useAccountInvites, useStudents, useFaculty, useSubjects, useAssignmentsBundle
+├── utils/
+│   ├── identifier-patterns.ts     # Roll validation; deriveBatchFromRollNumber, deriveDepartmentFromRollNumber
+│   ├── activation-token.ts        # Read #token= from URL hash → POST body; strip from address bar
+│   └── auth-flash.ts              # One-time login success via router state (never URL query params)
 ├── components/
 │   ├── auth/                      # AuthShell, AuthCard — login + activate
+│   ├── coordinator/
+│   │   ├── account-invites/       # BulkInviteForm, SingleInviteForm, InviteTable, RosterDialog
+│   │   └── subjects/              # AddSubjectForm, AddAssessmentForm, ElectiveRosterModal
 │   ├── student/                   # StudentShell, SubjectCard — student portal
-│   └── shared/                    # RoleNavBar (coordinator/teacher), badges, import
+│   └── shared/                    # StaffShell, ExcelImportCard, badges
 ├── pages/
 │   ├── Login.tsx                  # /login
-│   ├── ActivateAccount.tsx        # /activate?token=… (first-time password)
+│   ├── ActivateAccount.tsx        # /activate#token=… (first-time password)
 │   ├── coordinator/               # Dashboard tabs + marks grid (NE/unlock/publish)
 │   ├── teacher/                   # Assignment list → marks entry
 │   ├── student/                   # Marksheet, Schedule (placeholder), Profile
@@ -121,11 +129,11 @@ src/
 
 ### Auth UI flow
 
-1. Coordinator creates account → activation link copied manually.
-2. User opens `/activate?token=…` → `ActivateAccount.tsx` → `POST /auth/activate`.
-3. User signs in at `/login` → `Login.tsx` → `POST /auth/login` → role-based redirect.
+1. Coordinator creates account → activation link copied manually (`{FRONTEND_URL}/activate#token=…`).
+2. User opens `/activate#token=…` → frontend reads hash, strips URL, posts token in `POST /auth/activate` body.
+3. User signs in at `/login` → `Login.tsx` → `POST /auth/login` → role-based redirect. Post-activation success banner uses **router state only** (not `?activated=1`).
 
-Student portal uses a separate shell (`StudentShell`) with marksheet / schedule / profile tabs. Coordinator and teacher use `RoleNavBar`.
+Student portal uses a separate shell (`StudentShell`) with marksheet / schedule / profile tabs. Coordinator and teacher use `StaffShell`.
 
 ---
 
@@ -138,13 +146,14 @@ Coordinator adds user (POST /allowed-users)
 
 College emails student the activation link
 
-Student opens /activate?token=...
-  → POST /auth/activate { token, newPassword }
-  → needsPasswordChange = false
+Student opens /activate#token=...
+  → frontend consumes hash → POST /auth/activate { token, newPassword }
+  → needsPasswordChange = false (server-side only — never from URL flags)
 
 Student signs in (POST /auth/login)
   → httpOnly cookies set (access 15min + refresh 7d)
   → NO tokens in JSON or localStorage
+  → Login blocked with 403 until needsPasswordChange is false (tampering ?activated= or isActivated= in URL has no effect)
 
 Frontend calls GET /auth/me (cookies sent automatically)
   → redirect to role dashboard
@@ -240,7 +249,7 @@ See [`../../AUDIT_REPORT.md`](../../AUDIT_REPORT.md) for full details.
 | IP spoofing in audit logs via `x-forwarded-for` | Open |
 | JWT secret strength not enforced at boot | Open |
 | No CSP / security headers on Vercel frontend | Open |
-| Activation token passed in URL query string | Open |
+| Activation token in URL | **Resolved** — JWT in hash fragment (`#token=`), consumed via POST body; stripped from address bar |
 | Unpatched `xlsx@0.18.5` on Excel import parser | Open |
 
 ---
@@ -249,7 +258,7 @@ See [`../../AUDIT_REPORT.md`](../../AUDIT_REPORT.md) for full details.
 
 - **Horizontal scaling:** NestJS is stateless; multiple instances can run behind a load balancer (Railway supports this)
 - **DB connections:** Supabase PgBouncer (port 6543) handles connection pooling for up to 800 concurrent users without exhausting Postgres connections
-- **Caching:** React Query is installed on the frontend but not yet used for data fetching — adoption would reduce duplicate API calls on tab switches
+- **Caching:** React Query caches coordinator dashboard lists/mutations (`src/hooks/`, 5 min `staleTime`) — tab switches no longer refetch on every visit
 - **PDF generation:** Synchronous for individual; async queue for bulk (M4)
 
 ### Known performance gaps (audit 2026-08-06)
@@ -262,8 +271,8 @@ These will cause slowdowns as cohort size grows beyond ~100 students:
 | `PATCH /marks/flag-ne` | Scans entire cohort even for small NE changes | Diff-only updates |
 | `GET /allowed-users` | N+1 token existence check per pending invite | Single `IN` query on `one_time_tokens` |
 | Excel import | Per-row upsert | Batch lookup + `createMany` |
-| List endpoints | No pagination on students/faculty/subjects | Add `?page=&limit=` |
-| Marks grid (FE) | Full DOM table, no virtualization | `@tanstack/react-virtual` |
-| Copy all pending links (FE) | N API calls to regenerate | Bulk backend endpoint |
+| List endpoints | No pagination on students/faculty/subjects | Add `?page=&limit=` | **Resolved** — paginated list endpoints |
+| Marks grid (FE) | Full DOM table, no virtualization | `@tanstack/react-virtual` | **Resolved** |
+| Copy all pending links (FE) | N API calls to regenerate | Bulk backend endpoint | **Resolved** — `POST /allowed-users/regenerate-all-pending` |
 
 Full report: [`../../AUDIT_REPORT.md`](../../AUDIT_REPORT.md)

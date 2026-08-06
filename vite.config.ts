@@ -9,12 +9,13 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Stable vendor chunk — rarely changes between deploys, long cache TTL
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          query: ['@tanstack/react-query'],
-          virtual: ['@tanstack/react-virtual'],
-          http: ['axios', 'zustand'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) return 'vendor'
+            if (id.includes('@tanstack/react-query')) return 'query'
+            if (id.includes('@tanstack/react-virtual')) return 'virtual'
+            if (id.includes('axios') || id.includes('zustand')) return 'http'
+          }
         },
       },
     },

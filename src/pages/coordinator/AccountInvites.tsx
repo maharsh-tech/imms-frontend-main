@@ -7,6 +7,7 @@ import {
   regenerateActivationLink,
 } from '../../api/allowedUsers'
 import type { AccountInvite, BulkCreateResult } from '../../types'
+import type { PaginationParams } from '../../types/pagination'
 import { createStudent } from '../../api/students'
 import { Trash2, UserPlus, Copy, Check, X } from 'lucide-react'
 import { apiErrorMessage } from '../../utils/api-errors'
@@ -227,8 +228,8 @@ const AccountInvites = () => {
         bulkRole === 'COORDINATOR'
           ? 'Add one email per line for coordinators'
           : bulkRole === 'TEACHER'
-            ? 'Add one teacher email per line (e.g. nishatshaikh.it@charusat.ac.in)'
-            : 'Add one ID per line (e.g. 24IT093)',
+            ? 'Add one teacher email per line (e.g. teacher@charusat.ac.in)'
+            : 'Add one ID per line (e.g. 24ABC123)',
       )
       return
     }
@@ -414,8 +415,8 @@ const AccountInvites = () => {
               bulkRole === 'COORDINATOR'
                 ? 'coordinator@charusat.ac.in'
                 : bulkRole === 'TEACHER'
-                  ? 'nishatshaikh.it@charusat.ac.in\npriyankapatel.it@charusat.ac.in'
-                  : '24IT093\n24IT094\n24IT095'
+                  ? 'teacher1@charusat.ac.in\nteacher2@charusat.ac.in'
+                  : '24ABC123\n24ABC124\n24ABC125'
             }
             className="w-full border border-outline-variant rounded-md px-3 py-2 text-sm font-mono focus:ring-primary/20 focus:border-primary outline-none"
             aria-label="Bulk account creation"
@@ -462,7 +463,7 @@ const AccountInvites = () => {
                 <input
                   type="text"
                   required
-                  placeholder="Roll (24IT093)"
+                  placeholder="Roll number (e.g. 24ABC123)"
                   className="w-full sm:w-40 px-3 py-2 border border-outline-variant rounded-md text-sm font-mono uppercase"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value.toUpperCase())}
@@ -474,7 +475,7 @@ const AccountInvites = () => {
                   required
                   placeholder={
                     addRole === 'TEACHER'
-                      ? 'nishatshaikh.it@charusat.ac.in'
+                      ? 'teacher@charusat.ac.in'
                       : 'coordinator@charusat.ac.in'
                   }
                   className="flex-1 px-3 py-2 border border-outline-variant rounded-md text-sm"

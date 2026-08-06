@@ -29,7 +29,7 @@ type NeFilter = 'all' | 'ne' | 'not-ne'
 const MarksGridPage = () => {
   usePageTitle('Marks Grid')
   const { assignmentId, assessmentId } = useParams<{ assignmentId: string; assessmentId: string }>()
-  const { user } = useAuthStore()
+  const { user, logout } = useAuthStore()
   const isCoordinator = user?.role === 'COORDINATOR'
   const isTeacher = user?.role === 'TEACHER'
 

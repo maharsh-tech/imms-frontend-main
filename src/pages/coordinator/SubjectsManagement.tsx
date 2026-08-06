@@ -16,7 +16,6 @@ import {
 import type { Assessment, Subject, SubjectEnrollment } from '../../api/subjects';
 import type { ImportResult } from '../../types';
 import ExcelImportCard from '../../components/shared/ExcelImportCard';
-import apiClient from '../../api/client';
 import { apiErrorMessage } from '../../utils/api-errors';
 
 const formatExamDate = (value?: string | null) => {
@@ -625,7 +624,7 @@ const SubjectsManagement = () => {
                   value={rosterPaste}
                   onChange={(e) => setRosterPaste(e.target.value)}
                   rows={5}
-                  placeholder={'24IT093\n24IT094\n24IT095'}
+                  placeholder={'24ABC123\n24ABC124\n24ABC125'}
                   className="w-full border border-outline-variant rounded-md px-3 py-2 text-sm font-mono"
                   aria-label="Paste roll numbers for elective enrollment"
                 />

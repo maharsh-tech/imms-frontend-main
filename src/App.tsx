@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AuthBootstrap from './components/AuthBootstrap'
 import PrivateRoute from './routes/PrivateRoute'
 import RoleRoute from './routes/RoleRoute'

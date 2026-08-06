@@ -82,7 +82,7 @@ const FacultyManagement = () => {
     e.preventDefault()
     const slug = teacherSlugFromEmailInput(teacherEmail)
     if (!isValidTeacherSlug(slug)) {
-      setError('Teacher email must match firstnamelastname.dept (e.g. nishatshaikh.it@charusat.ac.in)')
+      setError('Teacher email must match institutional format')
       return
     }
     setAddLoading(true)
@@ -114,7 +114,7 @@ const FacultyManagement = () => {
         <input
           type="email"
           required
-          placeholder="nishatshaikh.it@charusat.ac.in"
+          placeholder="teacher@charusat.ac.in"
           value={teacherEmail}
           onChange={(e) => setTeacherEmail(e.target.value)}
           className="px-3 py-2 border border-outline-variant rounded-md text-sm sm:col-span-2"

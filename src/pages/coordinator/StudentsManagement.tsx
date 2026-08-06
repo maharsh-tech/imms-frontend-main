@@ -88,7 +88,7 @@ const StudentsManagement = () => {
     e.preventDefault()
     const roll = normalizeRollInput(rollNumber)
     if (!isValidRollNumber(roll)) {
-      setError('Roll number must match format 24IT093 or D25IT131 (diploma)')
+      setError('Roll number must match standard format')
       return
     }
     setAddLoading(true)
@@ -122,7 +122,7 @@ const StudentsManagement = () => {
         <input
           type="text"
           required
-          placeholder="Roll (24IT093 or D25IT131)"
+          placeholder="Roll number"
           value={rollNumber}
           onChange={(e) => setRollNumber(e.target.value.toUpperCase())}
           className="px-3 py-2 border border-outline-variant rounded-md text-sm font-mono"

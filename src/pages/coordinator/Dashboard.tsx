@@ -24,11 +24,11 @@ export default function CoordinatorDashboard() {
   }
 
   const tabs = [
-    { id: 'subjects' as const, label: 'Subjects & Exams', shortLabel: 'Subjects', icon: Layers },
-    { id: 'assignments' as const, label: 'Assignments', icon: Link2 },
+    { id: 'subjects' as const, label: 'Subject', icon: Layers },
+    { id: 'assignments' as const, label: 'Exam & Assignments', icon: Link2 },
+    { id: 'faculty' as const, label: 'Manage Faculty', icon: BookOpen },
+    { id: 'students' as const, label: 'Manage Student', icon: GraduationCap },
     { id: 'invites' as const, label: 'Account Management', shortLabel: 'Accounts', icon: Users },
-    { id: 'students' as const, label: 'Students', icon: GraduationCap },
-    { id: 'faculty' as const, label: 'Faculty', icon: BookOpen },
   ]
 
   return (

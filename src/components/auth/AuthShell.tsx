@@ -15,7 +15,7 @@ const AuthShell = ({ children }: AuthShellProps) => {
         <div className="mx-auto flex h-full w-full max-w-[1200px] items-center px-md">
           <div className="flex items-center gap-sm">
             <GraduationCap className="h-6 w-6 shrink-0 text-primary" aria-hidden="true" />
-            <span className="text-headline-md font-bold text-primary">Student Portal</span>
+            <span className="text-headline-md font-bold text-primary">IMMS Portal</span>
           </div>
         </div>
       </header>

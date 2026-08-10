@@ -24,7 +24,7 @@ import { usePageTitle } from '../../hooks/usePageTitle'
 
 type RowState = MarksGridRowState
 
-type NeFilter = 'all' | 'ne' | 'not-ne'
+type NeFilter = 'all' | 'ne' | 'ab'
 
 const MarksGridPage = () => {
   usePageTitle('Marks Grid')
@@ -37,6 +37,7 @@ const MarksGridPage = () => {
   const [rows, setRows] = useState<RowState[]>([])
   const [search, setSearch] = useState('')
   const [neFilter, setNeFilter] = useState<NeFilter>('all')
+  const [hasDirtyChanges, setHasDirtyChanges] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -66,6 +67,7 @@ const MarksGridPage = () => {
           isNe: s.mark?.flag === FlagType.NE || s.mark?.flag === FlagType.AB_NE,
         })),
       )
+      setHasDirtyChanges(false)
     } catch (err) {
       setError(apiErrorMessage(err, 'Failed to load marks grid'))
     } finally {
@@ -90,7 +92,7 @@ const MarksGridPage = () => {
       .map((row, index) => ({ row, index }))
       .filter(({ row }) => {
         if (neFilter === 'ne' && !row.isNe) return false
-        if (neFilter === 'not-ne' && row.isNe) return false
+        if (neFilter === 'ab' && !row.isAb) return false
         if (!q) return true
         return row.rollNumber.toLowerCase().includes(q) || row.name.toLowerCase().includes(q)
       })
@@ -426,6 +428,7 @@ const MarksGridPage = () => {
   }
 
   const updateRow = useCallback((studentId: string, patch: Partial<RowState>) => {
+    setHasDirtyChanges(true)
     setRows((prev) =>
       prev.map((r) => (r.studentId === studentId ? { ...r, ...patch } : r)),
     )
@@ -556,11 +559,11 @@ const MarksGridPage = () => {
               className="imms-input max-w-sm text-sm"
               aria-label="Search students"
             />
-          <div className="flex overflow-hidden rounded-lg border border-outline-variant" role="group" aria-label="Filter by NE status">
+          <div className="flex overflow-hidden rounded-lg border border-outline-variant" role="group" aria-label="Filter by status">
             {([
               ['all', `All (${rows.length})`],
               ['ne', `NE (${summary.ne})`],
-              ['not-ne', `Not NE (${rows.length - summary.ne})`],
+              ['ab', `AB (${summary.ab})`],
             ] as const).map(([value, label]) => (
               <button
                 key={value}
@@ -606,9 +609,7 @@ const MarksGridPage = () => {
               <col className="w-12" />
               <col className="w-28" />
               <col />
-              <col className="w-28" />
-              <col className="w-16" />
-              <col className="w-16" />
+              <col className="w-80" />
             </colgroup>
             <thead className="bg-surface-container-low sticky top-0 z-10">
               <tr>
@@ -616,9 +617,6 @@ const MarksGridPage = () => {
                 <th className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">Student ID</th>
                 <th className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">Name</th>
                 <th className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">Enter Marks</th>
-                {isCoordinator && <th className="px-4 py-3 text-center text-label-sm uppercase text-on-surface-variant">NE</th>}
-                {isTeacher && <th className="px-4 py-3 text-center text-label-sm uppercase text-on-surface-variant">NE</th>}
-                {(isTeacher || isCoordinator) && <th className="px-4 py-3 text-center text-label-sm uppercase text-on-surface-variant">AB</th>}
               </tr>
             </thead>
             <tbody
@@ -627,7 +625,7 @@ const MarksGridPage = () => {
             >
               {filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-sm text-on-surface-variant">
+                  <td colSpan={4} className="px-4 py-6 text-center text-sm text-on-surface-variant">
                     {rows.length === 0
                       ? grid?.assignment.subjectType === 'ELECTIVE'
                         ? 'No students enrolled in this elective — coordinator must import the roster in Subjects first.'
@@ -685,7 +683,7 @@ const MarksGridPage = () => {
               <>
                 <button
                   onClick={handleSaveAll}
-                  disabled={saving}
+                  disabled={saving || !hasDirtyChanges}
                   className="flex-1 md:flex-none md:w-full bg-primary text-on-primary px-3 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer text-center"
                 >
                   Save Changes

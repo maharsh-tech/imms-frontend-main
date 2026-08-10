@@ -1,4 +1,4 @@
-import type { Subject, SubjectEnrollment } from '../../../api/subjects'
+import type { Subject, SubjectEnrollment, EnrollmentScope } from '../../../api/subjects'
 import type { ImportResult } from '../../../types'
 import ExcelImportCard from '../../shared/ExcelImportCard'
 import {
@@ -8,6 +8,7 @@ import {
 
 type ElectiveRosterModalProps = {
   subject: Subject
+  enrollmentScope: EnrollmentScope
   enrollments: SubjectEnrollment[]
   rosterPaste: string
   rosterResult: ImportResult | null
@@ -22,6 +23,7 @@ type ElectiveRosterModalProps = {
 
 const ElectiveRosterModal = ({
   subject,
+  enrollmentScope,
   enrollments,
   rosterPaste,
   rosterResult,
@@ -40,7 +42,8 @@ const ElectiveRosterModal = ({
           Elective roster — {subject.code} ({subject.name})
         </h3>
         <p className="text-sm text-on-surface-variant mt-1">
-          Only these students appear when a teacher is assigned to this elective.
+          Offering {enrollmentScope.academicYear} · semester {enrollmentScope.semester}. Only these
+          students appear when a teacher is assigned to this elective.
         </p>
       </div>
       <div className="p-6 space-y-6">
@@ -48,7 +51,7 @@ const ElectiveRosterModal = ({
           title="Import roll numbers"
           description="One roll number per row. Students must already exist in the student roster."
           onDownloadTemplate={() => downloadEnrollmentTemplate(subject.id, subject.code)}
-          onImport={(file) => importSubjectEnrollments(subject.id, file)}
+          onImport={(file) => importSubjectEnrollments(subject.id, enrollmentScope, file)}
           onImportComplete={onImportComplete}
         />
         <div>
@@ -81,19 +84,17 @@ const ElectiveRosterModal = ({
           <h4 className="text-sm font-medium text-on-surface mb-2">
             Enrolled students ({enrollments.length})
           </h4>
-          {rosterLoading && enrollments.length === 0 ? (
-            <p className="text-sm text-on-surface-variant">Loading...</p>
-          ) : enrollments.length === 0 ? (
-            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">
-              No students enrolled yet. Import or paste roll numbers before assigning a teacher.
-            </p>
+          {enrollments.length === 0 ? (
+            <p className="text-sm text-on-surface-variant italic">No students enrolled yet.</p>
           ) : (
-            <ul className="divide-y divide-gray-100 border border-outline-variant rounded-md max-h-48 overflow-y-auto">
+            <ul className="divide-y divide-outline-variant border border-outline-variant rounded-md max-h-48 overflow-y-auto">
               {enrollments.map((row) => (
-                <li key={row.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                <li
+                  key={row.id}
+                  className="flex items-center justify-between px-3 py-2 text-sm"
+                >
                   <span>
-                    <span className="font-mono text-on-surface">{row.student.rollNumber}</span>
-                    <span className="text-on-surface-variant ml-2">{row.student.name}</span>
+                    {row.student.rollNumber} — {row.student.name}
                   </span>
                   <button
                     type="button"
@@ -108,13 +109,13 @@ const ElectiveRosterModal = ({
           )}
         </div>
       </div>
-      <div className="p-6 border-t border-outline-variant flex justify-end">
+      <div className="p-4 border-t border-outline-variant flex justify-end">
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 text-on-surface hover:bg-surface-container-low rounded-md border border-outline-variant"
+          className="px-4 py-2 text-sm text-on-surface-variant hover:underline"
         >
-          Done
+          Close
         </button>
       </div>
     </div>

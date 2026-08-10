@@ -12,7 +12,15 @@ export interface Subject {
   semester: number;
   subjectType: SubjectType;
   enrollmentCount?: number;
-  assessments?: Assessment[];
+}
+
+export interface CieRound {
+  id: string;
+  academicYear: string;
+  semester: number;
+  department: string;
+  name: string;
+  sequence: number;
 }
 
 export interface SubjectEnrollment {
@@ -26,13 +34,16 @@ export interface SubjectEnrollment {
     email: string;
     department: string;
     semester: number;
+    currentAcademicYear?: string;
   };
 }
 
 export interface Assessment {
   id: string;
-  subjectId: string;
+  subjectOfferingId?: string;
+  cieRoundId?: string;
   name: string;
+  sequence?: number;
   maxMarks: number;
   examDate?: string | null;
   examTime?: string | null;
@@ -48,13 +59,13 @@ export interface Faculty {
 
 export interface SubjectAssignment {
   id: string;
-  subjectId: string;
+  subjectOfferingId: string;
   facultyId: string;
   semester: number;
   academicYear: string;
   startRollNumber?: string | null;
   endRollNumber?: string | null;
-  subject: Subject;
+  subject: Subject & { assessments?: Assessment[] };
   faculty: Faculty;
   assessmentSubmissions?: { assessmentId: string; status: string; showNEToStudents: boolean }[];
 }
@@ -70,13 +81,24 @@ export type CreateSubjectPayload = {
 export type UpdateSubjectPayload = Partial<Omit<CreateSubjectPayload, 'code'>>;
 
 export type CreateAssessmentPayload = {
-  name: string;
+  academicYear: string;
+  semester: number;
+  cieRoundName: string;
   maxMarks: number;
   examDate?: string;
   examTime?: string;
 };
 
-export type UpdateAssessmentPayload = Partial<CreateAssessmentPayload>;
+export type UpdateAssessmentPayload = {
+  maxMarks?: number;
+  examDate?: string;
+  examTime?: string;
+};
+
+export type EnrollmentScope = {
+  academicYear: string;
+  semester: number;
+};
 
 export const getSubjects = (
   params?: PaginationParams & { semester?: number; department?: string },
@@ -106,6 +128,13 @@ export const updateAssessment = (
 export const deleteAssessment = (subjectId: string, assessmentId: string) =>
   apiClient.delete(`/subjects/${subjectId}/assessments/${assessmentId}`);
 
+export const getCieRounds = (params: {
+  academicYear: string;
+  semester: number;
+  department: string;
+}) =>
+  apiClient.get<CieRound[]>('/cie-rounds', { params }).then((r) => r.data);
+
 export const getFaculty = (params?: PaginationParams) =>
   apiClient.get<PaginatedResult<Faculty>>('/faculty', { params }).then((r) => r.data);
 
@@ -123,19 +152,36 @@ export const createAssignment = (data: {
 }) => apiClient.post<SubjectAssignment>('/subject-assignments', data).then((r) => r.data);
 export const deleteAssignment = (id: string) => apiClient.delete(`/subject-assignments/${id}`);
 
-export const getSubjectEnrollments = (subjectId: string) =>
-  apiClient.get<SubjectEnrollment[]>(`/subjects/${subjectId}/enrollments`).then((r) => r.data);
-
-export const bulkEnrollStudents = (subjectId: string, rollNumbers: string[]) =>
+export const getSubjectEnrollments = (
+  subjectId: string,
+  scope: EnrollmentScope,
+) =>
   apiClient
-    .post<ImportResult>(`/subjects/${subjectId}/enrollments/bulk`, { rollNumbers })
+    .get<SubjectEnrollment[]>(`/subjects/${subjectId}/enrollments`, { params: scope })
     .then((r) => r.data);
 
-export const importSubjectEnrollments = (subjectId: string, file: File) => {
+export const bulkEnrollStudents = (
+  subjectId: string,
+  scope: EnrollmentScope,
+  rollNumbers: string[],
+) =>
+  apiClient
+    .post<ImportResult>(`/subjects/${subjectId}/enrollments/bulk`, {
+      ...scope,
+      rollNumbers,
+    })
+    .then((r) => r.data);
+
+export const importSubjectEnrollments = (
+  subjectId: string,
+  scope: EnrollmentScope,
+  file: File,
+) => {
   const form = new FormData();
   form.append('file', file);
   return apiClient
     .post<ImportResult>(`/subjects/${subjectId}/enrollments/import`, form, {
+      params: scope,
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     .then((r) => r.data);
@@ -155,5 +201,9 @@ export const downloadEnrollmentTemplate = async (subjectId: string, subjectCode:
   window.URL.revokeObjectURL(url);
 };
 
-export const removeSubjectEnrollment = (subjectId: string, studentId: string) =>
-  apiClient.delete(`/subjects/${subjectId}/enrollments/${studentId}`);
+export const removeSubjectEnrollment = (
+  subjectId: string,
+  scope: EnrollmentScope,
+  studentId: string,
+) =>
+  apiClient.delete(`/subjects/${subjectId}/enrollments/${studentId}`, { params: scope });

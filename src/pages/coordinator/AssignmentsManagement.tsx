@@ -12,6 +12,7 @@ import {
   assignmentMutations,
 } from '../../hooks/useAssignments';
 import { useSubjectMutations } from '../../hooks/useSubjects';
+import { useCieRounds } from '../../hooks/useCieRounds';
 
 const defaultAcademicYear = () => {
   const y = new Date().getFullYear();
@@ -37,7 +38,9 @@ const AssignmentsManagement = () => {
   const [showAssignTeacher, setShowAssignTeacher] = useState(false);
   const [showAddAssessment, setShowAddAssessment] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
-  const [assessmentName, setAssessmentName] = useState('Internal 1');
+  const [assessmentAcademicYear, setAssessmentAcademicYear] = useState(defaultAcademicYear);
+  const [assessmentSemester, setAssessmentSemester] = useState(5);
+  const [cieRoundName, setCieRoundName] = useState('CIE-1');
   const [maxMarks, setMaxMarks] = useState<number | ''>(50);
   const [examDate, setExamDate] = useState('');
   const [examTime, setExamTime] = useState('');
@@ -85,10 +88,29 @@ const AssignmentsManagement = () => {
     [assignments],
   );
 
+  const selectedAssessmentSubject = useMemo(
+    () => subjects.find((s) => s.id === selectedSubjectId),
+    [subjects, selectedSubjectId],
+  );
+
+  const { data: cieRounds = [] } = useCieRounds(
+    assessmentAcademicYear,
+    assessmentSemester,
+    selectedAssessmentSubject?.department ?? '',
+  );
+
   const selectedSubject = useMemo(
     () => subjects.find((s) => s.id === subjectId),
     [subjects, subjectId],
   );
+
+  const handleAssessmentSubjectChange = (id: string) => {
+    setSelectedSubjectId(id);
+    const subject = subjects.find((s) => s.id === id);
+    if (subject) {
+      setAssessmentSemester(subject.semester);
+    }
+  };
 
   const filteredAssignments = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -128,9 +150,18 @@ const AssignmentsManagement = () => {
     deleteMutation.mutate(assignment.id);
   };
 
+  const sortedAssessments = (assessments: SubjectAssignment['subject']['assessments']) =>
+    [...(assessments ?? [])].sort(
+      (a, b) => (a.sequence ?? 0) - (b.sequence ?? 0) || a.name.localeCompare(b.name),
+    );
+
   const handleAddAssessment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSubjectId) return;
+    if (!cieRoundName.trim()) {
+      setError('CIE round is required');
+      return;
+    }
     if (!maxMarks || maxMarks <= 0) {
       setError('Max marks must be greater than zero');
       return;
@@ -141,7 +172,9 @@ const AssignmentsManagement = () => {
       {
         subjectId: selectedSubjectId,
         data: {
-          name: assessmentName,
+          academicYear: assessmentAcademicYear,
+          semester: assessmentSemester,
+          cieRoundName: cieRoundName.trim(),
           maxMarks: Number(maxMarks),
           ...(examDate ? { examDate } : {}),
           ...(examTime ? { examTime } : {}),
@@ -150,12 +183,12 @@ const AssignmentsManagement = () => {
       {
         onSuccess: () => {
           setMessage(
-            'Assessment added — click the exam link below to open marks and set NE students before marks entry.',
+            'CIE exam added — click the exam link below to open marks and set NE students before marks entry.',
           );
           setShowAddAssessment(false);
           invalidateAssignments();
         },
-        onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to add assessment')),
+        onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to add CIE exam')),
       },
     );
   };
@@ -209,7 +242,7 @@ const AssignmentsManagement = () => {
               : 'bg-surface-container-low text-primary hover:bg-surface-container'
           }`}
         >
-          {showAddAssessment ? 'Close Add Assessment' : 'Add Assessment'}
+          {showAddAssessment ? 'Close Add CIE Exam' : 'Add CIE Exam'}
         </button>
       </div>
 
@@ -289,7 +322,7 @@ const AssignmentsManagement = () => {
           </p>
         )}
         <p className="mt-1 text-xs text-amber-700">
-          To flag NE students: click an exam link below → tick NE column → Save NE Flags (once per exam, no Excel re-upload).
+          To flag NE students: click a CIE exam link below → tick NE column → Save NE Flags (once per CIE exam, no Excel re-upload).
         </p>
       </div>
       )}
@@ -298,13 +331,18 @@ const AssignmentsManagement = () => {
         <AddAssessmentForm
           subjects={subjects}
           selectedSubjectId={selectedSubjectId}
-          assessmentName={assessmentName}
+          academicYear={assessmentAcademicYear}
+          semester={assessmentSemester}
+          cieRoundName={cieRoundName}
+          cieRounds={cieRounds}
           maxMarks={maxMarks}
           examDate={examDate}
           examTime={examTime}
           isPending={actionLoading}
-          onSubjectChange={setSelectedSubjectId}
-          onNameChange={setAssessmentName}
+          onSubjectChange={handleAssessmentSubjectChange}
+          onAcademicYearChange={setAssessmentAcademicYear}
+          onSemesterChange={setAssessmentSemester}
+          onCieRoundChange={setCieRoundName}
           onMaxMarksChange={setMaxMarks}
           onExamDateChange={setExamDate}
           onExamTimeChange={setExamTime}
@@ -345,7 +383,7 @@ const AssignmentsManagement = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Sem</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Year</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Range</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Assessments (NE / Marks)</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">CIE Exams (NE / Marks)</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Actions</th>
               </tr>
             </thead>
@@ -372,7 +410,7 @@ const AssignmentsManagement = () => {
                         className="inline-flex items-center gap-1 text-sm font-medium text-on-surface hover:text-primary bg-background hover:bg-primary-fixed/30 px-2 py-1 rounded transition-colors"
                       >
                         <span className="text-xs">{expandedId === a.id ? '▴' : '▾'}</span>
-                        {a.subject.assessments?.length ?? 0} exams
+                        {a.subject.assessments?.length ?? 0} CIE exams
                       </button>
                     </td>
                     <td className="px-4 py-3 text-sm">
@@ -390,20 +428,20 @@ const AssignmentsManagement = () => {
                     <tr className="bg-surface-container-low/50">
                       <td colSpan={7} className="px-8 py-4">
                         {a.subject.assessments?.length === 0 ? (
-                          <p className="text-sm text-on-surface-variant italic">No exams defined for this subject.</p>
+                          <p className="text-sm text-on-surface-variant italic">No CIE exams defined for this subject.</p>
                         ) : (
                           <div className="bg-surface-container-lowest border rounded-lg overflow-hidden shadow-[var(--shadow-card)]">
                             <table className="min-w-full divide-y divide-surface-variant">
                               <thead className="bg-surface-container-low">
                                 <tr>
-                                  <th className="px-4 py-2 text-left text-xs font-medium text-on-surface-variant">Exam</th>
+                                  <th className="px-4 py-2 text-left text-xs font-medium text-on-surface-variant">CIE Exam</th>
                                   <th className="px-4 py-2 text-left text-xs font-medium text-on-surface-variant">Status</th>
                                   <th className="px-4 py-2 text-left text-xs font-medium text-on-surface-variant">Show Marks to NE Students</th>
                                   <th className="px-4 py-2 text-left text-xs font-medium text-on-surface-variant">Actions</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-100">
-                                {a.subject.assessments?.map((ass) => {
+                                {sortedAssessments(a.subject.assessments).map((ass) => {
                                   const sub = a.assessmentSubmissions?.find((s) => s.assessmentId === ass.id);
                                   const canToggleNE =
                                     sub?.status === 'SUBMITTED' || sub?.status === 'PUBLISHED';

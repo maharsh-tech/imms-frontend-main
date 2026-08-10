@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react'
 import { getMyMarksheet } from '../../api/marks'
 import apiClient from '../../api/client'
-import { StudentIdentity, SubjectCard } from '../../components/student'
+import { StudentIdentity, CIECard } from '../../components/student'
 
 interface MarksheetData {
   semester: number | null
   studentName: string
   rollNumber: string
   hasPublished: boolean
-  subjects: {
-    code: string
+  cieRounds: {
     name: string
-    assessments: { name: string; maxMarks: number; display: string }[]
+    sequence: number
+    subjects: { code: string; name: string; maxMarks: number; display: string }[]
   }[]
 }
 
@@ -84,7 +84,7 @@ const StudentMarksheet = () => {
     )
   }
 
-  const hasResults = Boolean(data?.hasPublished && data.subjects.length > 0)
+  const hasResults = Boolean(data?.hasPublished && data.cieRounds.length > 0)
 
   return (
     <>
@@ -123,12 +123,12 @@ const StudentMarksheet = () => {
 
       {hasResults && data && (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {data.subjects.map((subject) => (
-            <SubjectCard
-              key={subject.code}
-              code={subject.code}
-              name={subject.name}
-              assessments={subject.assessments}
+          {data.cieRounds.map((round) => (
+            <CIECard
+              key={`${round.sequence}-${round.name}`}
+              name={round.name}
+              sequence={round.sequence}
+              subjects={round.subjects}
             />
           ))}
         </div>

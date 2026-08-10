@@ -20,6 +20,14 @@ export const isValidRollNumber = (value: string): boolean =>
 export const isDiplomaRollNumber = (value: string): boolean =>
   /^D\d{2}[A-Z]{2}\d+$/.test(normalizeRollInput(value))
 
+export const deriveCurrentAcademicYearFromBatch = (batch: string, semester: number): string => {
+  const startYear = Number.parseInt(batch.split('-')[0] ?? '', 10)
+  if (!Number.isFinite(startYear) || semester < 1) return 'Unknown'
+  const yearOffset = Math.floor((semester - 1) / 2)
+  const acYearStart = startYear + yearOffset
+  return `${acYearStart}-${acYearStart + 1}`
+}
+
 export const deriveBatchFromRollNumber = (rollNumber: string): string => {
   const roll = rollNumber.trim().toUpperCase()
   const diploma = roll.match(/^D(\d{2})[A-Z]{2}/)

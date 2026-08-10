@@ -10,6 +10,7 @@ import {
   deleteAssessment,
   bulkEnrollStudents,
   removeSubjectEnrollment,
+  type EnrollmentScope,
 } from '../api/subjects'
 import type { PaginationParams } from '../types/pagination'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -23,11 +24,14 @@ export const useSubjects = (params?: PaginationParams & { semester?: number; dep
     queryFn: () => getSubjects(params),
   })
 
-export const useSubjectEnrollments = (subjectId: string | undefined) =>
+export const useSubjectEnrollments = (
+  subjectId: string | undefined,
+  scope?: EnrollmentScope,
+) =>
   useQuery({
-    queryKey: [SUBJECT_ENROLLMENTS_KEY, subjectId],
-    queryFn: () => getSubjectEnrollments(subjectId!),
-    enabled: Boolean(subjectId),
+    queryKey: [SUBJECT_ENROLLMENTS_KEY, subjectId, scope],
+    queryFn: () => getSubjectEnrollments(subjectId!, scope!),
+    enabled: Boolean(subjectId && scope?.academicYear && scope?.semester),
   })
 
 export const useSubjectsInvalidator = () => {
@@ -37,8 +41,12 @@ export const useSubjectsInvalidator = () => {
 
 export const useSubjectEnrollmentsInvalidator = () => {
   const queryClient = useQueryClient()
-  return (subjectId: string) =>
-    queryClient.invalidateQueries({ queryKey: [SUBJECT_ENROLLMENTS_KEY, subjectId] })
+  return (subjectId: string, scope?: EnrollmentScope) =>
+    queryClient.invalidateQueries({
+      queryKey: scope
+        ? [SUBJECT_ENROLLMENTS_KEY, subjectId, scope]
+        : [SUBJECT_ENROLLMENTS_KEY, subjectId],
+    })
 }
 
 export const useSubjectMutations = () => {
@@ -91,18 +99,32 @@ export const useSubjectMutations = () => {
     onSuccess: () => invalidateSubjects(),
   })
   const bulkEnrollMutation = useMutation({
-    mutationFn: ({ subjectId, rollNumbers }: { subjectId: string; rollNumbers: string[] }) =>
-      bulkEnrollStudents(subjectId, rollNumbers),
-    onSuccess: (_result, { subjectId }) => {
-      invalidateEnrollments(subjectId)
+    mutationFn: ({
+      subjectId,
+      scope,
+      rollNumbers,
+    }: {
+      subjectId: string
+      scope: EnrollmentScope
+      rollNumbers: string[]
+    }) => bulkEnrollStudents(subjectId, scope, rollNumbers),
+    onSuccess: (_result, { subjectId, scope }) => {
+      invalidateEnrollments(subjectId, scope)
       invalidateSubjects()
     },
   })
   const removeEnrollmentMutation = useMutation({
-    mutationFn: ({ subjectId, studentId }: { subjectId: string; studentId: string }) =>
-      removeSubjectEnrollment(subjectId, studentId),
-    onSuccess: (_result, { subjectId }) => {
-      invalidateEnrollments(subjectId)
+    mutationFn: ({
+      subjectId,
+      scope,
+      studentId,
+    }: {
+      subjectId: string
+      scope: EnrollmentScope
+      studentId: string
+    }) => removeSubjectEnrollment(subjectId, scope, studentId),
+    onSuccess: (_result, { subjectId, scope }) => {
+      invalidateEnrollments(subjectId, scope)
       invalidateSubjects()
     },
   })

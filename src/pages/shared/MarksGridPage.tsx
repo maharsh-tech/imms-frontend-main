@@ -506,10 +506,10 @@ const MarksGridPage = () => {
 
         {isCoordinator && isDraft && (
           <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <h2 className="text-sm font-semibold text-amber-900">Set NE for this exam</h2>
+            <h2 className="text-sm font-semibold text-amber-900">Set NE for this CIE exam</h2>
             <p className="text-sm text-amber-800 mt-1">
               Tick NE for students not eligible for <strong>{grid.assessment.name}</strong> only.
-              No Excel re-upload needed — do this once per internal/exam. Then click{' '}
+              No Excel re-upload needed — do this once per CIE exam. Then click{' '}
               <strong>Save NE Flags</strong>.
             </p>
           </div>

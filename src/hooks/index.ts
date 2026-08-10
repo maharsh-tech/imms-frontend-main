@@ -22,3 +22,4 @@ export {
   assignmentMutations,
   ASSIGNMENTS_KEY,
 } from './useAssignments'
+export { useCieRounds, CIE_ROUNDS_KEY } from './useCieRounds'

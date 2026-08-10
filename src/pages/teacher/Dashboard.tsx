@@ -7,6 +7,11 @@ import apiClient from '../../api/client'
 import { StaffShell } from '../../components/staff'
 import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge'
 
+const sortAssessments = (assessments: SubjectAssignment['subject']['assessments']) =>
+  [...(assessments ?? [])].sort(
+    (a, b) => (a.sequence ?? 0) - (b.sequence ?? 0) || a.name.localeCompare(b.name),
+  )
+
 export default function TeacherDashboard() {
   const { user, logout } = useAuthStore()
   const [assignments, setAssignments] = useState<SubjectAssignment[]>([])
@@ -34,7 +39,7 @@ export default function TeacherDashboard() {
           My Subjects
         </h1>
         <p className="mt-1 text-body-md text-on-surface-variant">
-          Enter marks for your assigned subjects and exams
+          Enter marks for your assigned subjects and CIE exams
         </p>
       </header>
 
@@ -65,7 +70,7 @@ export default function TeacherDashboard() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2 p-4">
-                {a.subject.assessments?.map((ass) => {
+                {sortAssessments(a.subject.assessments).map((ass) => {
                   const sub = a.assessmentSubmissions?.find((s) => s.assessmentId === ass.id)
                   return (
                     <Link

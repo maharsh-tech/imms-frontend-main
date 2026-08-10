@@ -1,6 +1,8 @@
-# IMMS Frontend — Project Context
+﻿# IMMS Frontend â€” Project Context
 
 > Living document. Updated after each epic completes.
+>
+> **CIE** = Continuous Internal Evaluation (internal exam). User-facing labels say "CIE"; code and API paths retain `Assessment` as the model/route name.
 
 ## Quick Reference
 
@@ -8,21 +10,21 @@
 |---|---|
 | Framework | React 19 + Vite |
 | Styling | Tailwind CSS v4 (Academic Core design tokens in `src/index.css`) |
-| Client State | Zustand (user profile only — **no tokens in storage**) |
+| Client State | Zustand (user profile only â€” **no tokens in storage**) |
 | Server State | React Query (`src/hooks/`, 5 min staleTime on coordinator dashboard) |
 | HTTP Client | Axios with `withCredentials: true` (httpOnly cookies) |
 | Routing | React Router v7 |
-| Auth | Plan A: activation link → set password → login |
+| Auth | Plan A: activation link â†’ set password â†’ login |
 | Git Remote | https://github.com/maharsh-tech/imms-frontend-main.git (branch: main) |
 
-## Architecture Principle — UI/UX Only
+## Architecture Principle â€” UI/UX Only
 
 **This frontend does not implement business logic.** It renders UI, collects user input, and calls the backend API. The backend is always authoritative.
 
 | Concern | Frontend | Backend |
 |---|---|---|
-| Marks validation (≤ maxMarks) | Shows API error message | Enforces in `MarksService` |
-| NE / AB flag rules | Checkbox toggles → sends flag to API | Persists NE; blocks changes when locked |
+| Marks validation (â‰¤ maxMarks) | Shows API error message | Enforces in `MarksService` |
+| NE / AB flag rules | Checkbox toggles â†’ sends flag to API | Persists NE; blocks changes when locked |
 | Submission workflow | Disables buttons based on `submission.status` from API | State machine + audit log |
 | Student marksheet display | Renders `display` string from API | Computes NE/AB/numeric rules |
 | Authorization | Route guards (UX redirect only) | JwtAuthGuard + RolesGuard on every endpoint |
@@ -30,14 +32,14 @@
 | Assignment semester | Auto-fills from subject; editable for backlog | Validates + stores on assignment |
 | Duplicate assignment | Shows API error message | ConflictException on unique constraint |
 
-`src/api/` is a **thin HTTP client layer** — no validation, no business rules.
+`src/api/` is a **thin HTTP client layer** â€” no validation, no business rules.
 
 ## Auth Pages (Public)
 
 | File | Route | Purpose |
 |---|---|---|
-| `src/pages/Login.tsx` | `/login` | Sign-in form. Posts `{ loginId, password }` to `POST /auth/login`. Students use **roll number**; staff use **@charusat.ac.in** email. Redirects by role after success. Post-activation success banner uses **router state only** (`auth-flash.ts`) — never URL query params. |
-| `src/pages/ActivateAccount.tsx` | `/activate#token=…` | First-time password setup from coordinator activation link. Reads token from URL **hash** (`activation-token.ts`), strips it from the address bar, posts `{ token, newPassword }` to `POST /auth/activate`, then redirects to `/login` with router flash state. Password: min 10 chars, letter + digit. |
+| `src/pages/Login.tsx` | `/login` | Sign-in form. Posts `{ loginId, password }` to `POST /auth/login`. Students use **roll number**; staff use **@charusat.ac.in** email. Redirects by role after success. Post-activation success banner uses **router state only** (`auth-flash.ts`) â€” never URL query params. |
+| `src/pages/ActivateAccount.tsx` | `/activate#token=â€¦` | First-time password setup from coordinator activation link. Reads token from URL **hash** (`activation-token.ts`), strips it from the address bar, posts `{ token, newPassword }` to `POST /auth/activate`, then redirects to `/login` with router flash state. Password: min 10 chars, letter + digit. |
 
 > **Not yet in UI:** `POST /auth/request-password-reset` and `POST /auth/reset-password` exist on the backend but have no frontend pages yet. `GET /audit` (coordinator audit log viewer) is also backend-only.
 
@@ -47,52 +49,52 @@ Shared layout/components: `src/components/auth/` (`AuthShell`, `AuthCard`, `Pass
 
 ```
 imms-frontend/
-├── src/
-│   ├── App.tsx
-│   ├── index.css                    # Design tokens (Academic Core palette + typography)
-│   ├── api/
-│   │   ├── client.ts                # withCredentials, 401 → /auth/refresh
-│   │   ├── allowedUsers.ts
-│   │   ├── faculty.ts, students.ts
-│   │   ├── import.ts
-│   │   ├── subjects.ts
-│   │   └── marks.ts
-│   ├── hooks/
-│   │   ├── useAccountInvites.ts   # List + create/delete/regenerate mutations
-│   │   ├── useStudents.ts, useFaculty.ts, useSubjects.ts, useAssignments.ts
-│   │   └── usePageTitle.ts
-│   ├── utils/
-│   │   ├── identifier-patterns.ts # Roll validation; deriveBatch/deriveDepartment from roll
-│   │   ├── activation-token.ts    # Consume #token= from hash; strip URL
-│   │   └── auth-flash.ts          # One-time login messages via router state
-│   ├── components/
-│   │   ├── AuthBootstrap.tsx
-│   │   ├── auth/                    # Login + activate shared UI
-│   │   ├── coordinator/
-│   │   │   ├── account-invites/     # BulkInviteForm, SingleInviteForm, InviteTable, RosterDialog
-│   │   │   └── subjects/            # AddSubjectForm, AddAssessmentForm, ElectiveRosterModal
-│   │   ├── staff/                   # StaffShell, StaffTabBar (coordinator/teacher)
-│   │   ├── student/                 # Student portal shell, SubjectCard, etc.
-│   │   └── shared/                  # SubmissionStatusBadge, ExcelImportCard
-│   ├── pages/
-│   │   ├── Login.tsx
-│   │   ├── ActivateAccount.tsx
-│   │   ├── coordinator/
-│   │   │   ├── Dashboard.tsx
-│   │   │   ├── AccountInvites.tsx
-│   │   │   ├── StudentsManagement.tsx
-│   │   │   ├── FacultyManagement.tsx
-│   │   │   ├── SubjectsManagement.tsx
-│   │   │   └── AssignmentsManagement.tsx
-│   │   ├── teacher/Dashboard.tsx
-│   │   ├── student/
-│   │   │   ├── Marksheet.tsx
-│   │   │   ├── Schedule.tsx         # Placeholder (no API yet)
-│   │   │   └── Profile.tsx
-│   │   └── shared/MarksGridPage.tsx
-│   ├── routes/PrivateRoute.tsx, RoleRoute.tsx
-│   └── stores/authStore.ts
-└── context.md
+â”œâ”€â”€ src/
+â”‚   â”œâ”€â”€ App.tsx
+â”‚   â”œâ”€â”€ index.css                    # Design tokens (Academic Core palette + typography)
+â”‚   â”œâ”€â”€ api/
+â”‚   â”‚   â”œâ”€â”€ client.ts                # withCredentials, 401 â†’ /auth/refresh
+â”‚   â”‚   â”œâ”€â”€ allowedUsers.ts
+â”‚   â”‚   â”œâ”€â”€ faculty.ts, students.ts
+â”‚   â”‚   â”œâ”€â”€ import.ts
+â”‚   â”‚   â”œâ”€â”€ subjects.ts
+â”‚   â”‚   â””â”€â”€ marks.ts
+â”‚   â”œâ”€â”€ hooks/
+â”‚   â”‚   â”œâ”€â”€ useAccountInvites.ts   # List + create/delete/regenerate mutations
+â”‚   â”‚   â”œâ”€â”€ useStudents.ts, useFaculty.ts, useSubjects.ts, useAssignments.ts
+â”‚   â”‚   â””â”€â”€ usePageTitle.ts
+â”‚   â”œâ”€â”€ utils/
+â”‚   â”‚   â”œâ”€â”€ identifier-patterns.ts # Roll validation; deriveBatch/deriveDepartment from roll
+â”‚   â”‚   â”œâ”€â”€ activation-token.ts    # Consume #token= from hash; strip URL
+â”‚   â”‚   â””â”€â”€ auth-flash.ts          # One-time login messages via router state
+â”‚   â”œâ”€â”€ components/
+â”‚   â”‚   â”œâ”€â”€ AuthBootstrap.tsx
+â”‚   â”‚   â”œâ”€â”€ auth/                    # Login + activate shared UI
+â”‚   â”‚   â”œâ”€â”€ coordinator/
+â”‚   â”‚   â”‚   â”œâ”€â”€ account-invites/     # BulkInviteForm, SingleInviteForm, InviteTable, RosterDialog
+â”‚   â”‚   â”‚   â””â”€â”€ subjects/            # AddSubjectForm, AddAssessmentForm, ElectiveRosterModal
+â”‚   â”‚   â”œâ”€â”€ staff/                   # StaffShell, StaffTabBar (coordinator/teacher)
+â”‚   â”‚   â”œâ”€â”€ student/                 # Student portal shell, SubjectCard, etc.
+â”‚   â”‚   â””â”€â”€ shared/                  # SubmissionStatusBadge, ExcelImportCard
+â”‚   â”œâ”€â”€ pages/
+â”‚   â”‚   â”œâ”€â”€ Login.tsx
+â”‚   â”‚   â”œâ”€â”€ ActivateAccount.tsx
+â”‚   â”‚   â”œâ”€â”€ coordinator/
+â”‚   â”‚   â”‚   â”œâ”€â”€ Dashboard.tsx
+â”‚   â”‚   â”‚   â”œâ”€â”€ AccountInvites.tsx
+â”‚   â”‚   â”‚   â”œâ”€â”€ StudentsManagement.tsx
+â”‚   â”‚   â”‚   â”œâ”€â”€ FacultyManagement.tsx
+â”‚   â”‚   â”‚   â”œâ”€â”€ SubjectsManagement.tsx
+â”‚   â”‚   â”‚   â””â”€â”€ AssignmentsManagement.tsx
+â”‚   â”‚   â”œâ”€â”€ teacher/Dashboard.tsx
+â”‚   â”‚   â”œâ”€â”€ student/
+â”‚   â”‚   â”‚   â”œâ”€â”€ Marksheet.tsx
+â”‚   â”‚   â”‚   â”œâ”€â”€ Schedule.tsx         # Placeholder (no API yet)
+â”‚   â”‚   â”‚   â””â”€â”€ Profile.tsx
+â”‚   â”‚   â””â”€â”€ shared/MarksGridPage.tsx
+â”‚   â”œâ”€â”€ routes/PrivateRoute.tsx, RoleRoute.tsx
+â”‚   â””â”€â”€ stores/authStore.ts
+â””â”€â”€ context.md
 ```
 
 ## Routes
@@ -100,10 +102,10 @@ imms-frontend/
 | Path | Role | Purpose |
 |---|---|---|
 | `/login` | Public | Email/roll-number + password login |
-| `/activate#token=…` | Public | Set password from activation link (hash consumed client-side) |
+| `/activate#token=â€¦` | Public | Set password from activation link (hash consumed client-side) |
 | `/coordinator` | Coordinator | Tabs: accounts, students, faculty, subjects, assignments |
 | `/coordinator/marks/:assignmentId/:assessmentId` | Coordinator | NE flags, lock, unlock, publish, unpublish |
-| `/teacher` | Teacher | Assigned subjects → marks entry links |
+| `/teacher` | Teacher | Assigned subjects â†’ marks entry links |
 | `/teacher/marks/:assignmentId/:assessmentId` | Teacher | Enter marks, AB, submit |
 | `/student` | Student | Marksheet (default tab) |
 | `/student/schedule` | Student | Schedule placeholder |
@@ -115,19 +117,19 @@ imms-frontend/
 |---|---|---|
 | Student | `StudentShell` | Student Portal header, sidebar (desktop) / bottom nav (mobile), no profile photo |
 | Coordinator / Teacher | `StaffShell` | Left-aligned fixed sidebar (desktop) / slide-in drawer (mobile) with `StaffSidebar`. User info + Logout pinned to bottom |
-| Marks grid | `StaffShell` (wide) | Shared by coordinator and teacher at `/…/marks/:assignmentId/:assessmentId` |
+| Marks grid | `StaffShell` (wide) | Shared by coordinator and teacher at `/â€¦/marks/:assignmentId/:assessmentId` |
 
 ## Implemented Features
 
-- [x] Epic 1.1 — Project Scaffolding
-- [x] Epic 1.3 — Authentication (Plan A + cookie session)
-- [x] Epic 1.4 — Allowed User Management UI
-- [x] Epic 1.5 — Excel Import UI
-- [x] Epic 2.1 — Subject & Assessment management UI (full CRUD, search/filter)
-- [x] Epic 2.2 — Subject Assignment UI (semester auto-fill, academic year, search/filter, status badges)
-- [x] Epic 2.3 — Marks grid UI (NE / AB / save draft, search, summary, status badge, read-only banners)
-- [x] Epic 2.4 — Submit / lock / unlock / publish / unpublish with confirm dialogs + API error feedback
-- [x] Student portal UI — marksheet cards, profile, auth pages (Academic Core design)
+- [x] Epic 1.1 â€” Project Scaffolding
+- [x] Epic 1.3 â€” Authentication (Plan A + cookie session)
+- [x] Epic 1.4 â€” Allowed User Management UI
+- [x] Epic 1.5 â€” Excel Import UI
+- [x] Epic 2.1 â€” Subject & Assessment management UI (full CRUD, search/filter)
+- [x] Epic 2.2 â€” Subject Assignment UI (semester auto-fill, academic year, search/filter, status badges)
+- [x] Epic 2.3 â€” Marks grid UI (NE / AB / save draft, search, summary, status badge, read-only banners)
+- [x] Epic 2.4 â€” Submit / lock / unlock / publish / unpublish with confirm dialogs + API error feedback
+- [x] Student portal UI â€” marksheet cards, profile, auth pages (Academic Core design)
 
 ## Environment Variables
 
@@ -140,18 +142,18 @@ imms-frontend/
 Both servers must run:
 
 ```powershell
-# Terminal 1 — backend (from imms-backend, NOT frontend)
+# Terminal 1 â€” backend (from imms-backend, NOT frontend)
 cd imms-backend
 npm run start:dev
 
-# Terminal 2 — frontend
+# Terminal 2 â€” frontend
 cd imms-frontend
 npm run dev
 ```
 
-Open http://localhost:5173 — login fails with "Check credentials" if backend is not running (`ERR_CONNECTION_REFUSED` on port 3000).
+Open http://localhost:5173 â€” login fails with "Check credentials" if backend is not running (`ERR_CONNECTION_REFUSED` on port 3000).
 
-Copy `.env.example` → `.env` and set `VITE_API_BASE_URL=http://localhost:3000/api/v1`.
+Copy `.env.example` â†’ `.env` and set `VITE_API_BASE_URL=http://localhost:3000/api/v1`.
 
 Database seed runs in **backend only**: `cd imms-backend && npx prisma db seed`
 
@@ -162,7 +164,7 @@ Database seed runs in **backend only**: `cd imms-backend && npx prisma db seed`
 - Read-only banner when SUBMITTED/PUBLISHED ("View only" teacher / "Marks are locked" coordinator)
 - NE rows highlighted amber for teachers; NE label shown in name column
 - Client-side search by roll number / name
-- Footer summary: entered · AB · NE · blank counts
+- Footer summary: entered Â· AB Â· NE Â· blank counts
 - Confirm dialogs on submit, unlock, publish, unpublish
 - Coordinator: **Lock Marks**, **Unlock for Teacher**, **Publish Results**, **Unpublish Results**, **Save Marks** (enables editing student marks and AB checkboxes in DRAFT mode)
 - Export features (coordinator only): **Download PDF** (using `jspdf` & `jspdf-autotable`) and **Download Excel** (using `exceljs` as native warning-free `.xlsx` file). NE student marks are masked in exports as a light-blue highlighted "NE" cell.
@@ -172,51 +174,75 @@ Database seed runs in **backend only**: `cd imms-backend && npx prisma db seed`
 
 ## Coordinator: Account Management
 
-Create student/teacher/coordinator accounts, bulk paste IDs, filter by role, copy activation links (manual delivery — no automated email UI). **Copy activation link** / **Copy all pending links** call `POST /allowed-users/:id/regenerate-activation-link`. Bulk creation button renamed to **Create accounts & download Excel**, which automatically generates and triggers a download of a native `.xlsx` sheet containing Student/Faculty/Coordinator IDs and activation links using `exceljs`. Listing accounts does not expose links — only `hasActivationToken`. **`isActivated` is server-computed** (from `needsPasswordChange`) — never trusted from URL params.
+Create student/teacher/coordinator accounts, bulk paste IDs, filter by role, copy activation links (manual delivery â€” no automated email UI). **Copy activation link** / **Copy all pending links** call `POST /allowed-users/:id/regenerate-activation-link`. Bulk creation button renamed to **Create accounts & download Excel**, which automatically generates and triggers a download of a native `.xlsx` sheet containing Student/Faculty/Coordinator IDs and activation links using `exceljs`. Listing accounts does not expose links â€” only `hasActivationToken`. **`isActivated` is server-computed** (from `needsPasswordChange`) â€” never trusted from URL params.
 
 **Add to roster** (student accounts not yet in master roster): department and batch **auto-derive from roll number** (`deriveDepartmentFromRollNumber`, `deriveBatchFromRollNumber`); semester must be entered manually. Activation not required before roster add.
 
-**Student Excel:** CSPIT `Roll No` + `Student Name` (regular `24IT…` and diploma `D25IT…`). Set semester in import panel; department/batch auto from roll when omitted.
+**Student Excel:** CSPIT `Roll No` + `Student Name` (regular `24ITâ€¦` and diploma `D25ITâ€¦`). Set semester in import panel; department/batch auto from roll when omitted.
 
 **Faculty Excel:** CSPIT name list (single column) matched to accounts by name, or structured sheet with email slug + name.
 
-**Teacher accounts:** institutional email `firstnamelastname.dept@charusat.ac.in` (e.g. `nishatshaikh.it@charusat.ac.in`) — not 3-letter codes. Bulk paste one email per line.
+**Teacher accounts:** institutional email `firstnamelastname.dept@charusat.ac.in` (e.g. `nishatshaikh.it@charusat.ac.in`) â€” not 3-letter codes. Bulk paste one email per line.
 
 ## Subjects: Core vs Elective
 
-- **Core** — all students in same department + semester appear on marks grid automatically
-- **Elective** — coordinator imports roll numbers after create; teacher sees only enrolled students
+- **Core** â€” all students in same department + semester + **current academic year** appear on marks grid automatically
+- **Elective** â€” coordinator imports roll numbers **for a specific offering** (academic year + semester) after create; teacher sees only enrolled students
 
-Subjects tab: check "Elective subject" → roster modal (Excel or paste) → assign teacher in Assignments tab. Enrollment count badge on subject/assignment rows.
+Subjects tab: catalog only. **CIE exams and teacher assignment** live in **Exam & Assignments**. Elective roster modal requires an academic year (defaults to current year).
+
+## Data model â€” Subject Offering + CIE Round
+
+| Layer | Change |
+|---|---|
+| Subject | Catalog only â€” no nested assessments |
+| SubjectOffering | `subjectId + academicYear + semester` |
+| CIERound | Dept-scoped round name + auto sequence |
+| Assessment | `subjectOfferingId + cieRoundId` (+ maxMarks, dates) |
+| SubjectAssignment | Points at offering (semester/year from offering) |
+| Student | `currentAcademicYear` set on create/import from batch + sem |
+
+API highlights:
+- `POST /subjects/:id/assessments` body: `{ academicYear, semester, cieRoundName, maxMarks, ... }`
+- `GET /cie-rounds?academicYear=&semester=&department=`
+- `GET /marks/my-marksheet` â†’ `{ cieRounds: [{ name, sequence, subjects: [...] }], ... }`
+- Elective enrollments require `academicYear` + `semester` query/body params
 
 ## Dev logins (after seed)
 
 | Role | Login | Password |
 |------|-------|----------|
 | Coordinator | coordinator@charusat.ac.in | password123 |
-| Teacher | dev.it@charusat.ac.in | password123 |
-| Student | 23IT001 | password123 |
+| Teacher | test.it@charusat.ac.in | password123@ |
+| Student | 24IT093 or 24it093@charusat.edu.in | password123@ |
 
 ## Last Updated
+
+**Subject Offering + CIE Round refactor** (2026-08-10):
+- Schema: SubjectOffering, CIERound; Assessment/Assignment/Enrollment scoped to offerings; Student.currentAcademicYear.
+- Security: marksheet + assignment visibility filtered by student.currentAcademicYear; assessment-offering match on mark entry.
+- Coordinator: Add CIE Exam uses CIE round combobox (datalist from GET /cie-rounds); elective roster scoped by academic year.
+- Student marksheet: CIE-first layout via `CIECard` (round â†’ subjects table).
+- Docs: `03_ARCHITECTURE.md` Â§6 data model; this file data-model + API table.
 
 **Coordinator workflow & UI polish** (2026-08-10):
 - Login/activate brand changed to **IMMS Portal** (public auth header only; in-app role headers unchanged).
 - **Student shell rebuilt for staff-shell parity**: 260px sidebar, graduation-cap branding, left-border active tabs, bottom-pinned user + Logout; mobile bottom nav retained (intentional student pattern).
-- **Marks grid**: Save Changes disabled until there are edits and when locked (new minimal dirty tracking); NE/AB controls merged into one "Enter Marks" cell next to the input; filter tabs now `All / NE / AB` (was "Not NE"); inline over-`maxMarks` feedback (red border + "Max N") while typing — backend remains authoritative.
+- **Marks grid**: Save Changes disabled until there are edits and when locked (new minimal dirty tracking); NE/AB controls merged into one "Enter Marks" cell next to the input; filter tabs now `All / NE / AB` (was "Not NE"); inline over-`maxMarks` feedback (red border + "Max N") while typing â€” backend remains authoritative.
 - **Locked-teacher audit**: lock == `SUBMITTED` (no separate LOCKED status); editing already gated by `isDraft`; verified fully non-editable when locked.
-- **Coordinator sidebar reorder**: Subject → Exam & Assignments → Manage Faculty → Manage Student → Account Management (**Marks Entry tab deferred** by owner).
+- **Coordinator sidebar reorder**: Subject â†’ Exam & Assignments â†’ Manage Faculty â†’ Manage Student â†’ Account Management (**Marks Entry tab deferred** by owner).
 - **Add Assessment moved** from Subject tab to Exam & Assignments (button-gated, same logic; assignments bundle invalidated on success so the new exam's "Open Marks" link appears immediately). **Assign Teacher to Subject** is now a toggle button that opens the form.
 - Removed deprecated unused `TEACHER_CODE_PATTERN` + `normalizeTeacherCodeInput` (frontend-only).
 
 **Security & roster defaults** (2026-08-07):
-- Activation links use URL hash (`/activate#token=…`); token posted in body, stripped from address bar.
+- Activation links use URL hash (`/activate#token=â€¦`); token posted in body, stripped from address bar.
 - Login post-activation message uses router state (`auth-flash.ts`), not `?activated=1`.
 - Roster dialog auto-fills department + batch from roll number; semester entered manually (no hardcoded defaults).
 - Diploma batch format: `2025-2028` (3-year); B.Tech: `2024-2028` (4-year).
 
-**Handoff Phase 2 — React Query & component split** (2026-08-07):
+**Handoff Phase 2 â€” React Query & component split** (2026-08-07):
 - Coordinator dashboard uses React Query hooks for all tab data + mutations (`useAccountInvites`, `useStudents`, `useFaculty`, `useSubjects`, `useSubjectMutations`).
-- Split `AccountInvites.tsx` → `account-invites/*` components; `SubjectsManagement.tsx` → `subjects/*` components.
+- Split `AccountInvites.tsx` â†’ `account-invites/*` components; `SubjectsManagement.tsx` â†’ `subjects/*` components.
 
 **Coordinator Enhancements & Spinners Removal** (2026-08-06):
 - Reordered coordinator sidebar navigation tabs (Subjects & Exams is now the first landing tab).
@@ -245,7 +271,7 @@ Subjects tab: check "Elective subject" → roster modal (Excel or paste) → ass
 
 **CSPIT Excel import, teacher email slugs, Account Management UI** (2026-08-05)
 
-**Docs sync — backend security hardening** (2026-08-05): API spec updated for change-password (`currentPassword`), password reset endpoints, `GET /health`, and `GET /audit`. No frontend UI yet for reset or audit viewer.
+**Docs sync â€” backend security hardening** (2026-08-05): API spec updated for change-password (`currentPassword`), password reset endpoints, `GET /health`, and `GET /audit`. No frontend UI yet for reset or audit viewer.
 
 **Post-audit bugfixes** (2026-08-05): Account Management copy-link flow via regenerate endpoint; activation password validation aligned (10 chars + letter + digit); logout no longer requires valid access cookie.
 

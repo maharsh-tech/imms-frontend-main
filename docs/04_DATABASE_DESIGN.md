@@ -1,8 +1,8 @@
 # Database Design Document
 ## IMMS — Internal Marks Management System
 
-**Version:** 1.0  
-**Date:** 2026-07-24  
+**Version:** 1.1  
+**Date:** 2026-08-10  
 **ORM:** Prisma  
 **Database:** PostgreSQL (Supabase)
 
@@ -21,15 +21,18 @@ User (authenticated users)
     |─── (role = TEACHER) ──────► Faculty ──► SubjectAssignment
     |─── (role = STUDENT) ──────► Student ──► Mark
     
-Subject ──────────────────────► SubjectAssignment ──► Faculty
-   |                                    |
-   |                                    ▼
-   |                        [ AssessmentSubmission ] (per-exam state)
-   |                                    |
-   └──────► Assessment ──► Mark ◄───── Student
-                              |
-                              ▼
-                          AuditLog
+Subject (catalog) ──► SubjectOffering (per year/sem run)
+                           |
+         CIERound ─────────┼──► Assessment ──► Mark ◄── Student
+         (dept-wide)       |         |
+                           |         ▼
+                           └──► SubjectAssignment ──► Faculty
+                                     |
+                                     ▼
+                         [ AssessmentSubmission ] (per-exam state)
+                                     |
+                                     ▼
+                                 AuditLog
 `
 
 ---
@@ -133,8 +136,9 @@ model Student {
   email      String   @unique
   department String
   semester   Int
-  batch      String // e.g. "2024-2028" (B.Tech) or "2025-2028" (diploma)
-  isActive   Boolean  @default(true)
+  batch               String // e.g. "2024-2028" (B.Tech) or "2025-2028" (diploma)
+  currentAcademicYear String // e.g. "2025-2026" — scopes marksheet/assignments
+  isActive            Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -143,6 +147,7 @@ model Student {
   marks  Mark[]
 
   @@index([department, semester])
+  @@index([currentAcademicYear, semester])
   @@map("students")
 }
 
@@ -182,54 +187,96 @@ model Subject {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  assignments SubjectAssignment[]
-  assessments Assessment[]
+  offerings SubjectOffering[]
 
   @@map("subjects")
 }
 
 // ─────────────────────────────────────────────
-// SUBJECT ASSIGNMENT (Subject <-> Faculty)
+// SUBJECT OFFERING (catalog subject in a term)
 // ─────────────────────────────────────────────
 
-model SubjectAssignment {
+model SubjectOffering {
   id           String   @id @default(cuid())
   subjectId    String
-  facultyId    String
-  semester     Int
   academicYear String // e.g. "2025-2026"
+  semester     Int
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  subject               Subject                @relation(fields: [subjectId], references: [id])
+  subject     Subject             @relation(fields: [subjectId], references: [id])
+  assessments Assessment[]
+  assignments SubjectAssignment[]
+  enrollments SubjectEnrollment[]
+
+  @@unique([subjectId, academicYear, semester])
+  @@index([academicYear, semester])
+  @@map("subject_offerings")
+}
+
+// ─────────────────────────────────────────────
+// CIE ROUNDS (shared internal exam rounds — CIE 1, CIE 2, …)
+// ─────────────────────────────────────────────
+
+model CIERound {
+  id           String   @id @default(cuid())
+  academicYear String
+  semester     Int
+  department   String
+  name         String // e.g. "CIE 1"
+  sequence     Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assessments Assessment[]
+
+  @@unique([academicYear, semester, department, name])
+  @@unique([academicYear, semester, department, sequence])
+  @@map("cie_rounds")
+}
+
+// ─────────────────────────────────────────────
+// SUBJECT ASSIGNMENT (Offering <-> Faculty)
+// ─────────────────────────────────────────────
+
+model SubjectAssignment {
+  id                String   @id @default(cuid())
+  subjectOfferingId String
+  facultyId         String
+  startRollNumber   String?
+  endRollNumber     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  subjectOffering       SubjectOffering        @relation(fields: [subjectOfferingId], references: [id])
   faculty               Faculty                @relation(fields: [facultyId], references: [id])
   marks                 Mark[]
   assessmentSubmissions AssessmentSubmission[]
 
-  @@unique([subjectId, facultyId, academicYear])
-  @@index([academicYear, semester])
+  @@unique([subjectOfferingId, facultyId])
   @@map("subject_assignments")
 }
 
 // ─────────────────────────────────────────────
-// ASSESSMENTS (exam components per subject)
+// ASSESSMENTS (one subject offering × one CIE round — a CIE exam instance)
 // ─────────────────────────────────────────────
 
 model Assessment {
-  id        String    @id @default(cuid())
-  subjectId String
-  name      String // e.g. "Internal", "External", "Practical"
-  examDate  DateTime?
-  examTime  String? // e.g. "10:00 AM"
-  maxMarks  Decimal   @db.Decimal(5, 2)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  subjectOfferingId String
+  cieRoundId        String
+  examDate          DateTime?
+  examTime          String? // e.g. "10:00 AM"
+  maxMarks          Decimal   @db.Decimal(5, 2)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  subject     Subject                @relation(fields: [subjectId], references: [id])
-  marks       Mark[]
-  submissions AssessmentSubmission[]
+  subjectOffering SubjectOffering        @relation(fields: [subjectOfferingId], references: [id])
+  cieRound        CIERound               @relation(fields: [cieRoundId], references: [id])
+  marks           Mark[]
+  submissions     AssessmentSubmission[]
 
-  @@unique([subjectId, name])
+  @@unique([subjectOfferingId, cieRoundId])
   @@map("assessments")
 }
 
@@ -324,27 +371,33 @@ Created when the user completes activation (`POST /auth/activate`) and sets thei
 > **Code status:** Google OAuth is **not implemented**. There is no `googleId` column; auth uses `passwordHash` and `needsPasswordChange`.
 
 ### 3.3 students
-Imported via Excel. Linked to User on first login via email match. If the user has not activated yet, userId is null.
+Imported via Excel. Linked to User on first login via email match. If the user has not activated yet, userId is null. **`currentAcademicYear`** scopes which offering's assignments and marks appear on the marksheet (derived from batch + semester on import; coordinator can override for backlog/repeat).
 
 ### 3.4 faculty
 Imported via Excel. Linked to User on first login. Must exist before subject assignment.
 
 ### 3.5 subjects
-Defined by Coordinator. One subject can have a variable number of assessments/exams. Deletion restricted if marks exist.
+Catalog only (code, name, department, semester slot). CIE exams (`Assessment` rows) and teacher assignments live on **subject offerings**, not the catalog row. Deletion restricted if marks exist.
 
-### 3.6 subject_assignments
-Links a subject to a faculty for a given academic year and semester. This defines the teacher's class for the term.
+### 3.6 subject_offerings
+One row per `(subject, academicYear, semester)` — e.g. OS in 2026–2027 Sem 5. Owns CIE exams, assignments, and elective enrollments for that run. 25IT next year gets a separate offering even though the catalog subject is the same.
 
-### 3.7 assessments
-Exam components under a subject, defined by Coordinator with name, date, time, and maxMarks.
+### 3.7 cie_rounds
+**CIE** = Continuous Internal Evaluation (the internal exam name used across the college). A CIERound is a **shared internal exam round** for a department in a given academic year and semester — e.g. CIE 1, CIE 2 for IT Sem 5 2026–2027. All subject offerings in that scope link their per-subject exams to the same round so the student marksheet can group results by CIE. Variable count per year; `sequence` orders rounds on the marksheet.
 
-### 3.8 assessment_submissions
-Tracks the state of a specific exam (Assessment) for a specific teacher's class (SubjectAssignment). Tracks `status` (DRAFT → SUBMITTED → PUBLISHED). NE student visibility is NOT controlled here — NE marks are permanently hidden from students by design.
+### 3.8 subject_assignments
+Links a **subject offering** to a faculty member (optional roll range). Defines the teacher's class for that term.
 
-### 3.9 marks
+### 3.9 assessments
+One row per `(subjectOffering, cieRound)` — the subject's exam for that CIE round. Holds maxMarks, examDate, examTime. Display name comes from `cie_rounds.name`, not a free-text field on the assessment. (API/model name remains `Assessment`.)
+
+### 3.10 assessment_submissions
+Tracks the state of a specific CIE exam (`Assessment`) for a specific teacher's class (`SubjectAssignment`). Tracks `status` (DRAFT → SUBMITTED → PUBLISHED). NE student visibility is NOT controlled here — NE marks are permanently hidden from students by design.
+
+### 3.11 marks
 Core marks record. One row per student per assessment per subject_assignment. The `flag` determines AB/NE/NONE. `marksObtained` is null for AB only. For NE students, the teacher CAN enter a mark (it is stored), but the student's marksheet always shows "NE" regardless — the mark is never revealed. Editing is governed by the related `assessment_submissions` status.
 
-### 3.10 audit_logs
+### 3.12 audit_logs
 Immutable log of all marks-related changes. previousValue and newValue stored as JSON for full diff visibility. Never updated or deleted.
 
 ---

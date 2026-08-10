@@ -415,85 +415,144 @@ Roles: COORDINATOR
 
 ---
 
-### 5.5 Elective Enrollments
-
-```
-GET    /subjects/:id/enrollments
-GET    /subjects/:id/enrollments/template
-POST   /subjects/:id/enrollments/bulk     Body: { "rollNumbers": ["24IT093", ...] }
-POST   /subjects/:id/enrollments/import   multipart Excel
-DELETE /subjects/:id/enrollments/:studentId
-Roles: COORDINATOR (elective subjects only)
-```
-Student must exist in master roster (same dept + semester). Import skips invalid rows with per-row errors.
-
----
-
 ### 5.2 List Subjects
-`
+```
 GET /subjects?semester=3&department=CS
 Roles: COORDINATOR, TEACHER (filtered by assignment)
-`
+```
 Teachers receive only their assigned subjects.
 
 ---
 
 ### 5.3 Update Subject
-`
+```
 PATCH /subjects/:id
 Roles: COORDINATOR
-`
+```
 **Body:** Partial subject fields.
 
 ---
 
 ### 5.4 Delete Subject
-`
+```
 DELETE /subjects/:id
 Roles: COORDINATOR
-`
+```
 **Response 409:** If marks exist for this subject.
 
 ---
 
-## 6. Subject Assignments
+### 5.5 Elective Enrollments
 
-### 6.1 Assign Subject to Faculty
-`
+```
+GET    /subjects/:id/enrollments?academicYear=2026-2027&semester=5
+GET    /subjects/:id/enrollments/template
+POST   /subjects/:id/enrollments/bulk     Body: { "academicYear": "2026-2027", "semester": 5, "rollNumbers": ["24IT093", ...] }
+POST   /subjects/:id/enrollments/import?academicYear=2026-2027&semester=5   multipart Excel
+DELETE /subjects/:id/enrollments/:studentId?academicYear=2026-2027&semester=5
+Roles: COORDINATOR (elective subjects only)
+```
+Enrollments are scoped to a **subject offering** (`subject + academicYear + semester`), not the catalog subject alone. Student must exist in master roster (same dept + semester).
+
+---
+
+## 6. CIE Rounds
+
+**CIE** = Continuous Internal Evaluation (the internal exam name used at the college).
+
+### 6.1 List CIE Rounds
+```
+GET /cie-rounds?academicYear=2026-2027&semester=5&department=IT
+Roles: COORDINATOR
+```
+Returns shared internal-exam rounds for a department/term (e.g. CIE 1, CIE 2), sorted by `sequence`. Used by the coordinator UI when adding a CIE exam to a subject.
+
+---
+
+## 7. CIE Exams (API: Assessments, nested under Subjects)
+
+Each assessment row = one subject offering × one CIE round. Display name comes from the linked CIE round, not a free-text field.
+
+### 7.1 Create CIE Exam
+```
+POST /subjects/:subjectId/assessments
+Roles: COORDINATOR
+```
+**Body:**
+```json
+{
+  "academicYear": "2026-2027",
+  "semester": 5,
+  "cieRoundName": "CIE 1",
+  "maxMarks": 20,
+  "examDate": "2026-09-15",
+  "examTime": "10:00 AM"
+}
+```
+Creates or reuses `SubjectOffering` and `CIERound`, then the assessment. **Side effect:** Creates `assessment_submissions` rows (DRAFT) for every existing teacher assignment on that offering.
+
+### 7.2 List CIE Exams for Subject
+```
+GET /subjects/:subjectId/assessments?academicYear=2026-2027&semester=5
+Roles: COORDINATOR
+```
+
+### 7.3 Update CIE Exam
+```
+PATCH /subjects/:subjectId/assessments/:assessmentId
+Roles: COORDINATOR
+```
+**Body:** Partial `{ maxMarks, examDate, examTime }` — CIE round name is not editable here (tied to `CIERound`).
+
+### 7.4 Delete CIE Exam
+```
+DELETE /subjects/:subjectId/assessments/:assessmentId
+Roles: COORDINATOR
+```
+**Response 409:** If marks exist for this CIE exam.
+
+---
+
+## 8. Subject Assignments
+
+### 8.1 Assign Subject to Faculty
+```
 POST /subject-assignments
 Roles: COORDINATOR
-`
+```
 **Body:**
-`json
+```json
 {
   "subjectId": "cuid_subject",
   "facultyId": "cuid_faculty",
-  "semester": 3,
-  "academicYear": "2025-2026"
+  "semester": 5,
+  "academicYear": "2026-2027",
+  "startRollNumber": "24IT001",
+  "endRollNumber": "24IT065"
 }
-`
-**Response 201:** Assignment object.
+```
+Creates or reuses `SubjectOffering` for `(subjectId, academicYear, semester)`, then the assignment.
 
 ---
 
-### 6.2 List Assignments
-`
-GET /subject-assignments?semester=3&academicYear=2025-2026
+### 8.2 List Assignments
+```
+GET /subject-assignments?semester=5&academicYear=2026-2027
 Roles: COORDINATOR
-`
+```
 
 ---
 
-### 6.3 Get My Assignments (Teacher)
-`
+### 8.3 Get My Assignments (Teacher)
+```
 GET /subject-assignments/my
 Roles: TEACHER
-`
+```
 Returns only assignments for the authenticated teacher.
 
 ---
 
-### 6.4 Delete Assignment
+### 8.4 Delete Assignment
 ```
 DELETE /subject-assignments/:id
 Roles: COORDINATOR
@@ -502,42 +561,9 @@ Only allowed before marks entry begins.
 
 ---
 
-## 7. Assessments (nested under Subjects)
+## 9. Marks
 
-### 7.1 Create Assessment
-```
-POST /subjects/:subjectId/assessments
-Roles: COORDINATOR
-```
-**Body:** `{ "name": "Internal 1", "maxMarks": 50, "examDate": "...", "examTime": "..." }`
-
-**Side effect:** Creates `assessment_submissions` rows (DRAFT) for every existing teacher assignment on this subject.
-
-### 7.2 List Assessments for Subject
-```
-GET /subjects/:subjectId/assessments
-Roles: COORDINATOR
-```
-
-### 7.3 Update Assessment
-```
-PATCH /subjects/:subjectId/assessments/:assessmentId
-Roles: COORDINATOR
-```
-**Body:** Partial `{ name, maxMarks, examDate, examTime }`
-
-### 7.4 Delete Assessment
-```
-DELETE /subjects/:subjectId/assessments/:assessmentId
-Roles: COORDINATOR
-```
-**Response 409:** If marks exist for this assessment.
-
----
-
-## 8. Marks
-
-### 8.1 Get Marks Grid
+### 9.1 Get Marks Grid
 ```
 GET /marks/grid?subjectAssignmentId={id}&assessmentId={id}
 Roles: COORDINATOR, TEACHER (assigned only)
@@ -546,7 +572,7 @@ Returns assignment, assessment, submission status, and student rows with marks/f
 
 ---
 
-### 8.2 Bulk Upsert Marks
+### 9.2 Bulk Upsert Marks
 ```
 PUT /marks/bulk
 Roles: TEACHER (assigned only, DRAFT status)
@@ -566,7 +592,7 @@ Roles: TEACHER (assigned only, DRAFT status)
 
 ---
 
-### 8.3 Flag NE Students (Coordinator)
+### 9.3 Flag NE Students (Coordinator)
 ```
 PATCH /marks/flag-ne
 Roles: COORDINATOR (DRAFT status only)
@@ -582,7 +608,7 @@ Roles: COORDINATOR (DRAFT status only)
 
 ---
 
-### 8.4 Submit Marks
+### 9.4 Submit Marks
 ```
 POST /marks/submit
 Roles: TEACHER
@@ -592,7 +618,7 @@ Sets submission status to `SUBMITTED`. Audit log created.
 
 ---
 
-### 8.5 Lock Marks (Coordinator)
+### 9.5 Lock Marks (Coordinator)
 ```
 PATCH /marks/lock
 Roles: COORDINATOR
@@ -602,7 +628,7 @@ Locks a DRAFT submission (sets `SUBMITTED`). Teacher cannot edit until unlocked.
 
 ---
 
-### 8.6 Unlock Submission
+### 9.6 Unlock Submission
 ```
 PATCH /marks/unlock
 Roles: COORDINATOR
@@ -612,7 +638,7 @@ Returns submission to `DRAFT`. Audit log created.
 
 ---
 
-### 8.7 Publish Results
+### 9.7 Publish Results
 ```
 PATCH /marks/publish
 Roles: COORDINATOR
@@ -622,7 +648,7 @@ Sets submission status to `PUBLISHED`. Students can now see results. For electiv
 
 ---
 
-### 8.8 Unpublish Results
+### 9.8 Unpublish Results
 ```
 PATCH /marks/unpublish
 Roles: COORDINATOR
@@ -632,7 +658,7 @@ Returns `PUBLISHED` → `SUBMITTED`. Results hidden from students.
 
 ---
 
-### 8.9 Student Marksheet
+### 9.9 Student Marksheet (CIE-first)
 ```
 GET /marks/my-marksheet
 Roles: STUDENT
@@ -644,24 +670,24 @@ Roles: STUDENT
   "studentName": "Dev Student",
   "rollNumber": "23IT001",
   "hasPublished": true,
-  "subjects": [
+  "cieRounds": [
     {
-      "code": "IT301",
-      "name": "Data Structures",
-      "assessments": [
-        { "name": "Internal 1", "maxMarks": 50, "display": "NE" }
+      "name": "CIE-1",
+      "sequence": 1,
+      "subjects": [
+        { "code": "IT301", "name": "Data Structures", "maxMarks": 50, "display": "NE" }
       ]
     }
   ]
 }
 ```
-`display` is computed server-side: `"NE"`, `"AB"`, numeric string, or `"-"`.
+Results are grouped by CIE round (`cieRounds[]`, sorted by `sequence`). `display` is computed server-side: `"NE"`, `"AB"`, numeric string, or `"-"`.
 
 ---
 
-## 9. Reports (Milestone 3 — not yet implemented)
+## 10. Reports (Milestone 3 — not yet implemented)
 
-### 9.1 Get Student Marksheet
+### 10.1 Get Student Marksheet
 `
 GET /reports/marksheet/:studentId?semester=3&academicYear=2025-2026
 Roles: COORDINATOR (any student), STUDENT (self only)
@@ -697,7 +723,7 @@ Roles: COORDINATOR (any student), STUDENT (self only)
 
 ---
 
-### 9.2 Download Marksheet PDF
+### 10.2 Download Marksheet PDF
 `
 GET /reports/marksheet/:studentId/pdf?semester=3&academicYear=2025-2026
 Roles: COORDINATOR, STUDENT (self only)
@@ -706,7 +732,7 @@ Roles: COORDINATOR, STUDENT (self only)
 
 ---
 
-### 9.3 Semester Report
+### 10.3 Semester Report
 `
 GET /reports/semester?semester=3&department=CS&academicYear=2025-2026
 Roles: COORDINATOR
@@ -715,7 +741,7 @@ Returns all students with all subject marks for the semester.
 
 ---
 
-### 9.4 Semester Report PDF
+### 10.4 Semester Report PDF
 `
 GET /reports/semester/pdf?semester=3&department=CS&academicYear=2025-2026
 Roles: COORDINATOR
@@ -724,7 +750,7 @@ Roles: COORDINATOR
 
 ---
 
-### 9.5 Subject-wise Report
+### 10.5 Subject-wise Report
 `
 GET /reports/subject/:subjectAssignmentId
 Roles: COORDINATOR
@@ -732,7 +758,7 @@ Roles: COORDINATOR
 
 ---
 
-### 9.6 Subject-wise Report PDF
+### 10.6 Subject-wise Report PDF
 `
 GET /reports/subject/:subjectAssignmentId/pdf
 Roles: COORDINATOR
@@ -740,9 +766,9 @@ Roles: COORDINATOR
 
 ---
 
-## 10. Audit Logs
+## 11. Audit Logs
 
-### 10.1 Get Audit Logs
+### 11.1 Get Audit Logs
 ```
 GET /audit?subjectId=cuid&studentId=cuid&userId=cuid&from=2026-01-01&to=2026-07-24&page=1&limit=50
 Roles: COORDINATOR
@@ -774,7 +800,7 @@ Returns mark value changes (`INSERT`/`UPDATE`), submission transitions (`SUBMIT`
 
 ---
 
-## 11. Error Codes Reference
+## 12. Error Codes Reference
 
 | HTTP Status | Error Code | Meaning |
 |---|---|---|

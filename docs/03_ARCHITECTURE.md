@@ -40,8 +40,8 @@ IMMS follows a **3-tier web architecture** with a clear separation between:
 │                      DATA LAYER                             │
 │            PostgreSQL via Supabase                          │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │  Tables: User, Student, Faculty, Subject,            │   │
-│  │  SubjectAssignment, Assessment, Mark, AuditLog       │   │
+│  │  Tables: User, Student, Faculty, Subject, SubjectOffering,     │   │
+│  │  CIERound, SubjectAssignment, Assessment, Mark, AuditLog       │   │
 │  └──────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
          │
@@ -87,6 +87,7 @@ src/
 ├── import/                      # SheetJS Excel parsing
 ├── subjects/                    # subjects.service, faculty.service, students.service
 ├── subject-assignments/
+├── cie-rounds/                    # GET /cie-rounds (coordinator)
 ├── marks/                       # Grid, bulk, NE, submit/unlock/publish, marksheet
 └── prisma/
     ├── prisma.module.ts
@@ -114,7 +115,7 @@ src/
 │   ├── coordinator/
 │   │   ├── account-invites/       # BulkInviteForm, SingleInviteForm, InviteTable, RosterDialog
 │   │   └── subjects/              # AddSubjectForm, AddAssessmentForm, ElectiveRosterModal
-│   ├── student/                   # StudentShell, SubjectCard — student portal
+│   ├── student/                   # StudentShell, CIECard — CIE-first marksheet
 │   └── shared/                    # StaffShell, ExcelImportCard, badges
 ├── pages/
 │   ├── Login.tsx                  # /login
@@ -169,7 +170,34 @@ Student record lookup (by email)
 
 ---
 
-## 6. Marks Submission Workflow (per assessment)
+## 6. Data model — Subject Offering + CIE Round (2026-08-10)
+
+> **Terminology:** **CIE** = Continuous Internal Evaluation (internal exam). User-facing UI and docs say "CIE"; the Prisma model and API paths retain `Assessment` for each subject's exam in a CIE round.
+
+Year-scoped exam data is separated from the subject catalog:
+
+| Entity | Purpose |
+|---|---|
+| **Subject** | Year-agnostic catalog (code, name, dept, sem, core/elective) |
+| **SubjectOffering** | One row per subject × academic year × semester |
+| **CIERound** | Shared internal exam round per dept/year/sem (CIE 1, CIE 2, …; `sequence` for ordering) |
+| **Assessment** | One subject's CIE exam — links offering + CIE round; holds maxMarks, examDate, examTime |
+| **SubjectAssignment** | Faculty assigned to an offering (optional roll range) |
+| **SubjectEnrollment** | Elective roster scoped to an offering |
+| **Student.currentAcademicYear** | Derived from batch + semester; scopes marksheet/assignment visibility |
+
+**Security scoping:**
+- `assertAssessmentBelongsToAssignment` matches `assessment.subjectOfferingId` to the assignment’s offering (prevents cross-offering mark entry).
+- Student marksheet and assignment queries filter by `student.currentAcademicYear` via `buildStudentAssignmentWhere`.
+- Cohort queries filter students by offering academic year (`buildCohortStudentWhere`).
+
+**Coordinator workflow:** create catalog subject → (elective) enroll rolls for a specific year/sem offering → assign teacher to offering → add CIE exam (pick/create CIE round) → marks workflow unchanged.
+
+**Student marksheet:** `GET /marks/my-marksheet` returns `cieRounds[]` (sorted by sequence), each listing subjects with display marks — CIE-first layout (`CIECard`).
+
+---
+
+## 7. Marks Submission Workflow (per assessment)
 
 ```
 Coordinator flags NE (optional) → status: DRAFT
@@ -189,7 +217,7 @@ All state transitions validated server-side in `MarksService`.
 
 ---
 
-## 7. PDF Generation Strategy
+## 8. PDF Generation Strategy
 
 - **Individual marksheets:** Generated on-demand using @react-pdf/renderer (server-side via NestJS) or Puppeteer rendering a React HTML template.
 - **Bulk export (P2):** BullMQ job queue processes batch generation, stores to temporary file, returns download link.
@@ -197,7 +225,7 @@ All state transitions validated server-side in `MarksService`.
 
 ---
 
-## 8. Deployment Architecture
+## 9. Deployment Architecture
 
 `
 ┌─────────────────────────────────────────────────────────────────┐
@@ -222,7 +250,7 @@ All state transitions validated server-side in `MarksService`.
 
 ---
 
-## 9. Security Architecture
+## 10. Security Architecture
 
 | Concern | Implementation |
 |---|---|
@@ -252,7 +280,7 @@ All state transitions validated server-side in `MarksService`.
 
 ---
 
-## 10. Scalability & Performance Considerations
+## 11. Scalability & Performance Considerations
 
 - **Horizontal scaling:** NestJS is stateless; multiple instances can run behind a load balancer (Railway supports this)
 - **DB connections:** Supabase PgBouncer (port 6543) handles connection pooling for up to 800 concurrent users without exhausting Postgres connections

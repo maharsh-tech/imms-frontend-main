@@ -183,7 +183,7 @@ const AssignmentsManagement = () => {
       {
         onSuccess: () => {
           setMessage(
-            'CIE exam added — click the exam link below to open marks and set NE students before marks entry.',
+            'CIE exam added. Assign a teacher for the same subject, academic year, and semester if the table is empty — then expand that row to open marks and set NE flags.',
           );
           setShowAddAssessment(false);
           invalidateAssignments();
@@ -245,6 +245,11 @@ const AssignmentsManagement = () => {
           {showAddAssessment ? 'Close Add CIE Exam' : 'Add CIE Exam'}
         </button>
       </div>
+
+      <p className="text-sm text-on-surface-variant">
+        This table lists teacher assignments. CIE exams are nested under each row — assign a teacher first,
+        or add exams first and assign a teacher next (same academic year and semester).
+      </p>
 
       {showAssignTeacher && (
       <div className="bg-surface-container-lowest rounded-lg shadow p-6 border border-outline-variant">
@@ -501,7 +506,17 @@ const AssignmentsManagement = () => {
               ))}
               {!filteredAssignments.length && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-sm text-on-surface-variant">No assignments found</td>
+                  <td colSpan={7} className="px-4 py-6 text-center text-sm text-on-surface-variant">
+                    {assignments.length === 0 ? (
+                      <>
+                        No teacher assignments yet. Use <strong>Assign Teacher to Subject</strong> to create a
+                        row — CIE exams appear under each assignment. You can add CIE exams before or after
+                        assigning; they show up once a teacher is assigned for the same academic year and semester.
+                      </>
+                    ) : (
+                      'No assignments match your search or filters.'
+                    )}
+                  </td>
                 </tr>
               )}
             </tbody>

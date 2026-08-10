@@ -4,12 +4,14 @@ import { Link } from 'react-router-dom';
 import { setNEVisibility } from '../../api/marks';
 import type { SubjectAssignment } from '../../api/subjects';
 import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge';
+import AddAssessmentForm from '../../components/coordinator/subjects/AddAssessmentForm';
 import { apiErrorMessage } from '../../utils/api-errors';
 import {
   useAssignmentsBundle,
   useAssignmentsInvalidator,
   assignmentMutations,
 } from '../../hooks/useAssignments';
+import { useSubjectMutations } from '../../hooks/useSubjects';
 
 const defaultAcademicYear = () => {
   const y = new Date().getFullYear();
@@ -32,8 +34,16 @@ const AssignmentsManagement = () => {
   const [filterSemester, setFilterSemester] = useState('');
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showAssignTeacher, setShowAssignTeacher] = useState(false);
+  const [showAddAssessment, setShowAddAssessment] = useState(false);
+  const [selectedSubjectId, setSelectedSubjectId] = useState('');
+  const [assessmentName, setAssessmentName] = useState('Internal 1');
+  const [maxMarks, setMaxMarks] = useState<number | ''>(50);
+  const [examDate, setExamDate] = useState('');
+  const [examTime, setExamTime] = useState('');
 
   const invalidateAssignments = useAssignmentsInvalidator();
+  const { createAssessment } = useSubjectMutations();
   const { data, isLoading, isFetching, error: queryError } = useAssignmentsBundle();
   const assignments = data?.assignments ?? [];
   const subjects = data?.subjects ?? [];
@@ -62,7 +72,8 @@ const AssignmentsManagement = () => {
     onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to delete assignment')),
   });
 
-  const actionLoading = loading || createMutation.isPending || deleteMutation.isPending;
+  const actionLoading =
+    loading || createMutation.isPending || deleteMutation.isPending || createAssessment.isPending;
 
   const academicYears = useMemo(
     () => [...new Set(assignments.map((a) => a.academicYear))].sort(),
@@ -117,6 +128,38 @@ const AssignmentsManagement = () => {
     deleteMutation.mutate(assignment.id);
   };
 
+  const handleAddAssessment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSubjectId) return;
+    if (!maxMarks || maxMarks <= 0) {
+      setError('Max marks must be greater than zero');
+      return;
+    }
+    setError('');
+    setMessage('');
+    createAssessment.mutate(
+      {
+        subjectId: selectedSubjectId,
+        data: {
+          name: assessmentName,
+          maxMarks: Number(maxMarks),
+          ...(examDate ? { examDate } : {}),
+          ...(examTime ? { examTime } : {}),
+        },
+      },
+      {
+        onSuccess: () => {
+          setMessage(
+            'Assessment added — click the exam link below to open marks and set NE students before marks entry.',
+          );
+          setShowAddAssessment(false);
+          invalidateAssignments();
+        },
+        onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to add assessment')),
+      },
+    );
+  };
+
   const handleToggleNE = async (assignmentId: string, assessmentId: string, current: boolean) => {
     try {
       await setNEVisibility({
@@ -139,6 +182,38 @@ const AssignmentsManagement = () => {
         <div className="bg-red-50 border-l-4 border-red-400 p-3 text-sm text-red-700">{error || 'Failed to load assignments'}</div>
       ) : null}
 
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setShowAssignTeacher(!showAssignTeacher);
+            setShowAddAssessment(false);
+          }}
+          className={`inline-flex items-center px-3 py-2 text-sm font-semibold rounded-md border border-outline-variant cursor-pointer transition-colors ${
+            showAssignTeacher
+              ? 'bg-primary text-white hover:bg-primary-container'
+              : 'bg-surface-container-low text-primary hover:bg-surface-container'
+          }`}
+        >
+          {showAssignTeacher ? 'Close Assign Teacher' : 'Assign Teacher to Subject'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setShowAddAssessment(!showAddAssessment);
+            setShowAssignTeacher(false);
+          }}
+          className={`inline-flex items-center px-3 py-2 text-sm font-semibold rounded-md border border-outline-variant cursor-pointer transition-colors ${
+            showAddAssessment
+              ? 'bg-primary text-white hover:bg-primary-container'
+              : 'bg-surface-container-low text-primary hover:bg-surface-container'
+          }`}
+        >
+          {showAddAssessment ? 'Close Add Assessment' : 'Add Assessment'}
+        </button>
+      </div>
+
+      {showAssignTeacher && (
       <div className="bg-surface-container-lowest rounded-lg shadow p-6 border border-outline-variant">
         <h3 className="text-lg font-semibold mb-4">Assign Teacher to Subject</h3>
         <form onSubmit={handleCreate} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -217,6 +292,25 @@ const AssignmentsManagement = () => {
           To flag NE students: click an exam link below → tick NE column → Save NE Flags (once per exam, no Excel re-upload).
         </p>
       </div>
+      )}
+
+      {showAddAssessment && (
+        <AddAssessmentForm
+          subjects={subjects}
+          selectedSubjectId={selectedSubjectId}
+          assessmentName={assessmentName}
+          maxMarks={maxMarks}
+          examDate={examDate}
+          examTime={examTime}
+          isPending={actionLoading}
+          onSubjectChange={setSelectedSubjectId}
+          onNameChange={setAssessmentName}
+          onMaxMarksChange={setMaxMarks}
+          onExamDateChange={setExamDate}
+          onExamTimeChange={setExamTime}
+          onSubmit={handleAddAssessment}
+        />
+      )}
 
       <div className="bg-surface-container-lowest rounded-lg shadow p-4 border border-outline-variant flex flex-wrap gap-3">
         <input

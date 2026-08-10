@@ -8,7 +8,6 @@ import {
   useSubjectMutations,
 } from '../../hooks/useSubjects';
 import AddSubjectForm from '../../components/coordinator/subjects/AddSubjectForm';
-import AddAssessmentForm from '../../components/coordinator/subjects/AddAssessmentForm';
 import ElectiveRosterModal from '../../components/coordinator/subjects/ElectiveRosterModal';
 
 const formatExamDate = (value?: string | null) => {
@@ -24,7 +23,6 @@ const SubjectsManagement = () => {
     createSubject,
     updateSubject,
     deleteSubject,
-    createAssessment,
     updateAssessment,
     deleteAssessment,
     bulkEnroll,
@@ -38,7 +36,6 @@ const SubjectsManagement = () => {
     createSubject.isPending ||
     updateSubject.isPending ||
     deleteSubject.isPending ||
-    createAssessment.isPending ||
     updateAssessment.isPending ||
     deleteAssessment.isPending;
 
@@ -53,12 +50,6 @@ const SubjectsManagement = () => {
   const [rosterPaste, setRosterPaste] = useState('');
   const [rosterResult, setRosterResult] = useState<ImportResult | null>(null);
   const rosterPasteRef = useRef<HTMLTextAreaElement>(null);
-
-  const [selectedSubjectId, setSelectedSubjectId] = useState('');
-  const [assessmentName, setAssessmentName] = useState('Internal 1');
-  const [maxMarks, setMaxMarks] = useState<number | ''>(50);
-  const [examDate, setExamDate] = useState('');
-  const [examTime, setExamTime] = useState('');
 
   const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -80,7 +71,6 @@ const SubjectsManagement = () => {
 
   const [expandedSubjects, setExpandedSubjects] = useState<Record<string, boolean>>({});
   const [showAddSubject, setShowAddSubject] = useState(false);
-  const [showAddAssessment, setShowAddAssessment] = useState(false);
 
   const toggleRow = (subjectId: string) => {
     setExpandedSubjects((prev) => ({
@@ -205,37 +195,6 @@ const SubjectsManagement = () => {
     );
   };
 
-  const handleAddAssessment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedSubjectId) return;
-    if (!maxMarks || maxMarks <= 0) {
-      setError('Max marks must be greater than zero');
-      return;
-    }
-    setError('');
-    setMessage('');
-    createAssessment.mutate(
-      {
-        subjectId: selectedSubjectId,
-        data: {
-          name: assessmentName,
-          maxMarks: Number(maxMarks),
-          ...(examDate ? { examDate } : {}),
-          ...(examTime ? { examTime } : {}),
-        },
-      },
-      {
-        onSuccess: () => {
-          setMessage(
-            'Assessment added — go to Assignments tab, click the exam link, and set NE students before marks entry.',
-          );
-          setShowAddAssessment(false);
-        },
-        onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to add assessment')),
-      },
-    );
-  };
-
   const startEditSubject = (subject: Subject) => {
     setEditingSubjectId(subject.id);
     setEditName(subject.name);
@@ -336,27 +295,12 @@ const SubjectsManagement = () => {
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => {
-            setShowAddSubject(!showAddSubject);
-            setShowAddAssessment(false);
-          }}
+          onClick={() => setShowAddSubject(!showAddSubject)}
           className={`inline-flex items-center px-3 py-2 text-sm font-semibold rounded-md border border-outline-variant cursor-pointer transition-colors ${
             showAddSubject ? 'bg-primary text-white hover:bg-primary-container' : 'bg-surface-container-low text-primary hover:bg-surface-container'
           }`}
         >
           {showAddSubject ? 'Close Add Subject' : 'Add Subject'}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setShowAddAssessment(!showAddAssessment);
-            setShowAddSubject(false);
-          }}
-          className={`inline-flex items-center px-3 py-2 text-sm font-semibold rounded-md border border-outline-variant cursor-pointer transition-colors ${
-            showAddAssessment ? 'bg-primary text-white hover:bg-primary-container' : 'bg-surface-container-low text-primary hover:bg-surface-container'
-          }`}
-        >
-          {showAddAssessment ? 'Close Add Assessment' : 'Add Assessment'}
         </button>
       </div>
 
@@ -374,24 +318,6 @@ const SubjectsManagement = () => {
           onSemesterChange={setSemester}
           onElectiveChange={setIsElective}
           onSubmit={handleCreateSubject}
-        />
-      )}
-
-      {showAddAssessment && (
-        <AddAssessmentForm
-          subjects={subjects}
-          selectedSubjectId={selectedSubjectId}
-          assessmentName={assessmentName}
-          maxMarks={maxMarks}
-          examDate={examDate}
-          examTime={examTime}
-          isPending={actionLoading}
-          onSubjectChange={setSelectedSubjectId}
-          onNameChange={setAssessmentName}
-          onMaxMarksChange={setMaxMarks}
-          onExamDateChange={setExamDate}
-          onExamTimeChange={setExamTime}
-          onSubmit={handleAddAssessment}
         />
       )}
 

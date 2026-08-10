@@ -199,6 +199,15 @@ Subjects tab: check "Elective subject" → roster modal (Excel or paste) → ass
 
 ## Last Updated
 
+**Coordinator workflow & UI polish** (2026-08-10):
+- Login/activate brand changed to **IMMS Portal** (public auth header only; in-app role headers unchanged).
+- **Student shell rebuilt for staff-shell parity**: 260px sidebar, graduation-cap branding, left-border active tabs, bottom-pinned user + Logout; mobile bottom nav retained (intentional student pattern).
+- **Marks grid**: Save Changes disabled until there are edits and when locked (new minimal dirty tracking); NE/AB controls merged into one "Enter Marks" cell next to the input; filter tabs now `All / NE / AB` (was "Not NE"); inline over-`maxMarks` feedback (red border + "Max N") while typing — backend remains authoritative.
+- **Locked-teacher audit**: lock == `SUBMITTED` (no separate LOCKED status); editing already gated by `isDraft`; verified fully non-editable when locked.
+- **Coordinator sidebar reorder**: Subject → Exam & Assignments → Manage Faculty → Manage Student → Account Management (**Marks Entry tab deferred** by owner).
+- **Add Assessment moved** from Subject tab to Exam & Assignments (button-gated, same logic; assignments bundle invalidated on success so the new exam's "Open Marks" link appears immediately). **Assign Teacher to Subject** is now a toggle button that opens the form.
+- Removed deprecated unused `TEACHER_CODE_PATTERN` + `normalizeTeacherCodeInput` (frontend-only).
+
 **Security & roster defaults** (2026-08-07):
 - Activation links use URL hash (`/activate#token=…`); token posted in body, stripped from address bar.
 - Login post-activation message uses router state (`auth-flash.ts`), not `?activated=1`.

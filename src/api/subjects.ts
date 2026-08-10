@@ -70,6 +70,19 @@ export interface SubjectAssignment {
   assessmentSubmissions?: { assessmentId: string; status: string; showNEToStudents: boolean }[];
 }
 
+export interface SubjectOfferingRow {
+  id: string;
+  academicYear: string;
+  semester: number;
+  subject: Subject & { assessments: Assessment[] };
+  assignments: Array<
+    Pick<
+      SubjectAssignment,
+      'id' | 'facultyId' | 'startRollNumber' | 'endRollNumber' | 'faculty' | 'assessmentSubmissions'
+    >
+  >;
+}
+
 export type CreateSubjectPayload = {
   code: string;
   name: string;
@@ -140,6 +153,8 @@ export const getFaculty = (params?: PaginationParams) =>
 
 export const getAssignments = (params?: { academicYear?: string; semester?: number }) =>
   apiClient.get<SubjectAssignment[]>('/subject-assignments', { params }).then((r) => r.data);
+export const getOfferings = (params?: { academicYear?: string; semester?: number }) =>
+  apiClient.get<SubjectOfferingRow[]>('/subject-offerings', { params }).then((r) => r.data);
 export const getMyAssignments = () =>
   apiClient.get<SubjectAssignment[]>('/subject-assignments/my').then((r) => r.data);
 export const createAssignment = (data: {

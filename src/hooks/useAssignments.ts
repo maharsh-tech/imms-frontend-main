@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getAssignments, getSubjects, getFaculty, createAssignment, deleteAssignment } from '../api/subjects'
+import { getOfferings, getSubjects, getFaculty, createAssignment, deleteAssignment } from '../api/subjects'
 
 export const ASSIGNMENTS_KEY = 'assignments'
 
@@ -7,12 +7,12 @@ export const useAssignmentsBundle = () =>
   useQuery({
     queryKey: [ASSIGNMENTS_KEY],
     queryFn: async () => {
-      const [assignments, subjects, faculty] = await Promise.all([
-        getAssignments(),
+      const [offerings, subjects, faculty] = await Promise.all([
+        getOfferings(),
         getSubjects({ limit: 500 }),
         getFaculty({ limit: 500 }),
       ])
-      return { assignments, subjects: subjects.data, faculty: faculty.data }
+      return { offerings, subjects: subjects.data, faculty: faculty.data }
     },
   })
 

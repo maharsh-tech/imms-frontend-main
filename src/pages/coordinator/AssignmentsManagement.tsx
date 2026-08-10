@@ -2,7 +2,7 @@ import { Fragment, useState, useMemo } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { setNEVisibility } from '../../api/marks';
-import type { SubjectAssignment } from '../../api/subjects';
+import type { SubjectOfferingRow } from '../../api/subjects';
 import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge';
 import AddAssessmentForm from '../../components/coordinator/subjects/AddAssessmentForm';
 import { apiErrorMessage } from '../../utils/api-errors';
@@ -18,6 +18,20 @@ const defaultAcademicYear = () => {
   const y = new Date().getFullYear();
   const m = new Date().getMonth();
   return m >= 6 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+};
+
+type OfferingAssignment = SubjectOfferingRow['assignments'][number];
+
+const formatTeachers = (assignments: OfferingAssignment[]) => {
+  if (assignments.length === 0) return 'Not assigned';
+  return assignments.map((a) => a.faculty.name).join(', ');
+};
+
+const formatRange = (assignment: OfferingAssignment) => {
+  if (assignment.startRollNumber && assignment.endRollNumber) {
+    return `${assignment.startRollNumber} - ${assignment.endRollNumber}`;
+  }
+  return 'All Students';
 };
 
 const AssignmentsManagement = () => {
@@ -48,7 +62,7 @@ const AssignmentsManagement = () => {
   const invalidateAssignments = useAssignmentsInvalidator();
   const { createAssessment } = useSubjectMutations();
   const { data, isLoading, isFetching, error: queryError } = useAssignmentsBundle();
-  const assignments = data?.assignments ?? [];
+  const offerings = data?.offerings ?? [];
   const subjects = data?.subjects ?? [];
   const faculty = data?.faculty ?? [];
   const loading = isLoading || isFetching;
@@ -79,13 +93,13 @@ const AssignmentsManagement = () => {
     loading || createMutation.isPending || deleteMutation.isPending || createAssessment.isPending;
 
   const academicYears = useMemo(
-    () => [...new Set(assignments.map((a) => a.academicYear))].sort(),
-    [assignments],
+    () => [...new Set(offerings.map((o) => o.academicYear))].sort(),
+    [offerings],
   );
 
   const semesters = useMemo(
-    () => [...new Set(assignments.map((a) => a.semester))].sort((a, b) => a - b),
-    [assignments],
+    () => [...new Set(offerings.map((o) => o.semester))].sort((a, b) => a - b),
+    [offerings],
   );
 
   const selectedAssessmentSubject = useMemo(
@@ -112,16 +126,17 @@ const AssignmentsManagement = () => {
     }
   };
 
-  const filteredAssignments = useMemo(() => {
+  const filteredOfferings = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return assignments.filter((a) => {
-      if (filterYear && a.academicYear !== filterYear) return false;
-      if (filterSemester && a.semester !== Number(filterSemester)) return false;
+    return offerings.filter((o) => {
+      if (filterYear && o.academicYear !== filterYear) return false;
+      if (filterSemester && o.semester !== Number(filterSemester)) return false;
       if (!q) return true;
-      const haystack = `${a.subject.code} ${a.subject.name} ${a.faculty.name}`.toLowerCase();
+      const teachers = o.assignments.map((a) => a.faculty.name).join(' ');
+      const haystack = `${o.subject.code} ${o.subject.name} ${teachers}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [assignments, search, filterYear, filterSemester]);
+  }, [offerings, search, filterYear, filterSemester]);
 
   const handleSubjectChange = (id: string) => {
     setSubjectId(id);
@@ -143,14 +158,14 @@ const AssignmentsManagement = () => {
     });
   };
 
-  const handleDelete = async (assignment: SubjectAssignment) => {
-    if (!confirm(`Delete assignment for ${assignment.subject.code} — ${assignment.faculty.name}?`)) return;
+  const handleDelete = async (assignment: OfferingAssignment, subjectCode: string) => {
+    if (!confirm(`Delete assignment for ${subjectCode} — ${assignment.faculty.name}?`)) return;
     setError('');
     setMessage('');
     deleteMutation.mutate(assignment.id);
   };
 
-  const sortedAssessments = (assessments: SubjectAssignment['subject']['assessments']) =>
+  const sortedAssessments = (assessments: SubjectOfferingRow['subject']['assessments']) =>
     [...(assessments ?? [])].sort(
       (a, b) => (a.sequence ?? 0) - (b.sequence ?? 0) || a.name.localeCompare(b.name),
     );
@@ -182,9 +197,7 @@ const AssignmentsManagement = () => {
       },
       {
         onSuccess: () => {
-          setMessage(
-            'CIE exam added. Assign a teacher for the same subject, academic year, and semester if the table is empty — then expand that row to open marks and set NE flags.',
-          );
+          setMessage('CIE exam added. It appears in the table below — assign a teacher to open marks.');
           setShowAddAssessment(false);
           invalidateAssignments();
         },
@@ -204,6 +217,114 @@ const AssignmentsManagement = () => {
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Failed to toggle NE visibility'));
     }
+  };
+
+  const renderMarksAction = (assignments: OfferingAssignment[], assessmentId: string) => {
+    if (assignments.length === 0) {
+      return (
+        <span className="text-xs text-on-surface-variant" title="Assign a teacher first">
+          Assign teacher to open marks
+        </span>
+      );
+    }
+    if (assignments.length === 1) {
+      return (
+        <Link
+          to={`/coordinator/marks/${assignments[0].id}/${assessmentId}`}
+          className="text-sm text-primary hover:underline inline-flex items-center gap-1 shrink-0"
+        >
+          Open Marks ↗
+        </Link>
+      );
+    }
+    return (
+      <div className="flex flex-col gap-1">
+        {assignments.map((assignment) => (
+          <Link
+            key={assignment.id}
+            to={`/coordinator/marks/${assignment.id}/${assessmentId}`}
+            className="text-sm text-primary hover:underline inline-flex items-center gap-1 shrink-0"
+          >
+            Open Marks ({assignment.faculty.name}) ↗
+          </Link>
+        ))}
+      </div>
+    );
+  };
+
+  const renderSubmissionStatus = (assignments: OfferingAssignment[], assessmentId: string) => {
+    if (assignments.length === 0) {
+      return <SubmissionStatusBadge status="DRAFT" />;
+    }
+    if (assignments.length === 1) {
+      const sub = assignments[0].assessmentSubmissions?.find((s) => s.assessmentId === assessmentId);
+      return <SubmissionStatusBadge status={sub?.status || 'DRAFT'} />;
+    }
+    return (
+      <div className="flex flex-col gap-1">
+        {assignments.map((assignment) => {
+          const sub = assignment.assessmentSubmissions?.find((s) => s.assessmentId === assessmentId);
+          return (
+            <div key={assignment.id} className="flex items-center gap-2">
+              <span className="text-xs text-on-surface-variant">{assignment.faculty.name}:</span>
+              <SubmissionStatusBadge status={sub?.status || 'DRAFT'} />
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderNEVisibility = (assignments: OfferingAssignment[], assessmentId: string, assessmentName: string) => {
+    if (assignments.length === 0) {
+      return <span className="text-xs text-outline">—</span>;
+    }
+
+    const renderToggle = (assignment: OfferingAssignment) => {
+      const sub = assignment.assessmentSubmissions?.find((s) => s.assessmentId === assessmentId);
+      const canToggleNE = sub?.status === 'SUBMITTED' || sub?.status === 'PUBLISHED';
+      if (!canToggleNE) return <span className="text-xs text-outline">—</span>;
+
+      return (
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => handleToggleNE(assignment.id, assessmentId, !!sub?.showNEToStudents)}
+            className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+              sub?.showNEToStudents ? 'bg-primary' : 'bg-gray-200'
+            }`}
+            aria-label={
+              sub?.showNEToStudents
+                ? `Hide NE marks from NE students for ${assessmentName}`
+                : `Show NE marks to NE students for ${assessmentName}`
+            }
+          >
+            <span
+              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-surface-container-lowest shadow ring-0 transition duration-200 ease-in-out ${
+                sub?.showNEToStudents ? 'translate-x-4' : 'translate-x-0'
+              }`}
+            />
+          </button>
+          <span className="text-[10px] uppercase font-semibold text-on-surface-variant/80 select-none">
+            {sub?.showNEToStudents ? 'NE marks published' : 'NE shows'}
+          </span>
+        </div>
+      );
+    };
+
+    if (assignments.length === 1) {
+      return renderToggle(assignments[0]);
+    }
+
+    return (
+      <div className="flex flex-col gap-2">
+        {assignments.map((assignment) => (
+          <div key={assignment.id} className="flex items-center gap-2">
+            <span className="text-xs text-on-surface-variant w-24 truncate">{assignment.faculty.name}</span>
+            {renderToggle(assignment)}
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -247,8 +368,8 @@ const AssignmentsManagement = () => {
       </div>
 
       <p className="text-sm text-on-surface-variant">
-        This table lists teacher assignments. CIE exams are nested under each row — assign a teacher first,
-        or add exams first and assign a teacher next (same academic year and semester).
+        Each row is a subject offering (subject, academic year, semester). CIE exams appear even before a
+        teacher is assigned — assign a teacher to open marks and set NE flags.
       </p>
 
       {showAssignTeacher && (
@@ -377,7 +498,7 @@ const AssignmentsManagement = () => {
       </div>
 
       <div className="bg-surface-container-lowest rounded-lg shadow border border-outline-variant overflow-x-auto">
-        {loading && assignments.length === 0 ? (
+        {loading && offerings.length === 0 ? (
           <p className="p-6 text-center text-on-surface-variant">Loading...</p>
         ) : (
           <table className="min-w-full divide-y divide-surface-variant">
@@ -393,47 +514,75 @@ const AssignmentsManagement = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-variant">
-              {filteredAssignments.map((a) => (
-                <Fragment key={a.id}>
+              {filteredOfferings.map((offering) => (
+                <Fragment key={offering.id}>
                   <tr>
-                    <td className="px-4 py-3 text-sm font-medium">{a.subject.code} — {a.subject.name}</td>
-                    <td className="px-4 py-3 text-sm">{a.faculty.name}</td>
-                    <td className="px-4 py-3 text-sm">{a.semester}</td>
-                    <td className="px-4 py-3 text-sm">{a.academicYear}</td>
+                    <td className="px-4 py-3 text-sm font-medium">{offering.subject.code} — {offering.subject.name}</td>
                     <td className="px-4 py-3 text-sm">
-                      {a.startRollNumber && a.endRollNumber ? (
-                        <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
-                          {a.startRollNumber} - {a.endRollNumber}
-                        </span>
+                      <span className={offering.assignments.length === 0 ? 'text-on-surface-variant italic' : ''}>
+                        {formatTeachers(offering.assignments)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm">{offering.semester}</td>
+                    <td className="px-4 py-3 text-sm">{offering.academicYear}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {offering.assignments.length === 0 ? (
+                        <span className="text-on-surface-variant text-xs">—</span>
+                      ) : offering.assignments.length === 1 ? (
+                        formatRange(offering.assignments[0]).startsWith('All') ? (
+                          <span className="text-on-surface-variant text-xs font-medium">{formatRange(offering.assignments[0])}</span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
+                            {formatRange(offering.assignments[0])}
+                          </span>
+                        )
                       ) : (
-                        <span className="text-on-surface-variant text-xs font-medium">All Students</span>
+                        <div className="flex flex-col gap-1">
+                          {offering.assignments.map((assignment) => (
+                            <span
+                              key={assignment.id}
+                              className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200 w-fit"
+                            >
+                              {assignment.faculty.name}: {formatRange(assignment)}
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       <button
-                        onClick={() => setExpandedId(expandedId === a.id ? null : a.id)}
+                        onClick={() => setExpandedId(expandedId === offering.id ? null : offering.id)}
                         className="inline-flex items-center gap-1 text-sm font-medium text-on-surface hover:text-primary bg-background hover:bg-primary-fixed/30 px-2 py-1 rounded transition-colors"
                       >
-                        <span className="text-xs">{expandedId === a.id ? '▴' : '▾'}</span>
-                        {a.subject.assessments?.length ?? 0} CIE exams
+                        <span className="text-xs">{expandedId === offering.id ? '▴' : '▾'}</span>
+                        {offering.subject.assessments?.length ?? 0} CIE exams
                       </button>
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(a)}
-                        disabled={actionLoading}
-                        className="text-red-600 hover:underline disabled:opacity-50"
-                      >
-                        Delete
-                      </button>
+                      {offering.assignments.length === 0 ? (
+                        <span className="text-xs text-on-surface-variant">—</span>
+                      ) : (
+                        <div className="flex flex-col gap-1">
+                          {offering.assignments.map((assignment) => (
+                            <button
+                              key={assignment.id}
+                              type="button"
+                              onClick={() => handleDelete(assignment, offering.subject.code)}
+                              disabled={actionLoading}
+                              className="text-red-600 hover:underline disabled:opacity-50 text-left"
+                            >
+                              Delete {offering.assignments.length > 1 ? `(${assignment.faculty.name})` : ''}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </td>
                   </tr>
-                  {expandedId === a.id && (
+                  {expandedId === offering.id && (
                     <tr className="bg-surface-container-low/50">
                       <td colSpan={7} className="px-8 py-4">
-                        {a.subject.assessments?.length === 0 ? (
-                          <p className="text-sm text-on-surface-variant italic">No CIE exams defined for this subject.</p>
+                        {offering.subject.assessments?.length === 0 ? (
+                          <p className="text-sm text-on-surface-variant italic">No CIE exams defined for this offering.</p>
                         ) : (
                           <div className="bg-surface-container-lowest border rounded-lg overflow-hidden shadow-[var(--shadow-card)]">
                             <table className="min-w-full divide-y divide-surface-variant">
@@ -446,55 +595,20 @@ const AssignmentsManagement = () => {
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-100">
-                                {sortedAssessments(a.subject.assessments).map((ass) => {
-                                  const sub = a.assessmentSubmissions?.find((s) => s.assessmentId === ass.id);
-                                  const canToggleNE =
-                                    sub?.status === 'SUBMITTED' || sub?.status === 'PUBLISHED';
-                                  return (
-                                    <tr key={ass.id}>
-                                      <td className="px-4 py-2 text-sm text-on-surface">{ass.name}</td>
-                                      <td className="px-4 py-2">
-                                        <SubmissionStatusBadge status={sub?.status || 'DRAFT'} />
-                                      </td>
-                                      <td className="px-4 py-2">
-                                        {canToggleNE ? (
-                                          <div className="flex items-center gap-1.5">
-                                            <button
-                                              onClick={() => handleToggleNE(a.id, ass.id, !!sub?.showNEToStudents)}
-                                              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                                sub?.showNEToStudents ? 'bg-primary' : 'bg-gray-200'
-                                              }`}
-                                              aria-label={
-                                                sub?.showNEToStudents
-                                                  ? `Hide NE marks from NE students for ${ass.name}`
-                                                  : `Show NE marks to NE students for ${ass.name}`
-                                              }
-                                            >
-                                              <span
-                                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-surface-container-lowest shadow ring-0 transition duration-200 ease-in-out ${
-                                                  sub?.showNEToStudents ? 'translate-x-4' : 'translate-x-0'
-                                                }`}
-                                              />
-                                            </button>
-                                            <span className="text-[10px] uppercase font-semibold text-on-surface-variant/80 select-none">
-                                              {sub?.showNEToStudents ? 'NE marks published' : 'NE shows'}
-                                            </span>
-                                          </div>
-                                        ) : (
-                                          <span className="text-xs text-outline">—</span>
-                                        )}
-                                      </td>
-                                      <td className="px-4 py-2">
-                                        <Link
-                                          to={`/coordinator/marks/${a.id}/${ass.id}`}
-                                          className="text-sm text-primary hover:underline inline-flex items-center gap-1 shrink-0"
-                                        >
-                                          Open Marks ↗
-                                        </Link>
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
+                                {sortedAssessments(offering.subject.assessments).map((ass) => (
+                                  <tr key={ass.id}>
+                                    <td className="px-4 py-2 text-sm text-on-surface">{ass.name}</td>
+                                    <td className="px-4 py-2">
+                                      {renderSubmissionStatus(offering.assignments, ass.id)}
+                                    </td>
+                                    <td className="px-4 py-2">
+                                      {renderNEVisibility(offering.assignments, ass.id, ass.name)}
+                                    </td>
+                                    <td className="px-4 py-2">
+                                      {renderMarksAction(offering.assignments, ass.id)}
+                                    </td>
+                                  </tr>
+                                ))}
                               </tbody>
                             </table>
                           </div>
@@ -504,17 +618,17 @@ const AssignmentsManagement = () => {
                   )}
                 </Fragment>
               ))}
-              {!filteredAssignments.length && (
+              {!filteredOfferings.length && (
                 <tr>
                   <td colSpan={7} className="px-4 py-6 text-center text-sm text-on-surface-variant">
-                    {assignments.length === 0 ? (
+                    {offerings.length === 0 ? (
                       <>
-                        No teacher assignments yet. Use <strong>Assign Teacher to Subject</strong> to create a
-                        row — CIE exams appear under each assignment. You can add CIE exams before or after
-                        assigning; they show up once a teacher is assigned for the same academic year and semester.
+                        No subject offerings yet. Use <strong>Add CIE Exam</strong> or{' '}
+                        <strong>Assign Teacher to Subject</strong> to get started — CIE exams show up as soon as
+                        they are created, even before a teacher is assigned.
                       </>
                     ) : (
-                      'No assignments match your search or filters.'
+                      'No offerings match your search or filters.'
                     )}
                   </td>
                 </tr>

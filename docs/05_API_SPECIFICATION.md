@@ -561,6 +561,15 @@ Only allowed before marks entry begins.
 
 ---
 
+### 8.5 List Subject Offerings (Exam & Assignments page)
+```
+GET /subject-offerings?academicYear=2026-2027&semester=5
+Roles: COORDINATOR
+```
+Returns subject offerings that have at least one CIE exam or teacher assignment. Used by the coordinator Exam & Assignments table so CIE exams appear even when no teacher is assigned yet. Each row includes nested `subject.assessments` and `assignments[]`.
+
+---
+
 ## 9. Marks
 
 ### 9.1 Get Marks Grid

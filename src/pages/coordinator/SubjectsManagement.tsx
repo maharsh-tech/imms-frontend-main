@@ -7,6 +7,10 @@ import {
   useSubjectEnrollments,
   useSubjectMutations,
 } from '../../hooks/useSubjects';
+import {
+  importSubjectEnrollments,
+  downloadEnrollmentTemplate,
+} from '../../api/subjects';
 import AddSubjectForm from '../../components/coordinator/subjects/AddSubjectForm';
 import ElectiveRosterModal from '../../components/coordinator/subjects/ElectiveRosterModal';
 
@@ -356,13 +360,15 @@ const SubjectsManagement = () => {
             </label>
           </div>
           <ElectiveRosterModal
-            subject={rosterSubject}
-            enrollmentScope={rosterScope}
+            title={`Elective roster — ${rosterSubject.code} (${rosterSubject.name})`}
+            description={`Offering ${rosterScope.academicYear} · semester ${rosterScope.semester}. Only these students appear when a teacher is assigned to this elective.`}
             enrollments={enrollments}
             rosterPaste={rosterPaste}
             rosterResult={rosterResult}
             rosterLoading={rosterBusy}
             rosterPasteRef={rosterPasteRef}
+            onDownloadTemplate={() => downloadEnrollmentTemplate(rosterSubject.id, rosterSubject.code)}
+            onImport={(file) => importSubjectEnrollments(rosterSubject.id, rosterScope, file)}
             onPasteChange={setRosterPaste}
             onPasteEnroll={handlePasteEnroll}
             onRemoveEnrollment={handleRemoveEnrollment}

@@ -1,19 +1,25 @@
-import type { Subject, SubjectEnrollment, EnrollmentScope } from '../../../api/subjects'
 import type { ImportResult } from '../../../types'
 import ExcelImportCard from '../../shared/ExcelImportCard'
-import {
-  importSubjectEnrollments,
-  downloadEnrollmentTemplate,
-} from '../../../api/subjects'
+
+export type RosterMember = {
+  id: string
+  studentId: string
+  student: {
+    rollNumber: string
+    name: string
+  }
+}
 
 type ElectiveRosterModalProps = {
-  subject: Subject
-  enrollmentScope: EnrollmentScope
-  enrollments: SubjectEnrollment[]
+  title: string
+  description: string
+  enrollments: RosterMember[]
   rosterPaste: string
   rosterResult: ImportResult | null
   rosterLoading: boolean
   rosterPasteRef: React.RefObject<HTMLTextAreaElement | null>
+  onDownloadTemplate: () => Promise<void>
+  onImport: (file: File) => Promise<ImportResult>
   onPasteChange: (value: string) => void
   onPasteEnroll: () => void
   onRemoveEnrollment: (studentId: string) => void
@@ -22,13 +28,15 @@ type ElectiveRosterModalProps = {
 }
 
 const ElectiveRosterModal = ({
-  subject,
-  enrollmentScope,
+  title,
+  description,
   enrollments,
   rosterPaste,
   rosterResult,
   rosterLoading,
   rosterPasteRef,
+  onDownloadTemplate,
+  onImport,
   onPasteChange,
   onPasteEnroll,
   onRemoveEnrollment,
@@ -38,20 +46,15 @@ const ElectiveRosterModal = ({
   <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
     <div className="bg-surface-container-lowest rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-outline-variant">
       <div className="p-6 border-b border-outline-variant">
-        <h3 className="text-lg font-semibold text-on-surface">
-          Elective roster — {subject.code} ({subject.name})
-        </h3>
-        <p className="text-sm text-on-surface-variant mt-1">
-          Offering {enrollmentScope.academicYear} · semester {enrollmentScope.semester}. Only these
-          students appear when a teacher is assigned to this elective.
-        </p>
+        <h3 className="text-lg font-semibold text-on-surface">{title}</h3>
+        <p className="text-sm text-on-surface-variant mt-1">{description}</p>
       </div>
       <div className="p-6 space-y-6">
         <ExcelImportCard
           title="Import roll numbers"
           description="One roll number per row. Students must already exist in the student roster."
-          onDownloadTemplate={() => downloadEnrollmentTemplate(subject.id, subject.code)}
-          onImport={(file) => importSubjectEnrollments(subject.id, enrollmentScope, file)}
+          onDownloadTemplate={onDownloadTemplate}
+          onImport={onImport}
           onImportComplete={onImportComplete}
         />
         <div>
@@ -63,7 +66,7 @@ const ElectiveRosterModal = ({
             rows={5}
             placeholder={'24ABC123\n24ABC124\n24ABC125'}
             className="w-full border border-outline-variant rounded-md px-3 py-2 text-sm font-mono"
-            aria-label="Paste roll numbers for elective enrollment"
+            aria-label="Paste roll numbers for roster"
           />
           <button
             type="button"

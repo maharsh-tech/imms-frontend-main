@@ -252,9 +252,28 @@ model SubjectAssignment {
   faculty               Faculty                @relation(fields: [facultyId], references: [id])
   marks                 Mark[]
   assessmentSubmissions AssessmentSubmission[]
+  roster                SubjectAssignmentRoster[]
 
   @@unique([subjectOfferingId, facultyId])
   @@map("subject_assignments")
+}
+
+// ─────────────────────────────────────────────
+// SUBJECT ASSIGNMENT ROSTER (explicit per-teacher roll list)
+// ─────────────────────────────────────────────
+
+model SubjectAssignmentRoster {
+  id                  String   @id @default(cuid())
+  subjectAssignmentId String
+  studentId           String
+  createdAt           DateTime @default(now())
+
+  subjectAssignment SubjectAssignment @relation(fields: [subjectAssignmentId], references: [id], onDelete: Cascade)
+  student           Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([subjectAssignmentId, studentId])
+  @@index([studentId])
+  @@map("subject_assignment_rosters")
 }
 
 // ─────────────────────────────────────────────
@@ -386,7 +405,10 @@ One row per `(subject, academicYear, semester)` — e.g. OS in 2026–2027 Sem 5
 **CIE** = Continuous Internal Evaluation (the internal exam name used across the college). A CIERound is a **shared internal exam round** for a department in a given academic year and semester — e.g. CIE 1, CIE 2 for IT Sem 5 2026–2027. All subject offerings in that scope link their per-subject exams to the same round so the student marksheet can group results by CIE. Variable count per year; `sequence` orders rounds on the marksheet.
 
 ### 3.8 subject_assignments
-Links a **subject offering** to a faculty member (optional roll range). Defines the teacher's class for that term.
+Links a **subject offering** to a faculty member (optional roll range **or** explicit roster). Defines the teacher's class for that term. When `subject_assignment_rosters` rows exist for an assignment, the marks grid uses that explicit list instead of dept/sem/year cohort or roll range.
+
+### 3.8a subject_assignment_rosters
+Explicit roll-number list for one teacher's assignment — alternative to typed `startRollNumber`/`endRollNumber`. Adding a student here also creates a `subject_enrollments` row so backlog students bypass normal cohort filters on marksheet and grid queries.
 
 ### 3.9 assessments
 One row per `(subjectOffering, cieRound)` — the subject's exam for that CIE round. Holds maxMarks, examDate, examTime. Display name comes from `cie_rounds.name`, not a free-text field on the assessment. (API/model name remains `Assessment`.)

@@ -442,7 +442,7 @@ Roles: COORDINATOR
 
 ---
 
-### 5.5 Elective Enrollments
+### 5.5 Subject Enrollments (elective roster + core backlog)
 
 ```
 GET    /subjects/:id/enrollments?academicYear=2026-2027&semester=5
@@ -450,9 +450,12 @@ GET    /subjects/:id/enrollments/template
 POST   /subjects/:id/enrollments/bulk     Body: { "academicYear": "2026-2027", "semester": 5, "rollNumbers": ["24IT093", ...] }
 POST   /subjects/:id/enrollments/import?academicYear=2026-2027&semester=5   multipart Excel
 DELETE /subjects/:id/enrollments/:studentId?academicYear=2026-2027&semester=5
-Roles: COORDINATOR (elective subjects only)
+Roles: COORDINATOR
 ```
-Enrollments are scoped to a **subject offering** (`subject + academicYear + semester`), not the catalog subject alone. Student must exist in master roster (same dept + semester).
+Enrollments are scoped to a **subject offering** (`subject + academicYear + semester`), not the catalog subject alone.
+
+- **Elective:** student must exist in master roster with matching department and semester.
+- **Core (backlog):** student must be in the same department and have **advanced past** the offering's semester (e.g. sem 7 student retaking a sem 5 core). Creates a `SubjectEnrollment` override so the student appears on the marks grid and marksheet without matching the offering's year/semester cohort.
 
 ---
 
@@ -566,7 +569,20 @@ Only allowed before marks entry begins.
 GET /subject-offerings?academicYear=2026-2027&semester=5
 Roles: COORDINATOR
 ```
-Returns subject offerings that have at least one CIE exam or teacher assignment. Used by the coordinator Exam & Assignments table so CIE exams appear even when no teacher is assigned yet. Each row includes nested `subject.assessments` and `assignments[]`.
+Returns subject offerings that have at least one CIE exam or teacher assignment. Used by the coordinator Exam & Assignments table so CIE exams appear even when no teacher is assigned yet. Each row includes nested `subject.assessments` and `assignments[]` (each assignment includes `rosterCount`).
+
+### 8.6 Per-Assignment Roster (explicit roll list)
+
+```
+GET    /subject-assignments/:id/roster
+GET    /subject-assignments/:id/roster/template
+POST   /subject-assignments/:id/roster/bulk     Body: { "rollNumbers": ["24IT093", ...] }
+POST   /subject-assignments/:id/roster/import   multipart Excel
+DELETE /subject-assignments/:id/roster/:studentId
+Roles: COORDINATOR
+```
+
+Explicit roll-number roster for one teacher's assignment — alternative to typed `startRollNumber`/`endRollNumber`. When roster rows exist, the marks grid uses this list instead of cohort/range logic. Adding a student also creates a `SubjectEnrollment` for the offering (backlog override). Removal blocked if marks exist for that student under the assignment. A student cannot appear on two teachers' rosters/ranges for the same offering.
 
 ---
 

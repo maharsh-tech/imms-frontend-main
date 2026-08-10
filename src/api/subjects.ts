@@ -65,6 +65,7 @@ export interface SubjectAssignment {
   academicYear: string;
   startRollNumber?: string | null;
   endRollNumber?: string | null;
+  rosterCount?: number;
   subject: Subject & { assessments?: Assessment[] };
   faculty: Faculty;
   assessmentSubmissions?: { assessmentId: string; status: string; showNEToStudents: boolean }[];
@@ -78,7 +79,13 @@ export interface SubjectOfferingRow {
   assignments: Array<
     Pick<
       SubjectAssignment,
-      'id' | 'facultyId' | 'startRollNumber' | 'endRollNumber' | 'faculty' | 'assessmentSubmissions'
+      | 'id'
+      | 'facultyId'
+      | 'startRollNumber'
+      | 'endRollNumber'
+      | 'rosterCount'
+      | 'faculty'
+      | 'assessmentSubmissions'
     >
   >;
 }

@@ -58,10 +58,12 @@ imms-frontend/
 â”‚   â”‚   â”œâ”€â”€ faculty.ts, students.ts
 â”‚   â”‚   â”œâ”€â”€ import.ts
 â”‚   â”‚   â”œâ”€â”€ subjects.ts
+â”‚   â”‚   â”œâ”€â”€ subject-assignment-roster.ts  # Per-teacher roster (mirrors elective enrollment API)
 â”‚   â”‚   â””â”€â”€ marks.ts
 â”‚   â”œâ”€â”€ hooks/
 â”‚   â”‚   â”œâ”€â”€ useAccountInvites.ts   # List + create/delete/regenerate mutations
 â”‚   â”‚   â”œâ”€â”€ useStudents.ts, useFaculty.ts, useSubjects.ts, useAssignments.ts
+â”‚   â”‚   â”œâ”€â”€ useAssignmentRoster.ts # Per-teacher roster query + bulk/import/remove mutations
 â”‚   â”‚   â””â”€â”€ usePageTitle.ts
 â”‚   â”œâ”€â”€ utils/
 â”‚   â”‚   â”œâ”€â”€ identifier-patterns.ts # Roll validation; deriveBatch/deriveDepartment from roll
@@ -72,7 +74,7 @@ imms-frontend/
 â”‚   â”‚   â”œâ”€â”€ auth/                    # Login + activate shared UI
 â”‚   â”‚   â”œâ”€â”€ coordinator/
 â”‚   â”‚   â”‚   â”œâ”€â”€ account-invites/     # BulkInviteForm, SingleInviteForm, InviteTable, RosterDialog
-â”‚   â”‚   â”‚   â””â”€â”€ subjects/            # AddSubjectForm, AddAssessmentForm, ElectiveRosterModal
+â”‚   â”‚   â”‚   â””â”€â”€ subjects/            # AddSubjectForm, AddAssessmentForm, ElectiveRosterModal, BacklogStudentForm
 â”‚   â”‚   â”œâ”€â”€ staff/                   # StaffShell, StaffTabBar (coordinator/teacher)
 â”‚   â”‚   â”œâ”€â”€ student/                 # Student portal shell, SubjectCard, etc.
 â”‚   â”‚   â””â”€â”€ shared/                  # SubmissionStatusBadge, ExcelImportCard
@@ -186,10 +188,12 @@ Create student/teacher/coordinator accounts, bulk paste IDs, filter by role, cop
 
 ## Subjects: Core vs Elective
 
-- **Core** â€” all students in same department + semester + **current academic year** appear on marks grid automatically
+- **Core** â€” students in same department + semester + **current academic year** appear on marks grid automatically; **backlog** students (advanced past the offering semester) via offering enrollment or per-teacher roster import
 - **Elective** â€” coordinator imports roll numbers **for a specific offering** (academic year + semester) after create; teacher sees only enrolled students
 
-Subjects tab: catalog only. **CIE exams and teacher assignment** live in **Exam & Assignments**. Elective roster modal requires an academic year (defaults to current year).
+**Per-assignment roster:** explicit roll list on one teacher's assignment (`Manage roster` on Exam & Assignments). When roster rows exist, marks grid uses that list; adding students also creates `SubjectEnrollment` for backlog/marksheet override.
+
+Subjects tab: catalog only. **CIE exams, teacher assignment, backlog students, and per-assignment roster** live in **Exam & Assignments**.
 
 ## Data model â€” Subject Offering + CIE Round
 
@@ -207,6 +211,8 @@ API highlights:
 - `GET /cie-rounds?academicYear=&semester=&department=`
 - `GET /marks/my-marksheet` â†’ `{ cieRounds: [{ name, sequence, subjects: [...] }], ... }`
 - Elective enrollments require `academicYear` + `semester` query/body params
+- Backlog enrollment (CORE): same enrollment endpoints; student must have advanced past the offering's semester
+- Assignment roster: `GET/POST /subject-assignments/:id/roster/*` (bulk, import, template, delete)
 
 ## Dev logins (after seed)
 
@@ -217,6 +223,13 @@ API highlights:
 | Student | 24IT093 or 24it093@charusat.edu.in | password123@ |
 
 ## Last Updated
+
+**Backlog students + per-teacher Excel roster** (2026-08-11):
+- New `BacklogStudentForm.tsx` (single roll-number add/remove, no Excel) opened per subject-offering row in Exam & Assignments ("Backlog students" action) â€” reuses the existing `bulkEnrollStudents`/`removeSubjectEnrollment` API + `useSubjectMutations` hooks with a 1-element roll-number array.
+- `ElectiveRosterModal.tsx` generalized (title/description/`onDownloadTemplate`/`onImport` now props instead of hardcoded elective-enrollment calls) so it's reused unmodified for the new per-assignment "Manage roster" Excel/paste flow, not just electives.
+- New `api/subject-assignment-roster.ts` + `hooks/useAssignmentRoster.ts` mirror the enrollment API/hooks 1:1, pointed at `/subject-assignments/:id/roster/*`.
+- `AssignmentsManagement.tsx`: "Manage roster" action per teacher assignment opens the roster modal; `formatRange` shows "Custom roster (N students)" when `assignment.rosterCount > 0`.
+- `api/subjects.ts`: `SubjectAssignment`/`SubjectOfferingRow` types gained `rosterCount?: number`.
 
 **Subject Offering + CIE Round refactor** (2026-08-10):
 - Schema: SubjectOffering, CIERound; Assessment/Assignment/Enrollment scoped to offerings; Student.currentAcademicYear.

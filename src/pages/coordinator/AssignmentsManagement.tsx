@@ -1,10 +1,17 @@
-import { Fragment, useState, useMemo } from 'react';
+import { Fragment, useState, useMemo, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { setNEVisibility } from '../../api/marks';
 import type { SubjectOfferingRow } from '../../api/subjects';
+import {
+  importAssignmentRoster,
+  downloadAssignmentRosterTemplate,
+} from '../../api/subject-assignment-roster';
+import type { ImportResult } from '../../types';
 import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge';
 import AddAssessmentForm from '../../components/coordinator/subjects/AddAssessmentForm';
+import BacklogStudentForm from '../../components/coordinator/subjects/BacklogStudentForm';
+import ElectiveRosterModal from '../../components/coordinator/subjects/ElectiveRosterModal';
 import { apiErrorMessage } from '../../utils/api-errors';
 import {
   useAssignmentsBundle,
@@ -13,6 +20,7 @@ import {
 } from '../../hooks/useAssignments';
 import { useSubjectMutations } from '../../hooks/useSubjects';
 import { useCieRounds } from '../../hooks/useCieRounds';
+import { useAssignmentRoster, useAssignmentRosterMutations } from '../../hooks/useAssignmentRoster';
 
 const defaultAcademicYear = () => {
   const y = new Date().getFullYear();
@@ -28,6 +36,9 @@ const formatTeachers = (assignments: OfferingAssignment[]) => {
 };
 
 const formatRange = (assignment: OfferingAssignment) => {
+  if (assignment.rosterCount && assignment.rosterCount > 0) {
+    return `Custom roster (${assignment.rosterCount} students)`;
+  }
   if (assignment.startRollNumber && assignment.endRollNumber) {
     return `${assignment.startRollNumber} - ${assignment.endRollNumber}`;
   }
@@ -59,8 +70,18 @@ const AssignmentsManagement = () => {
   const [examDate, setExamDate] = useState('');
   const [examTime, setExamTime] = useState('');
 
+  const [backlogOffering, setBacklogOffering] = useState<SubjectOfferingRow | null>(null);
+
+  const [rosterAssignment, setRosterAssignment] = useState<OfferingAssignment | null>(null);
+  const [rosterLabel, setRosterLabel] = useState('');
+  const [rosterPaste, setRosterPaste] = useState('');
+  const [rosterResult, setRosterResult] = useState<ImportResult | null>(null);
+  const rosterPasteRef = useRef<HTMLTextAreaElement>(null);
+
   const invalidateAssignments = useAssignmentsInvalidator();
   const { createAssessment } = useSubjectMutations();
+  const { data: rosterRows = [] } = useAssignmentRoster(rosterAssignment?.id);
+  const { bulkAdd: bulkAddRoster, remove: removeFromRoster, invalidateRoster } = useAssignmentRosterMutations();
   const { data, isLoading, isFetching, error: queryError } = useAssignmentsBundle();
   const offerings = data?.offerings ?? [];
   const subjects = data?.subjects ?? [];
@@ -163,6 +184,51 @@ const AssignmentsManagement = () => {
     setError('');
     setMessage('');
     deleteMutation.mutate(assignment.id);
+  };
+
+  const handleOpenRoster = (assignment: OfferingAssignment, subjectCode: string) => {
+    setRosterAssignment(assignment);
+    setRosterLabel(`${subjectCode} — ${assignment.faculty.name}`);
+    setRosterPaste('');
+    setRosterResult(null);
+    setError('');
+  };
+
+  const handleCloseRoster = () => {
+    setRosterAssignment(null);
+    setRosterPaste('');
+    setRosterResult(null);
+  };
+
+  const handleRosterPasteAdd = () => {
+    if (!rosterAssignment) return;
+    const rollNumbers = rosterPaste
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (!rollNumbers.length) return;
+    setRosterResult(null);
+    bulkAddRoster.mutate(
+      { subjectAssignmentId: rosterAssignment.id, rollNumbers },
+      {
+        onSuccess: (result) => {
+          setRosterResult(result);
+          setRosterPaste('');
+          setMessage(`Added ${result.imported} student(s) to ${rosterLabel}'s roster`);
+        },
+        onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to add students to roster')),
+      },
+    );
+  };
+
+  const handleRosterRemove = (studentId: string) => {
+    if (!rosterAssignment) return;
+    removeFromRoster.mutate(
+      { subjectAssignmentId: rosterAssignment.id, studentId },
+      {
+        onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to remove student from roster')),
+      },
+    );
   };
 
   const sortedAssessments = (assessments: SubjectOfferingRow['subject']['assessments']) =>
@@ -559,13 +625,24 @@ const AssignmentsManagement = () => {
                       </button>
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      {offering.assignments.length === 0 ? (
-                        <span className="text-xs text-on-surface-variant">—</span>
-                      ) : (
-                        <div className="flex flex-col gap-1">
-                          {offering.assignments.map((assignment) => (
+                      <div className="flex flex-col gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setBacklogOffering(offering)}
+                          className="text-purple-700 hover:underline text-left"
+                        >
+                          Backlog students
+                        </button>
+                        {offering.assignments.map((assignment) => (
+                          <div key={assignment.id} className="flex flex-col gap-1 border-t border-outline-variant/60 pt-1.5 first:border-t-0 first:pt-0">
                             <button
-                              key={assignment.id}
+                              type="button"
+                              onClick={() => handleOpenRoster(assignment, offering.subject.code)}
+                              className="text-primary hover:underline text-left"
+                            >
+                              Manage roster {offering.assignments.length > 1 ? `(${assignment.faculty.name})` : ''}
+                            </button>
+                            <button
                               type="button"
                               onClick={() => handleDelete(assignment, offering.subject.code)}
                               disabled={actionLoading}
@@ -573,9 +650,9 @@ const AssignmentsManagement = () => {
                             >
                               Delete {offering.assignments.length > 1 ? `(${assignment.faculty.name})` : ''}
                             </button>
-                          ))}
-                        </div>
-                      )}
+                          </div>
+                        ))}
+                      </div>
                     </td>
                   </tr>
                   {expandedId === offering.id && (
@@ -637,6 +714,33 @@ const AssignmentsManagement = () => {
           </table>
         )}
       </div>
+
+      {backlogOffering && (
+        <BacklogStudentForm
+          subject={backlogOffering.subject}
+          enrollmentScope={{ academicYear: backlogOffering.academicYear, semester: backlogOffering.semester }}
+          onClose={() => setBacklogOffering(null)}
+        />
+      )}
+
+      {rosterAssignment && (
+        <ElectiveRosterModal
+          title={`Manage roster — ${rosterLabel}`}
+          description="Explicit roll-number roster for this teacher's assignment. Adding a student here also enrolls them for this offering, so backlog students bypass the usual semester/year match."
+          enrollments={rosterRows}
+          rosterPaste={rosterPaste}
+          rosterResult={rosterResult}
+          rosterLoading={bulkAddRoster.isPending || removeFromRoster.isPending}
+          rosterPasteRef={rosterPasteRef}
+          onDownloadTemplate={() => downloadAssignmentRosterTemplate(rosterAssignment.id)}
+          onImport={(file) => importAssignmentRoster(rosterAssignment.id, file)}
+          onPasteChange={setRosterPaste}
+          onPasteEnroll={handleRosterPasteAdd}
+          onRemoveEnrollment={handleRosterRemove}
+          onImportComplete={() => invalidateRoster(rosterAssignment.id)}
+          onClose={handleCloseRoster}
+        />
+      )}
     </div>
   );
 };

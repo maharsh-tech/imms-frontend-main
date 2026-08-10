@@ -21,6 +21,7 @@ import { FileText, FileSpreadsheet } from 'lucide-react'
 import { MarksGridRow, MARKS_GRID_COLUMNS, type MarksGridRowState } from './MarksGridRow'
 import { apiErrorMessage } from '../../utils/api-errors'
 import { usePageTitle } from '../../hooks/usePageTitle'
+import { useAssignmentsInvalidator } from '../../hooks/useAssignments'
 
 type RowState = MarksGridRowState
 
@@ -32,6 +33,7 @@ const MarksGridPage = () => {
   const { user, logout } = useAuthStore()
   const isCoordinator = user?.role === 'COORDINATOR'
   const isTeacher = user?.role === 'TEACHER'
+  const invalidateAssignments = useAssignmentsInvalidator()
 
   const [grid, setGrid] = useState<MarksGrid | null>(null)
   const [rows, setRows] = useState<RowState[]>([])
@@ -177,6 +179,7 @@ const MarksGridPage = () => {
         })),
       })
       await submitMarks(assignmentId, assessmentId)
+      invalidateAssignments()
       showToast('Marks submitted successfully!', 'success')
       load()
     } catch (err: unknown) {
@@ -200,6 +203,7 @@ const MarksGridPage = () => {
     setMessage('')
     try {
       await lockMarks(assignmentId, assessmentId)
+      invalidateAssignments()
       showToast('Marks locked successfully!', 'success')
       load()
     } catch (err: unknown) {
@@ -215,6 +219,7 @@ const MarksGridPage = () => {
     setMessage('')
     try {
       await unlockMarks(assignmentId, assessmentId)
+      invalidateAssignments()
       showToast('Marks unlocked successfully!', 'success')
       load()
     } catch (err: unknown) {
@@ -236,6 +241,7 @@ const MarksGridPage = () => {
     setMessage('')
     try {
       await publishMarks(assignmentId, assessmentId)
+      invalidateAssignments()
       showToast('Results published successfully!', 'success')
       load()
     } catch (err: unknown) {
@@ -257,6 +263,7 @@ const MarksGridPage = () => {
     setMessage('')
     try {
       await unpublishMarks(assignmentId, assessmentId)
+      invalidateAssignments()
       showToast('Results unpublished successfully!', 'success')
       load()
     } catch (err: unknown) {

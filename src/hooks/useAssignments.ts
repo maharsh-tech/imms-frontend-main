@@ -6,6 +6,7 @@ export const ASSIGNMENTS_KEY = 'assignments'
 export const useAssignmentsBundle = () =>
   useQuery({
     queryKey: [ASSIGNMENTS_KEY],
+    staleTime: 0,
     queryFn: async () => {
       const [offerings, subjects, faculty] = await Promise.all([
         getOfferings(),

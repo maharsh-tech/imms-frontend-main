@@ -18,7 +18,7 @@ import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge
 import { StaffShell } from '../../components/staff'
 import apiClient from '../../api/client'
 import { FileText, FileSpreadsheet } from 'lucide-react'
-import { MarksGridRow, type MarksGridRowState } from './MarksGridRow'
+import { MarksGridRow, MARKS_GRID_COLUMNS, type MarksGridRowState } from './MarksGridRow'
 import { apiErrorMessage } from '../../utils/api-errors'
 import { usePageTitle } from '../../hooks/usePageTitle'
 
@@ -604,65 +604,72 @@ const MarksGridPage = () => {
 
         <div className="imms-card mt-4 overflow-x-auto">
           <div ref={scrollRef} className="max-h-[min(60vh,640px)] overflow-y-auto">
-          <table className="min-w-full table-fixed divide-y divide-surface-variant">
-            <colgroup>
-              <col className="w-12" />
-              <col className="w-28" />
-              <col />
-              <col className="w-80" />
-            </colgroup>
-            <thead className="bg-surface-container-low sticky top-0 z-10">
-              <tr>
-                <th className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">Sr</th>
-                <th className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">Student ID</th>
-                <th className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">Name</th>
-                <th className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">Enter Marks</th>
-              </tr>
-            </thead>
-            <tbody
-              className="divide-y divide-surface-variant relative"
-              style={{ height: filteredRows.length > 0 ? `${rowVirtualizer.getTotalSize()}px` : undefined }}
-            >
-              {filteredRows.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-sm text-on-surface-variant">
-                    {rows.length === 0
-                      ? grid?.assignment.subjectType === 'ELECTIVE'
-                        ? 'No students enrolled in this elective — coordinator must import the roster in Subjects first.'
-                        : 'No students in this semester/department — import students first (Students tab).'
-                      : 'No students match your search'}
-                  </td>
-                </tr>
-              ) : (
-                rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const item = filteredRows[virtualRow.index]
-                  if (!item) return null
-                  const { row } = item
-                  return (
-                    <MarksGridRow
-                      key={row.studentId}
-                      row={row}
-                      displayIndex={virtualRow.index}
-                      isDraft={isDraft}
-                      isCoordinator={isCoordinator}
-                      isTeacher={isTeacher}
-                      maxMarks={maxMarks}
-                      onUpdateRow={(patch) => updateRow(row.studentId, patch)}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        transform: `translateY(${virtualRow.start}px)`,
-                        display: 'table',
-                        tableLayout: 'fixed',
-                      }}
-                    />
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+            <div role="table" className="min-w-full">
+              <div
+                role="row"
+                className="sticky top-0 z-10 grid border-b border-surface-variant bg-surface-container-low"
+                style={{ gridTemplateColumns: MARKS_GRID_COLUMNS }}
+              >
+                <div role="columnheader" className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">
+                  Sr
+                </div>
+                <div role="columnheader" className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">
+                  Student ID
+                </div>
+                <div role="columnheader" className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">
+                  Name
+                </div>
+                <div role="columnheader" className="px-4 py-3 text-left text-label-sm uppercase text-on-surface-variant">
+                  Enter Marks
+                </div>
+              </div>
+              <div
+                role="rowgroup"
+                className="relative"
+                style={{ height: filteredRows.length > 0 ? `${rowVirtualizer.getTotalSize()}px` : undefined }}
+              >
+                {filteredRows.length === 0 ? (
+                  <div
+                    role="row"
+                    className="grid"
+                    style={{ gridTemplateColumns: MARKS_GRID_COLUMNS }}
+                  >
+                    <div role="cell" className="col-span-4 px-4 py-6 text-center text-sm text-on-surface-variant">
+                      {rows.length === 0
+                        ? grid?.assignment.subjectType === 'ELECTIVE'
+                          ? 'No students enrolled in this elective — coordinator must import the roster in Subjects first.'
+                          : 'No students in this semester/department — import students first (Students tab).'
+                        : 'No students match your search'}
+                    </div>
+                  </div>
+                ) : (
+                  rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const item = filteredRows[virtualRow.index]
+                    if (!item) return null
+                    const { row } = item
+                    return (
+                      <MarksGridRow
+                        key={row.studentId}
+                        row={row}
+                        displayIndex={virtualRow.index}
+                        isDraft={isDraft}
+                        isCoordinator={isCoordinator}
+                        isTeacher={isTeacher}
+                        maxMarks={maxMarks}
+                        onUpdateRow={(patch) => updateRow(row.studentId, patch)}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                      />
+                    )
+                  })
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

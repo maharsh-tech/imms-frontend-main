@@ -1,5 +1,8 @@
 import { memo, type CSSProperties } from 'react'
 
+/** Shared with MarksGridPage header — keep in sync for column alignment. */
+export const MARKS_GRID_COLUMNS = '3rem 7rem minmax(0, 1fr) 20rem'
+
 export type MarksGridRowState = {
   studentId: string
   rollNumber: string
@@ -35,11 +38,21 @@ export const MarksGridRow = memo(function MarksGridRow({
   const marksErrorId = `marks-error-${row.studentId}`
 
   return (
-    <tr className={row.isNe ? 'bg-amber-50' : ''} style={style}>
-      <td className="px-4 py-2 text-sm">{displayIndex + 1}</td>
-      <td className="px-4 py-2 text-sm font-mono">{row.rollNumber}</td>
-      <td className="px-4 py-2 text-sm">{row.name}</td>
-      <td className="px-4 py-2">
+    <div
+      role="row"
+      className={`grid border-b border-surface-variant ${row.isNe ? 'bg-amber-50' : ''}`}
+      style={{ gridTemplateColumns: MARKS_GRID_COLUMNS, ...style }}
+    >
+      <div role="cell" className="px-4 py-2 text-sm">
+        {displayIndex + 1}
+      </div>
+      <div role="cell" className="px-4 py-2 text-sm font-mono">
+        {row.rollNumber}
+      </div>
+      <div role="cell" className="min-w-0 truncate px-4 py-2 text-sm">
+        {row.name}
+      </div>
+      <div role="cell" className="px-4 py-2">
         {(isTeacher || isCoordinator) && isDraft ? (
           <div className="flex flex-wrap items-center gap-3 whitespace-nowrap">
             <input
@@ -113,7 +126,7 @@ export const MarksGridRow = memo(function MarksGridRow({
             )}
           </span>
         )}
-      </td>
-    </tr>
+      </div>
+    </div>
   )
 })

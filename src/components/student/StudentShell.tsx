@@ -142,6 +142,15 @@ const StudentShell = () => {
             </NavLink>
           )
         })}
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl p-2 text-on-secondary-container transition-colors hover:bg-surface-container"
+          aria-label="Log out"
+        >
+          <LogOut className="h-6 w-6" aria-hidden="true" />
+          <span className="mt-1 text-label-sm">Logout</span>
+        </button>
       </nav>
     </div>
   )

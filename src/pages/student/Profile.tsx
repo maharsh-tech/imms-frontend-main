@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { LogOut } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 import apiClient from '../../api/client'
 import { getMyMarksheet } from '../../api/marks'
@@ -11,10 +10,10 @@ type ProfileDetails = {
 }
 
 /**
- * Student profile — account details and logout. No photo/avatar.
+ * Student profile — account details. No photo/avatar.
  */
 const StudentProfile = () => {
-  const { user, logout } = useAuthStore()
+  const { user } = useAuthStore()
   const [details, setDetails] = useState<ProfileDetails | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -48,14 +47,6 @@ const StudentProfile = () => {
     }
     loadProfile()
   }, [user?.name])
-
-  const handleLogout = async () => {
-    try {
-      await apiClient.post('/auth/logout')
-    } finally {
-      logout()
-    }
-  }
 
   const displayName = details?.studentName || user?.name || '—'
 
@@ -122,18 +113,6 @@ const StudentProfile = () => {
             </div>
           ))}
         </dl>
-
-        <div className="border-t border-surface-variant p-4">
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-primary bg-transparent px-4 py-3 text-label-md font-semibold text-primary transition-colors hover:bg-surface-container-low focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:w-auto sm:min-w-[160px]"
-            aria-label="Log out of Student Portal"
-          >
-            <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
-            Log out
-          </button>
-        </div>
       </article>
     </section>
   )

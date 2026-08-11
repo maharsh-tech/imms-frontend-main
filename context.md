@@ -184,7 +184,7 @@ Removing a backlog student clears both `SubjectEnrollment` and any `SubjectAssig
 
 ## Coordinator: Marks Entry
 
-**Marks Entry** tab (`MarksEntry.tsx`) — when teachers have not entered marks on the website, coordinator uploads Excel directly (bypasses teachers).
+**Marks Entry** tab (`MarksEntry.tsx`) — when teachers have not entered marks on the website, coordinator uploads Excel directly (bypasses teachers). Loads offerings **per selected academic year only** (not the full assignments bundle).
 
 | Step | UI | API |
 |---|---|---|

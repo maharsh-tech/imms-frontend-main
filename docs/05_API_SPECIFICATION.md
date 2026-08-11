@@ -552,7 +552,7 @@ Roles: TEACHER (assigned only, DRAFT status)
 GET /marks/import/template?subjectId={id}&academicYear=2025-2026&semester=5&cieRoundName=CIE-1
 Roles: COORDINATOR
 ```
-Without query params: empty template (Student ID, Name, Marks Obtained). With scope: prefilled with cohort rolls and existing marks for that exam/subject/semester.
+Without query params: empty template (Student ID, Marks). With scope: prefilled with cohort roll numbers and existing marks for that exam/subject/semester.
 
 **Response:** `.xlsx` binary stream.
 

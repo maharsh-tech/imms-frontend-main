@@ -13,45 +13,35 @@ const defaultAcademicYear = () => {
 
 /**
  * Coordinator Marks Entry — Excel upload that bypasses teachers.
- * Sequence: Exam → Subject → Semester → Excel.
+ * Sequence: Year → Subject → Semester → Exam → Excel.
  */
 const MarksEntry = () => {
   const [academicYear, setAcademicYear] = useState(defaultAcademicYear)
-  const [cieRoundName, setCieRoundName] = useState('')
   const [subjectId, setSubjectId] = useState('')
   const [semester, setSemester] = useState('')
+  const [cieRoundName, setCieRoundName] = useState('')
+  const [subjectSearch, setSubjectSearch] = useState('')
 
   const { data, isLoading, isFetching } = useAssignmentsBundle()
   const offerings = data?.offerings ?? []
   const loading = isLoading || isFetching
 
+  const yearOptions = useMemo(() => {
+    const years = new Set(offerings.map((o) => o.academicYear))
+    const current = academicYear.trim()
+    if (current) years.add(current)
+    return [...years].sort((a, b) => b.localeCompare(a))
+  }, [offerings, academicYear])
+
   const yearOfferings = useMemo(
-    () =>
-      offerings.filter(
-        (o) => o.academicYear === academicYear.trim(),
-      ),
+    () => offerings.filter((o) => o.academicYear === academicYear.trim()),
     [offerings, academicYear],
   )
 
-  const examOptions = useMemo(() => {
-    const names = new Set<string>()
-    for (const offering of yearOfferings) {
-      for (const assessment of offering.subject.assessments ?? []) {
-        if (assessment.name) names.add(assessment.name)
-      }
-    }
-    return [...names].sort((a, b) => a.localeCompare(b))
-  }, [yearOfferings])
-
   const subjectOptions = useMemo(() => {
-    if (!cieRoundName) return []
-    const exam = cieRoundName.trim().toUpperCase()
+    if (!academicYear.trim()) return []
     const byId = new Map<string, { id: string; code: string; name: string }>()
     for (const offering of yearOfferings) {
-      const hasExam = (offering.subject.assessments ?? []).some(
-        (a) => a.name.trim().toUpperCase() === exam,
-      )
-      if (!hasExam) continue
       byId.set(offering.subject.id, {
         id: offering.subject.id,
         code: offering.subject.code,
@@ -59,27 +49,44 @@ const MarksEntry = () => {
       })
     }
     return [...byId.values()].sort((a, b) => a.code.localeCompare(b.code))
-  }, [yearOfferings, cieRoundName])
+  }, [yearOfferings, academicYear])
+
+  const filteredSubjectOptions = useMemo(() => {
+    const q = subjectSearch.trim().toLowerCase()
+    if (!q) return subjectOptions
+    return subjectOptions.filter(
+      (s) =>
+        s.code.toLowerCase().includes(q) ||
+        s.name.toLowerCase().includes(q),
+    )
+  }, [subjectOptions, subjectSearch])
 
   const semesterOptions = useMemo(() => {
-    if (!cieRoundName || !subjectId) return []
-    const exam = cieRoundName.trim().toUpperCase()
+    if (!subjectId) return []
     const semesters = new Set<number>()
     for (const offering of yearOfferings) {
-      if (offering.subject.id !== subjectId) continue
-      const hasExam = (offering.subject.assessments ?? []).some(
-        (a) => a.name.trim().toUpperCase() === exam,
-      )
-      if (hasExam) semesters.add(offering.semester)
+      if (offering.subject.id === subjectId) semesters.add(offering.semester)
     }
     return [...semesters].sort((a, b) => a - b)
-  }, [yearOfferings, cieRoundName, subjectId])
+  }, [yearOfferings, subjectId])
+
+  const examOptions = useMemo(() => {
+    if (!subjectId || !semester) return []
+    const offering = yearOfferings.find(
+      (o) => o.subject.id === subjectId && o.semester === Number(semester),
+    )
+    if (!offering) return []
+    const names = (offering.subject.assessments ?? [])
+      .map((a) => a.name)
+      .filter(Boolean)
+    return [...new Set(names)].sort((a, b) => a.localeCompare(b))
+  }, [yearOfferings, subjectId, semester])
 
   const canUpload =
-    Boolean(cieRoundName) &&
+    Boolean(academicYear.trim()) &&
     Boolean(subjectId) &&
     Boolean(semester) &&
-    Boolean(academicYear.trim())
+    Boolean(cieRoundName)
 
   const scopeParams = {
     subjectId,
@@ -88,15 +95,23 @@ const MarksEntry = () => {
     cieRoundName,
   }
 
-  const handleExamChange = (value: string) => {
-    setCieRoundName(value)
+  const handleYearChange = (value: string) => {
+    setAcademicYear(value)
     setSubjectId('')
     setSemester('')
+    setCieRoundName('')
+    setSubjectSearch('')
   }
 
   const handleSubjectChange = (value: string) => {
     setSubjectId(value)
     setSemester('')
+    setCieRoundName('')
+  }
+
+  const handleSemesterChange = (value: string) => {
+    setSemester(value)
+    setCieRoundName('')
   }
 
   const handleDownloadTemplate = async () => {
@@ -110,7 +125,7 @@ const MarksEntry = () => {
         imported: 0,
         updated: 0,
         skipped: 0,
-        errors: [{ row: 0, reason: 'Select Exam, Subject, and Semester first' }],
+        errors: [{ row: 0, reason: 'Select Year, Subject, Semester, and Exam first' }],
       }
     }
     return importMarks(file, scopeParams)
@@ -135,64 +150,56 @@ const MarksEntry = () => {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 bg-surface-container-lowest border border-outline-variant rounded-lg p-4">
         <label className="block">
           <span className="mb-1 block text-xs font-semibold text-on-surface-variant">
-            Academic year
-          </span>
-          <input
-            type="text"
-            value={academicYear}
-            onChange={(e) => {
-              setAcademicYear(e.target.value)
-              setCieRoundName('')
-              setSubjectId('')
-              setSemester('')
-            }}
-            placeholder="2025-2026"
-            className={selectClass}
-            aria-label="Academic year"
-          />
-        </label>
-
-        <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-on-surface-variant">
-            1. Exam
+            1. Academic year
           </span>
           <select
-            value={cieRoundName}
-            onChange={(e) => handleExamChange(e.target.value)}
-            disabled={loading || examOptions.length === 0}
+            value={academicYear}
+            onChange={(e) => handleYearChange(e.target.value)}
+            disabled={loading || yearOptions.length === 0}
             className={selectClass}
-            aria-label="Select exam"
+            aria-label="Select academic year"
           >
             <option value="">
-              {loading ? 'Loading…' : examOptions.length === 0 ? 'No exams for year' : 'Select exam'}
+              {loading ? 'Loading…' : yearOptions.length === 0 ? 'No years' : 'Select year'}
             </option>
-            {examOptions.map((name) => (
-              <option key={name} value={name}>
-                {name}
+            {yearOptions.map((year) => (
+              <option key={year} value={year}>
+                {year}
               </option>
             ))}
           </select>
         </label>
 
-        <label className="block">
+        <label className="block sm:col-span-2">
           <span className="mb-1 block text-xs font-semibold text-on-surface-variant">
             2. Subject
           </span>
+          <input
+            type="search"
+            value={subjectSearch}
+            onChange={(e) => setSubjectSearch(e.target.value)}
+            disabled={!academicYear || subjectOptions.length === 0}
+            placeholder="Search by code or name…"
+            className={`${selectClass} mb-2`}
+            aria-label="Search subjects"
+          />
           <select
             value={subjectId}
             onChange={(e) => handleSubjectChange(e.target.value)}
-            disabled={!cieRoundName || subjectOptions.length === 0}
+            disabled={!academicYear || filteredSubjectOptions.length === 0}
             className={selectClass}
             aria-label="Select subject"
           >
             <option value="">
-              {!cieRoundName
-                ? 'Select exam first'
-                : subjectOptions.length === 0
-                  ? 'No subjects for exam'
+              {!academicYear
+                ? 'Select year first'
+                : filteredSubjectOptions.length === 0
+                  ? subjectSearch.trim()
+                    ? 'No subjects match search'
+                    : 'No subjects for year'
                   : 'Select subject'}
             </option>
-            {subjectOptions.map((s) => (
+            {filteredSubjectOptions.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.code} — {s.name}
               </option>
@@ -206,7 +213,7 @@ const MarksEntry = () => {
           </span>
           <select
             value={semester}
-            onChange={(e) => setSemester(e.target.value)}
+            onChange={(e) => handleSemesterChange(e.target.value)}
             disabled={!subjectId || semesterOptions.length === 0}
             className={selectClass}
             aria-label="Select semester"
@@ -225,18 +232,44 @@ const MarksEntry = () => {
             ))}
           </select>
         </label>
+
+        <label className="block lg:col-span-2">
+          <span className="mb-1 block text-xs font-semibold text-on-surface-variant">
+            4. Exam
+          </span>
+          <select
+            value={cieRoundName}
+            onChange={(e) => setCieRoundName(e.target.value)}
+            disabled={!semester || examOptions.length === 0}
+            className={selectClass}
+            aria-label="Select exam"
+          >
+            <option value="">
+              {!semester
+                ? 'Select semester first'
+                : examOptions.length === 0
+                  ? 'No exams for this offering'
+                  : 'Select exam'}
+            </option>
+            {examOptions.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {canUpload ? (
         <ExcelImportCard
-          title="4. Excel upload"
-          description="Columns: Student ID, Name (optional), Marks Obtained. Use AB for absent. Download the template for this exam/subject/semester, fill marks, then upload."
+          title="5. Excel upload"
+          description="Columns: Student ID and Marks. Use AB for absent. Download the template for this year/subject/semester/exam, fill marks, then upload."
           onDownloadTemplate={handleDownloadTemplate}
           onImport={handleImport}
         />
       ) : (
         <div className="rounded-lg border border-dashed border-outline-variant bg-surface-container-low p-8 text-center text-sm text-on-surface-variant">
-          Select Exam, Subject, and Semester to enable Excel upload.
+          Select Year, Subject, Semester, and Exam to enable Excel upload.
         </div>
       )}
     </div>

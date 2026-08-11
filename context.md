@@ -188,12 +188,13 @@ Removing a backlog student clears both `SubjectEnrollment` and any `SubjectAssig
 
 | Step | UI | API |
 |---|---|---|
-| 1. Exam | CIE round dropdown | — |
-| 2. Subject | Subject with that exam | — |
-| 3. Semester | Semester offering | — |
-| 4. Excel | Template download + upload | `GET /marks/import/template`, `POST /marks/import` |
+| 1. Year | Academic year dropdown | — |
+| 2. Subject | Search + subject dropdown | — |
+| 3. Semester | Semester dropdown | — |
+| 4. Exam | CIE round dropdown | — |
+| 5. Excel | Template download + upload | `GET /marks/import/template`, `POST /marks/import` |
 
-Columns: **Student ID**, **Name** (optional), **Marks Obtained** (number or `AB`). NE flags remain in Exam & Assignments. Sidebar order: Subject → Exam & Assignments → **Marks Entry** → Manage Faculty → Manage Student → Account Management.
+Columns: **Student ID**, **Marks** (number or `AB`). NE flags remain in Exam & Assignments. Sidebar order: Subject → Exam & Assignments → **Marks Entry** → Manage Faculty → Manage Student → Account Management.
 
 ## Coordinator: Account Management
 

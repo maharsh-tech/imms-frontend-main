@@ -501,6 +501,28 @@ Roles: COORDINATOR
 ```
 Returns subject offerings that have at least one CIE exam or teacher assignment. Used by the coordinator Exam & Assignments table so CIE exams appear even when no teacher is assigned yet. Each row includes nested `subject.assessments` and `assignments[]` (each assignment includes `rosterCount`). UI actions (Open Marks, Backlog students, Manage roster, Delete) render as button-styled controls in the expanded CIE row and Actions column.
 
+### 8.5a Marks Entry cascade (lightweight)
+
+Used by the coordinator **Marks Entry** tab. Fetches **one step at a time** (no React Query cache). Does not load full offerings with nested assignments.
+
+```
+GET /subject-offerings/marks-entry/subjects?academicYear=2026-2027
+Roles: COORDINATOR
+```
+**Response 200:** `[{ "id": "cuid", "code": "ITUE201", "name": "OS" }, ...]`
+
+```
+GET /subject-offerings/marks-entry/semesters?academicYear=2026-2027&subjectId={id}
+Roles: COORDINATOR
+```
+**Response 200:** `[5, 3]` (semester numbers)
+
+```
+GET /subject-offerings/marks-entry/exams?academicYear=2026-2027&subjectId={id}&semester=5
+Roles: COORDINATOR
+```
+**Response 200:** `["CIE-1", "CIE-2"]`
+
 ### 8.6 Per-Assignment Roster (explicit roll list)
 
 ```

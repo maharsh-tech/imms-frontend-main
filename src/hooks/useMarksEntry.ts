@@ -1,13 +1,38 @@
 import { useQuery } from '@tanstack/react-query'
-import { getOfferings } from '../api/subjects'
+import {
+  getMarksEntrySubjects,
+  getMarksEntrySemesters,
+  getMarksEntryExams,
+} from '../api/subjects'
 
-export const MARKS_ENTRY_OFFERINGS_KEY = 'marksEntryOfferings'
+/** User asked for no cache — refetch every time a step is selected. */
+const NO_CACHE = { staleTime: 0, gcTime: 0 } as const
 
-/** Offerings for one academic year only — loaded after year is selected. */
-export const useMarksEntryOfferings = (academicYear: string) =>
+export const useMarksEntrySubjects = (academicYear: string) =>
   useQuery({
-    queryKey: [MARKS_ENTRY_OFFERINGS_KEY, academicYear.trim()],
-    queryFn: () => getOfferings({ academicYear: academicYear.trim() }),
+    queryKey: ['marksEntry', 'subjects', academicYear.trim()],
+    queryFn: () => getMarksEntrySubjects(academicYear.trim()),
     enabled: Boolean(academicYear.trim()),
-    staleTime: 60_000,
+    ...NO_CACHE,
+  })
+
+export const useMarksEntrySemesters = (academicYear: string, subjectId: string) =>
+  useQuery({
+    queryKey: ['marksEntry', 'semesters', academicYear.trim(), subjectId],
+    queryFn: () => getMarksEntrySemesters(academicYear.trim(), subjectId),
+    enabled: Boolean(academicYear.trim() && subjectId),
+    ...NO_CACHE,
+  })
+
+export const useMarksEntryExams = (
+  academicYear: string,
+  subjectId: string,
+  semester: string,
+) =>
+  useQuery({
+    queryKey: ['marksEntry', 'exams', academicYear.trim(), subjectId, semester],
+    queryFn: () =>
+      getMarksEntryExams(academicYear.trim(), subjectId, Number(semester)),
+    enabled: Boolean(academicYear.trim() && subjectId && semester),
+    ...NO_CACHE,
   })

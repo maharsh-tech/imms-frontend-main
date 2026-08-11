@@ -229,8 +229,9 @@ est new imms-backend) | 1h | Backend |
 | 2.3.11 | Frontend: NE flag UI for coordinator | ✅ Done |
 | 2.3.12 | GET/POST /marks/import — coordinator Excel marks upload (bypass teachers) | ✅ Done (2026-08-11) |
 | 2.3.13 | Frontend: Marks Entry tab (Year → Subject → Semester → Exam → Excel) | ✅ Done (2026-08-11) |
+| 2.3.14 | Marks Entry cascade API + lazy step fetch (no cache) | ✅ Done (2026-08-11) |
 
-> Enhancements shipped: cohort validation on bulk/NE writes, assessment-assignment linkage checks, NE authority (coordinator-only), transactional bulk save, no side-effect on GET grid, search/filter UI, entry summary counts, NE row highlight for teachers, read-only banners, shared status badge, **coordinator Excel import bypassing teacher workflow**.
+> Enhancements shipped: cohort validation on bulk/NE writes, assessment-assignment linkage checks, NE authority (coordinator-only), transactional bulk save, no side-effect on GET grid, search/filter UI, entry summary counts, NE row highlight for teachers, read-only banners, shared status badge, **coordinator Excel import bypassing teacher workflow**, **marks-entry cascade endpoints (subjects/semesters/exams)**.
 
 | # | Task | Est. Hours | Owner |
 |---|---|---|---|

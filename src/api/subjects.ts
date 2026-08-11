@@ -162,6 +162,34 @@ export const getAssignments = (params?: { academicYear?: string; semester?: numb
   apiClient.get<SubjectAssignment[]>('/subject-assignments', { params }).then((r) => r.data);
 export const getOfferings = (params?: { academicYear?: string; semester?: number }) =>
   apiClient.get<SubjectOfferingRow[]>('/subject-offerings', { params }).then((r) => r.data);
+
+export type MarksEntrySubject = Pick<Subject, 'id' | 'code' | 'name'>;
+
+export const getMarksEntrySubjects = (academicYear: string) =>
+  apiClient
+    .get<MarksEntrySubject[]>('/subject-offerings/marks-entry/subjects', {
+      params: { academicYear },
+    })
+    .then((r) => r.data);
+
+export const getMarksEntrySemesters = (academicYear: string, subjectId: string) =>
+  apiClient
+    .get<number[]>('/subject-offerings/marks-entry/semesters', {
+      params: { academicYear, subjectId },
+    })
+    .then((r) => r.data);
+
+export const getMarksEntryExams = (
+  academicYear: string,
+  subjectId: string,
+  semester: number,
+) =>
+  apiClient
+    .get<string[]>('/subject-offerings/marks-entry/exams', {
+      params: { academicYear, subjectId, semester },
+    })
+    .then((r) => r.data);
+
 export const getMyAssignments = () =>
   apiClient.get<SubjectAssignment[]>('/subject-assignments/my').then((r) => r.data);
 export const createAssignment = (data: {

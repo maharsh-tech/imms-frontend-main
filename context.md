@@ -184,14 +184,14 @@ Removing a backlog student clears both `SubjectEnrollment` and any `SubjectAssig
 
 ## Coordinator: Marks Entry
 
-**Marks Entry** tab (`MarksEntry.tsx`) — when teachers have not entered marks on the website, coordinator uploads Excel directly (bypasses teachers). Loads offerings **per selected academic year only** (not the full assignments bundle).
+**Marks Entry** tab (`MarksEntry.tsx`) — when teachers have not entered marks on the website, coordinator uploads Excel directly (bypasses teachers). Cascade fetches **one step at a time** (no cache): year → subjects → semesters → exams via `GET /subject-offerings/marks-entry/*`.
 
 | Step | UI | API |
 |---|---|---|
-| 1. Year | Academic year dropdown | — |
-| 2. Subject | Search + subject dropdown | — |
-| 3. Semester | Semester dropdown | — |
-| 4. Exam | CIE round dropdown | — |
+| 1. Year | Academic year dropdown (client list) | — |
+| 2. Subject | Subject dropdown | `GET /subject-offerings/marks-entry/subjects?academicYear=` |
+| 3. Semester | Semester dropdown | `GET /subject-offerings/marks-entry/semesters?academicYear=&subjectId=` |
+| 4. Exam | CIE round dropdown | `GET /subject-offerings/marks-entry/exams?academicYear=&subjectId=&semester=` |
 | 5. Excel | Template download + upload | `GET /marks/import/template`, `POST /marks/import` |
 
 Columns: **Student ID**, **Marks** (number or `AB`). NE flags remain in Exam & Assignments. Sidebar order: Subject → Exam & Assignments → **Marks Entry** → Manage Faculty → Manage Student → Account Management.

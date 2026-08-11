@@ -2,16 +2,14 @@ import { useMemo, useState } from 'react'
 import { ClipboardList } from 'lucide-react'
 import ExcelImportCard from '../../components/shared/ExcelImportCard'
 import { downloadMarksTemplate, importMarks } from '../../api/marks'
-import { useMarksEntryOfferings } from '../../hooks/useMarksEntry'
+import {
+  useMarksEntrySubjects,
+  useMarksEntrySemesters,
+  useMarksEntryExams,
+} from '../../hooks/useMarksEntry'
 import type { ImportResult } from '../../types'
 
-const defaultAcademicYear = () => {
-  const y = new Date().getFullYear()
-  const m = new Date().getMonth()
-  return m >= 6 ? `${y}-${y + 1}` : `${y - 1}-${y}`
-}
-
-/** Recent academic years — no API call until one is selected. */
+/** Recent academic years — client-side only, no API. */
 const buildYearOptions = (): string[] => {
   const y = new Date().getFullYear()
   const m = new Date().getMonth()
@@ -21,52 +19,37 @@ const buildYearOptions = (): string[] => {
 
 /**
  * Coordinator Marks Entry — Excel upload that bypasses teachers.
- * Sequence: Year → Subject → Semester → Exam → Excel (lazy-loaded per year).
+ * Fetches one step at a time: year (local) → subjects → semesters → exams.
  */
 const MarksEntry = () => {
-  const [academicYear, setAcademicYear] = useState(defaultAcademicYear)
+  const [academicYear, setAcademicYear] = useState('')
   const [subjectId, setSubjectId] = useState('')
   const [semester, setSemester] = useState('')
   const [cieRoundName, setCieRoundName] = useState('')
 
   const yearOptions = useMemo(() => buildYearOptions(), [])
 
-  const { data: offerings = [], isLoading, isFetching } = useMarksEntryOfferings(academicYear)
-  const loadingOfferings = isLoading || isFetching
+  const {
+    data: subjectOptions = [],
+    isLoading: subjectsLoading,
+    isFetching: subjectsFetching,
+  } = useMarksEntrySubjects(academicYear)
 
-  const subjectOptions = useMemo(() => {
-    if (!academicYear.trim()) return []
-    const byId = new Map<string, { id: string; code: string; name: string }>()
-    for (const offering of offerings) {
-      byId.set(offering.subject.id, {
-        id: offering.subject.id,
-        code: offering.subject.code,
-        name: offering.subject.name,
-      })
-    }
-    return [...byId.values()].sort((a, b) => a.code.localeCompare(b.code))
-  }, [offerings, academicYear])
+  const {
+    data: semesterOptions = [],
+    isLoading: semestersLoading,
+    isFetching: semestersFetching,
+  } = useMarksEntrySemesters(academicYear, subjectId)
 
-  const semesterOptions = useMemo(() => {
-    if (!subjectId) return []
-    const semesters = new Set<number>()
-    for (const offering of offerings) {
-      if (offering.subject.id === subjectId) semesters.add(offering.semester)
-    }
-    return [...semesters].sort((a, b) => a - b)
-  }, [offerings, subjectId])
+  const {
+    data: examOptions = [],
+    isLoading: examsLoading,
+    isFetching: examsFetching,
+  } = useMarksEntryExams(academicYear, subjectId, semester)
 
-  const examOptions = useMemo(() => {
-    if (!subjectId || !semester) return []
-    const offering = offerings.find(
-      (o) => o.subject.id === subjectId && o.semester === Number(semester),
-    )
-    if (!offering) return []
-    const names = (offering.subject.assessments ?? [])
-      .map((a) => a.name)
-      .filter(Boolean)
-    return [...new Set(names)].sort((a, b) => a.localeCompare(b))
-  }, [offerings, subjectId, semester])
+  const loadingSubjects = subjectsLoading || subjectsFetching
+  const loadingSemesters = semestersLoading || semestersFetching
+  const loadingExams = examsLoading || examsFetching
 
   const canUpload =
     Boolean(academicYear.trim()) &&
@@ -143,6 +126,7 @@ const MarksEntry = () => {
             className={selectClass}
             aria-label="Select academic year"
           >
+            <option value="">Select year</option>
             {yearOptions.map((year) => (
               <option key={year} value={year}>
                 {year}
@@ -158,16 +142,18 @@ const MarksEntry = () => {
           <select
             value={subjectId}
             onChange={(e) => handleSubjectChange(e.target.value)}
-            disabled={!academicYear || loadingOfferings || subjectOptions.length === 0}
+            disabled={!academicYear || loadingSubjects}
             className={selectClass}
             aria-label="Select subject"
           >
             <option value="">
-              {loadingOfferings
-                ? 'Loading…'
-                : subjectOptions.length === 0
-                  ? 'No subjects for year'
-                  : 'Select subject'}
+              {!academicYear
+                ? 'Select year first'
+                : loadingSubjects
+                  ? 'Loading…'
+                  : subjectOptions.length === 0
+                    ? 'No subjects for year'
+                    : 'Select subject'}
             </option>
             {subjectOptions.map((s) => (
               <option key={s.id} value={s.id}>
@@ -184,12 +170,18 @@ const MarksEntry = () => {
           <select
             value={semester}
             onChange={(e) => handleSemesterChange(e.target.value)}
-            disabled={!subjectId || semesterOptions.length === 0}
+            disabled={!subjectId || loadingSemesters}
             className={selectClass}
             aria-label="Select semester"
           >
             <option value="">
-              {!subjectId ? 'Select subject first' : 'Select semester'}
+              {!subjectId
+                ? 'Select subject first'
+                : loadingSemesters
+                  ? 'Loading…'
+                  : semesterOptions.length === 0
+                    ? 'No semesters'
+                    : 'Select semester'}
             </option>
             {semesterOptions.map((sem) => (
               <option key={sem} value={String(sem)}>
@@ -206,16 +198,18 @@ const MarksEntry = () => {
           <select
             value={cieRoundName}
             onChange={(e) => setCieRoundName(e.target.value)}
-            disabled={!semester || examOptions.length === 0}
+            disabled={!semester || loadingExams}
             className={selectClass}
             aria-label="Select exam"
           >
             <option value="">
               {!semester
                 ? 'Select semester first'
-                : examOptions.length === 0
-                  ? 'No exams'
-                  : 'Select exam'}
+                : loadingExams
+                  ? 'Loading…'
+                  : examOptions.length === 0
+                    ? 'No exams'
+                    : 'Select exam'}
             </option>
             {examOptions.map((name) => (
               <option key={name} value={name}>

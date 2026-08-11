@@ -105,7 +105,7 @@ src/
 ├── api/                           # Thin HTTP client — no business logic
 │   ├── client.ts
 │   ├── allowedUsers.ts, faculty.ts, students.ts, import.ts, subjects.ts, marks.ts
-├── hooks/                         # React Query — useAccountInvites, useStudents, useFaculty, useSubjects, useAssignmentsBundle
+├── hooks/                         # React Query — useAccountInvites, useStudents, useFaculty, useSubjects, useAssignmentsBundle, useMarksEntry*
 ├── utils/
 │   ├── identifier-patterns.ts     # Roll validation; deriveBatchFromRollNumber, deriveDepartmentFromRollNumber
 │   ├── activation-token.ts        # Read #token= from URL hash → POST body; strip from address bar

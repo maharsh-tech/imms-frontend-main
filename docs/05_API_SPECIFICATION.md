@@ -112,7 +112,7 @@ For role STUDENT, `studentState` is one of:
 - `"UNPUBLISHED"` — student record exists but no visible published results
 - `"PUBLISHED"` — at least one published assessment visible to this student
 
-Visibility matches `GET /marks/my-marksheet`: core subjects (dept + semester), enrolled electives, and any subject where the student has mark rows. Student roster is auto-linked on login/activation by email or roll number (`allowedUser.identifier`).
+Visibility matches `GET /marks/my-marksheet`: offerings in the student's current academic year + semester (core dept match, enrolled electives, or marks within that scoped branch), plus any offering with an explicit `SubjectEnrollment` (backlog retake). Past-semester marks are **not** shown after roster upgrade unless enrollment exists. Only **published** submissions appear; response is display-only (`code`, `name`, `maxMarks`, `display` — no mark row IDs or raw `marksObtained`). Student roster is auto-linked on login/activation by email or roll number (`allowedUser.identifier`).
 
 For non-student roles, `studentState` is `null`.
 
@@ -707,6 +707,14 @@ Roles: STUDENT
 }
 ```
 Results are grouped by CIE round (`cieRounds[]`, sorted by `sequence`). `display` is computed server-side: `"NE"`, `"AB"`, numeric string, or `"-"`.
+
+**Visibility rules:** Marks are stored permanently per `SubjectOffering` (year + semester). The marksheet shows only:
+1. Offerings matching the student's `currentAcademicYear` + `semester` (normal cohort path), and
+2. Offerings where the student has an explicit `SubjectEnrollment` (backlog retake override).
+
+Past-year / past-semester marks are hidden after roster upgrade unless an enrollment row exists. Only assessments with **published** submissions are included.
+
+**Security:** Students cannot call grid/bulk/publish endpoints (403). Teachers can only access their own `subjectAssignmentId` (403 on IDOR). The response exposes display strings only — no internal mark row IDs or numeric `marksObtained` alongside `display` (inspect via DevTools Network tab should show the shape above only).
 
 ---
 

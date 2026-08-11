@@ -71,17 +71,19 @@ export const MarksGridRow = memo(function MarksGridRow({
               aria-invalid={overMax}
               aria-describedby={overMax ? marksErrorId : undefined}
             />
+            <div className="flex items-center gap-3 border-l border-outline-variant pl-3">
             {isCoordinator && (
               <label className="flex cursor-pointer items-center gap-1.5 text-label-sm text-on-surface-variant">
                 <input
                   type="checkbox"
+                  tabIndex={-1}
                   checked={row.isNe}
                   disabled={!isDraft}
                   onChange={(e) => onUpdateRow({ isNe: e.target.checked })}
                   className="h-4 w-4 cursor-pointer disabled:cursor-not-allowed"
                   aria-label={`NE ${row.name}`}
                 />
-                <span>NE</span>
+                <span aria-hidden="true">NE</span>
               </label>
             )}
             {isTeacher && row.isNe && (
@@ -93,6 +95,7 @@ export const MarksGridRow = memo(function MarksGridRow({
               <label className="flex cursor-pointer items-center gap-1.5 text-label-sm text-on-surface-variant">
                 <input
                   type="checkbox"
+                  tabIndex={-1}
                   checked={row.isAb}
                   disabled={!isDraft}
                   onChange={(e) =>
@@ -104,7 +107,7 @@ export const MarksGridRow = memo(function MarksGridRow({
                   className="h-4 w-4 cursor-pointer disabled:cursor-not-allowed"
                   aria-label={`Mark ${row.name} absent (AB)`}
                 />
-                <span>AB</span>
+                <span aria-hidden="true">AB</span>
               </label>
             )}
             {overMax && (
@@ -112,6 +115,7 @@ export const MarksGridRow = memo(function MarksGridRow({
                 Max {maxMarks}
               </span>
             )}
+            </div>
           </div>
         ) : (
           <span className="text-sm">

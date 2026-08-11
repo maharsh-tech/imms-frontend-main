@@ -65,14 +65,15 @@ imms-frontend/
 â”‚   â”‚   â””â”€â”€ usePageTitle.ts
 â”‚   â”œâ”€â”€ utils/
 â”‚   â”‚   â”œâ”€â”€ identifier-patterns.ts # Roll validation; deriveBatch/deriveDepartment from roll
+â”‚   â”‚   â”œâ”€â”€ marksheet-pdf.ts        # Client-side CIE marksheet PDF export (jspdf + jspdf-autotable)
 â”‚   â”œâ”€â”€ components/
 â”‚   â”‚   â”œâ”€â”€ AuthBootstrap.tsx
 â”‚   â”‚   â”œâ”€â”€ auth/                    # Login shared UI
 â”‚   â”‚   â”œâ”€â”€ coordinator/
 â”‚   â”‚   â”‚   â”œâ”€â”€ account-invites/     # BulkInviteForm, SingleInviteForm, InviteTable, RosterDialog
 â”‚   â”‚   â”‚   â””â”€â”€ subjects/            # AddSubjectForm, AddAssessmentForm, ElectiveRosterModal, BacklogStudentForm
-â”‚   â”‚   â”œâ”€â”€ staff/                   # StaffShell, StaffTabBar (coordinator/teacher)
-â”‚   â”‚   â”œâ”€â”€ student/                 # Student portal shell, SubjectCard, etc.
+â”‚   â”‚   â”œâ”€â”€ staff/                   # StaffShell, StaffSidebar, staff-nav.ts (shared sidebar tab config)
+â”‚   â”‚   â”œâ”€â”€ student/                 # StudentShell, CIECard, CIEMarksheetModal, StudentIdentity, SubjectCard
 â”‚   â”‚   â””â”€â”€ shared/                  # SubmissionStatusBadge, ExcelImportCard
 â”‚   â”œâ”€â”€ pages/
 â”‚   â”‚   â”œâ”€â”€ Login.tsx
@@ -105,9 +106,9 @@ imms-frontend/
 | `/coordinator/marks/:assignmentId/:assessmentId` | Coordinator | NE flags, lock, unlock, publish, unpublish |
 | `/teacher` | Teacher | Assigned subjects â†’ marks entry links |
 | `/teacher/marks/:assignmentId/:assessmentId` | Teacher | Enter marks, AB, submit |
-| `/student` | Student | Marksheet (default tab) |
+| `/student` | Student | Marksheet — exam cards per CIE round (semester switcher); click a card → marksheet modal + PDF |
 | `/student/schedule` | Student | Schedule placeholder |
-| `/student/profile` | Student | Account info + logout |
+| `/student/profile` | Student | Account info (logout lives in sidebar / mobile bottom nav) |
 
 ## UI Surfaces by Role
 
@@ -115,7 +116,7 @@ imms-frontend/
 |---|---|---|
 | Student | `StudentShell` | Sidebar flush-left on desktop (matches staff layout); mobile bottom nav |
 | Coordinator / Teacher | `StaffShell` | Left-aligned fixed sidebar (desktop) / slide-in drawer (mobile) with `StaffSidebar`. User info + Logout pinned to bottom |
-| Marks grid | `StaffShell` (wide) | Shared by coordinator and teacher at `/â€¦/marks/:assignmentId/:assessmentId` |
+| Marks grid | `StaffShell` (wide) | Shared by coordinator and teacher at `/â€¦/marks/:assignmentId/:assessmentId` — sidebar shows the portal's nav tabs on every page (persistent quick navigation) |
 
 ## Implemented Features
 
@@ -232,9 +233,9 @@ Create student/teacher/coordinator accounts, bulk paste IDs, filter by role. Bul
 
 **Add to roster** (student accounts not yet in master roster): department and batch **auto-derive from roll number** (`deriveDepartmentFromRollNumber`, `deriveBatchFromRollNumber`); semester must be entered manually.
 
-**Student Excel:** CSPIT `Roll No` + `Student Name` (regular `24ITâ€¦` and diploma `D25ITâ€¦`). Set semester in import panel; department/batch auto from roll when omitted.
+**Student Excel:** 6-column template — `Roll No, Student Name, Student Email, Department, Semester, Academic Year`. Blank Department defaults to `IT`; `Semester` (1–12) and `Academic Year` come from the sheet (per-row validation; valid rows import when others error); `Academic Year` required and written verbatim; `Batch` is no longer an input column (always derived from roll). The "Semester (import default)" panel input was removed.
 
-**Faculty Excel:** CSPIT name list (single column) matched to accounts by name, or structured sheet with email slug + name.
+**Faculty Excel:** 3-column template — `Email, Full Name, Department` (blank Department defaults to `IT`). Legacy single-column name lists and `Email slug` headers still parse.
 
 **Teacher accounts:** institutional email `firstnamelastname.dept@charusat.ac.in` (e.g. `nishatshaikh.it@charusat.ac.in`) â€” not 3-letter codes. Bulk paste one email per line.
 
@@ -261,7 +262,7 @@ Subjects tab: catalog only. **CIE exams, teacher assignment, backlog students, a
 API highlights:
 - `POST /subjects/:id/assessments` body: `{ academicYear, semester, cieRoundName, maxMarks, ... }`
 - `GET /cie-rounds?academicYear=&semester=&department=`
-- `GET /marks/my-marksheet` â†’ `{ cieRounds: [{ name, sequence, subjects: [...] }], ... }`
+- `GET /marks/my-marksheet` â†’ `{ semester, studentName, rollNumber, hasPublished, cieRounds: [{ name, sequence, academicYear, semester, subjects: [...] }] }` — each round carries its own `academicYear`/`semester` (since 2026-08-11) so the student portal can group by semester
 - Elective enrollments require `academicYear` + `semester` query/body params
 - Backlog enrollment (CORE): same enrollment endpoints; student must have advanced past the offering's semester
 - Assignment roster: `GET/POST /subject-assignments/:id/roster/*` (bulk, import, template, delete)
@@ -279,6 +280,18 @@ API highlights:
 **Single session:** signing in elsewhere redirects old browser to `/login?error=session_superseded` (cookies cleared, no reload loop).
 
 ## Last Updated
+
+**Persistent sidebar on every page** (2026-08-11):
+- New `src/components/staff/staff-nav.ts` — shared `COORDINATOR_TABS` / `TEACHER_TABS` configs (single source of truth). `coordinator/Dashboard.tsx` opens sections via validated `?tab=` deep links (URL kept in sync with the live tab). `teacher/Dashboard.tsx` sidebar gains a "My Subjects" nav item. `shared/MarksGridPage.tsx` passes the role's tabs to its `StaffShell` so the marks pages keep full sidebar navigation (tab click → `/coordinator?tab=…` or `/teacher`).
+
+**Student portal two-step marksheet** (2026-08-11):
+- `pages/student/Marksheet.tsx` — exam cards per CIE round with a **semester switcher** (defaults to the current semester; only published rounds are returned by the API; per-semester "Results Awaited" empty state). Clicking a card opens `components/student/CIEMarksheetModal.tsx` (exact columns Subject / Marks Obtained / Total Marks) with a **Download PDF** action via new `utils/marksheet-pdf.ts` (`jspdf` + `jspdf-autotable`, filename `{rollNumber}_{examName}.pdf`). `CIECard` is now clickable (`onOpen`).
+
+**Profile logout relocation** (2026-08-11):
+- Removed the "Log out" button from the student Profile card; logout now lives in the desktop sidebar and a new mobile bottom-nav logout (`StudentShell.tsx`).
+
+**Excel import templates + student upload fix** (2026-08-11):
+- Templates reworked together with their parsers: student 6-column (`Roll No, Student Name, Student Email, Department, Semester, Academic Year`), faculty 3-column (`Email, Full Name, Department`), marks header-only (incl. scoped download). `Batch` removed from all input surfaces; blank Department → `IT`; `Academic Year` required + written verbatim. Student upload: `Semester` read per-row from the sheet; the "Semester (import default)" input and its request-level 400 removed; `ExcelImportCard` renders API validation errors via `apiErrorMessage`.
 
 **Coordinator cascade defaults** (2026-08-11):
 - Exam & Assignments, Marks Entry, and Marks tabs **default to current academic year** on open; Exam & Assignments and Marks also **auto-select latest semester** for that year.

@@ -229,12 +229,16 @@ Content-Type: multipart/form-data
 **Body:** Form field `file` (.xlsx file)
 
 **Query params (required unless noted):**
-- `department` — e.g. `IT`
-- `semester` — e.g. `5`
-- `batch` — optional; auto-derives from roll when omitted (`24IT` → `2024-2028`, `D25IT` → `2025-2028`)
-- `department` in file — optional; auto-derives from roll prefix when omitted (`24IT093` → `IT`)
+- `department` — optional fallback for blank Department cells; blank cells default to `IT`
+- `semester` — optional fallback for blank Semester cells; the sheet's `Semester` column is the source of truth
 
-**CSPIT columns:** `Roll No`, `Student Name` (ignores `Sr No`). Supports regular and diploma rolls.
+**Template columns (exactly 6, in order):** `Roll No`, `Student Name`, `Student Email`, `Department`, `Semester`, `Academic Year`.
+- `Department` blank → defaults to `IT`.
+- `Semester` comes from the sheet (1–12); a blank cell is rejected with a row error unless the optional `semester` query param is provided.
+- `Academic Year` is **required per row** and written verbatim to `Student.currentAcademicYear` (format `YYYY-YYYY`); blank/malformed cells are rejected with a row error.
+- `Student Email` is accepted but ignored — the student email is auto-generated from the roll number.
+- `Batch` is **not** an input column; it is always derived from the roll (`24IT` → `2024-2028`, `D25IT` → `2025-2028`).
+- Re-import is an upsert: an existing roll updates the same row in place (semester + currentAcademicYear overwritten) — no new row, no new version. Supports regular and diploma rolls.
 
 **Response 200:**
 `json
@@ -306,9 +310,13 @@ Content-Type: multipart/form-data
 Same pattern as student import.
 
 **Query params:**
-- `department` — optional, default `IT`
+- `department` — optional fallback for blank Department cells; blank cells default to `IT`
 
-**Formats:** CSPIT single-column name list (matched to Account Management), or structured sheet with email slug + name.
+**Template columns (exactly 3, in order):** `Email`, `Full Name`, `Department`.
+- `Email` is the teacher login slug (e.g. `nishatshaikh.it`); the faculty email is auto-generated as `{slug}@charusat.ac.in`.
+- `Department` blank → defaults to `IT`.
+- Legacy files with an `Email slug` header still parse.
+- **Formats:** CSPIT single-column name list (matched to Account Management, department defaults to IT), or the structured 3-column sheet above.
 
 ---
 
@@ -592,7 +600,7 @@ Roles: TEACHER (assigned only, DRAFT status)
 GET /marks/import/template?subjectId={id}&academicYear=2025-2026&semester=5&cieRoundName=CIE-1
 Roles: COORDINATOR
 ```
-Without query params: empty template (Student ID, Marks). With scope: prefilled with cohort roll numbers and existing marks for that exam/subject/semester.
+Always a header-only template: `Student ID`, `Marks` — no pre-filled student rows. When scope params are provided they are still validated (unknown exam/subject/semester returns 404/400) so bad downloads fail early.
 
 **Response:** `.xlsx` binary stream.
 
@@ -874,7 +882,7 @@ Published marks only. NE stored values included for coordinator (not student dis
 |----------|-------|-------|
 | `GET /marks/my-marksheet` | STUDENT | Display-only; own record via `resolveStudentForUser` |
 | `GET /marks/grid` | COORDINATOR, TEACHER | Teacher IDOR blocked in service |
-| `GET /marks/import/template` | COORDINATOR | Prefilled template may include marks — coordinator-only |
+| `GET /marks/import/template` | COORDINATOR | Header-only template (Student ID, Marks) — coordinator-only |
 | `GET /subject-offerings/marks-entry/*` | COORDINATOR | Cascade metadata only, no marks |
 
 ---

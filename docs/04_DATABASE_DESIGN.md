@@ -390,7 +390,7 @@ Created when the user completes activation (`POST /auth/activate`) and sets thei
 > **Code status:** Google OAuth is **not implemented**. There is no `googleId` column; auth uses `passwordHash` and `needsPasswordChange`.
 
 ### 3.3 students
-Imported via Excel. Linked to User on first login via email match. If the user has not activated yet, userId is null. **`currentAcademicYear`** scopes which offering's assignments and marks appear on the marksheet (derived from batch + semester on import; coordinator can override for backlog/repeat).
+Imported via Excel. Linked to User on first login via email match. If the user has not activated yet, userId is null. **`currentAcademicYear`** scopes which offering's assignments and marks appear on the marksheet. On Excel import it is written **verbatim from the `Academic Year` column** (required per row, `YYYY-YYYY`); the single-student create path derives it from batch + semester. Re-import updates the existing row in place (same roll) and never touches `marks`.
 
 ### 3.4 faculty
 Imported via Excel. Linked to User on first login. Must exist before subject assignment.
@@ -445,21 +445,22 @@ The system does not calculate grades, pass/fail status, or percentages, as its s
 |---|---|---|
 | Roll No | rollNumber | Yes |
 | Student Name | name | Yes |
-| Department | department | No — auto from roll prefix (`24IT`→`IT`) or import default (UI) |
-| Semester | semester | No — import default (UI) |
-| Batch | batch | No — auto from roll (`24IT`→`2024-2028`, `D25IT`→`2025-2028`) |
-| Email | email | No — auto from roll number |
+| Student Email | email | No — value ignored; email auto-generated from roll number (`24IT093` → `24it093@charusat.edu.in`) |
+| Department | department | No — blank defaults to `IT` |
+| Semester | semester | Yes — from sheet (1–12); blank cell rejected unless the optional UI fallback param is provided |
+| Academic Year | currentAcademicYear | Yes — written verbatim (`YYYY-YYYY`); blank/malformed cells rejected |
 
-**Roll formats:** `24IT093` (B.Tech), `D25IT131` (diploma).
+**Roll formats:** `24IT093` (B.Tech), `D25IT131` (diploma).  
+**Batch** is not an import column — always derived from the roll (`24IT`→`2024-2028`, `D25IT`→`2025-2028`). Re-import updates the existing row in place (same roll) and never touches `marks`.
 
 > **NE is not an import column.** Coordinator flags NE per exam in the marks workflow (Milestone 2). Stored on each `marks` row (`flag = NE`), not on the student profile.
 
 ### Faculty Excel Template
 | Column | Field | Required in file |
 |---|---|---|
-| Email slug | facultyCode | Yes (structured format only) |
+| Email | facultyCode | Yes (structured format only) — teacher login slug (e.g. `nishatshaikh.it`) |
 | Full Name / name list | name | Yes |
-| Department | department | No — import default (UI, default IT) |
-| Email | email | No — auto from slug (`slug@charusat.ac.in`) |
+| Department | department | No — blank defaults to `IT` |
 
-**Name-list format:** first column only (e.g. `CSPIT-IT STAFF.xlsx`) — no headers; names matched to Account Management teacher accounts.
+Faculty email is auto-generated from the slug (`slug@charusat.ac.in`). Legacy files with an `Email slug` header still parse.  
+**Name-list format:** first column only (e.g. `CSPIT-IT STAFF.xlsx`) — no headers; names matched to Account Management teacher accounts (department defaults to IT).

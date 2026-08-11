@@ -75,18 +75,23 @@ IMMS operates in three phases per semester:
 
 **FR-COORD-01: Student Import**
 - The Coordinator shall upload an Excel file (.xlsx) containing student data.
-- **CSPIT format:** `Roll No`, `Student Name` (optional `Sr No` column ignored). Semester comes from import defaults in the UI; **department** and **batch** auto-derive from roll when omitted (`24IT093` → dept `IT`, batch `2024-2028`; `D25IT131` → dept `IT`, batch `2025-2028`).
-- Also accepts legacy columns: Department, Semester, Batch, Email when present.
+- **Template columns (exactly 6, in order):** `Roll No`, `Student Name`, `Student Email`, `Department`, `Semester`, `Academic Year`.
+  - `Department` blank → defaults to `IT`.
+  - `Semester` comes from the sheet (1–12); blank cells are rejected per row (no UI default required — the "Semester (import default)" field was removed).
+  - `Academic Year` is **required per row** (`YYYY-YYYY`) and written verbatim to `Student.currentAcademicYear`; blank or malformed cells are rejected with a row error.
+  - `Student Email` is accepted but ignored — the email is auto-generated from the roll number.
+  - `Batch` is **not** an input column — it is always derived from the roll (`24IT093` → `2024-2028`, `D25IT131` → `2025-2028`).
 - Roll numbers: regular `24IT093` and diploma `D25IT131`.
 - The system shall validate the file structure before processing.
-- The import process shall act as an 'upsert'. If a Roll Number already exists, it will update their `Semester` and other details. This acts as the semester promotion mechanism.
+- The import process shall act as an 'upsert'. If a Roll Number already exists, it updates that **same row in place** (`Semester`, `currentAcademicYear`, etc.) — no new row, no new version. This acts as the semester promotion mechanism (the sheet's `Academic Year` must advance with `Semester`).
+- The import shall never delete or alter existing `marks` rows for a student (historical marks stay linked by roll/student).
 - **NE (Not Eligible) is not imported via Excel.** NE is flagged per exam by the Coordinator before each internal (see FR-COORD-06).
 - Successful import shall display a count of records added/updated.
 
 **FR-COORD-02: Faculty Import**
 - The Coordinator shall upload an Excel file (.xlsx) containing faculty data.
-- **CSPIT format:** single-column name list (`DR./MR./MS.` prefixes stripped) matched to existing teacher accounts by name; department defaults to IT unless overridden.
-- **Structured format:** Email slug (e.g. `nishatshaikh.it`), Full Name, optional Department.
+- **CSPIT format:** single-column name list (`DR./MR./MS.` prefixes stripped) matched to existing teacher accounts by name; department defaults to IT.
+- **Structured format (template columns, in order):** `Email` (teacher login slug, e.g. `nishatshaikh.it`), `Full Name`, `Department`. Blank `Department` defaults to `IT`.
 - Same validation rules as student import apply.
 
 **FR-COORD-03: Subject Management**

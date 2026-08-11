@@ -76,6 +76,10 @@ CORS_ORIGINS=https://imms.yourdomain.com
 
 ```env
 VITE_API_BASE_URL=https://api.imms.yourdomain.com/api/v1
+# Optional — show Continue with Google on login
+VITE_GOOGLE_AUTH=false
+# Optional — dev role switcher buttons (local/staging only)
+VITE_DEV_AUTH=false
 ```
 
 > **IMPORTANT:** Never commit `.env` files to Git. Use `.env.example` templates only.
@@ -227,9 +231,10 @@ Mitigations already in place:
 Run after every production deployment:
 
 **Authentication and Domain Restriction**
-- [ ] Coordinator signs in with Google (institutional @charusat.ac.in email) → coordinator dashboard
-- [ ] Teacher signs in with Google → sees only assigned subjects
-- [ ] Student signs in with Google → sees marksheet or appropriate state message (NOT blank screen)
+- [ ] Coordinator signs in with test password or Google → coordinator dashboard
+- [ ] Teacher signs in → sees only assigned subjects
+- [ ] Student signs in → sees marksheet or appropriate state message (NOT blank screen)
+- [ ] Sign in same user on second browser → first browser shows session superseded message (no reload loop)
 - [ ] Google account with non-institutional email → domain blocked error on login page
 - [ ] Institutional email not whitelisted → `not_whitelisted` error on login page (NOT blank screen)
 - [ ] Second device sign-in → first device gets `session_superseded` on refresh

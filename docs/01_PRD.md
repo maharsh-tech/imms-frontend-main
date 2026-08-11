@@ -76,7 +76,7 @@ Academic institutions currently manage examination marks through disconnected Ex
 ### 6.1 Authentication and Authorization
 | ID | Requirement | Priority |
 |---|---|---|
-| AUTH-01 | **Google OAuth** sign-in only (no password login) | P0 |
+| AUTH-01 | **Password login** for test accounts; **Google OAuth** when configured | P0 |
 | AUTH-02 | **Domain restriction by role**: staff `@charusat.ac.in`, students `@charusat.edu.in` | P0 |
 | AUTH-03 | Role assigned when coordinator pre-registers email in AllowedUser whitelist | P0 |
 | AUTH-04 | Session via **httpOnly JWT cookies** (15min access / 7d refresh) — not in localStorage; **single concurrent session** per user | P0 |

@@ -14,7 +14,7 @@
 | Server State | React Query (`src/hooks/`, 5 min staleTime on coordinator dashboard) |
 | HTTP Client | Axios with `withCredentials: true` (httpOnly cookies) |
 | Routing | React Router v7 |
-| Auth | Google OAuth sign-in; httpOnly cookie session; dev role switcher in local builds |
+| Auth | Password login (test accounts) + optional Google OAuth; httpOnly cookies; single concurrent session |
 | Git Remote | https://github.com/maharsh-tech/imms-frontend-main.git (branch: main) |
 
 ## Architecture Principle â€” UI/UX Only
@@ -38,7 +38,7 @@
 
 | File | Route | Purpose |
 |---|---|---|
-| `src/pages/Login.tsx` | `/login` | **Continue with Google** only. Redirects to `GET /auth/google`. In Vite dev, shows dev role switcher buttons (`GET /auth/dev/login?role=...`). Handles `?error=` query params (`not_whitelisted`, `session_superseded`, etc.). |
+| `src/pages/Login.tsx` | `/login` | Email/roll + password login. Google button when `VITE_GOOGLE_AUTH=true`. Dev role switcher when `VITE_DEV_AUTH=true` or Vite dev. Handles `?error=session_superseded` etc. |
 
 Shared layout/components: `src/components/auth/` (`AuthShell`, `AuthCard`, `AuthAlert`).
 
@@ -97,7 +97,7 @@ imms-frontend/
 
 | Path | Role | Purpose |
 |---|---|---|
-| `/login` | Public | Google OAuth sign-in (+ dev role switcher locally) |
+| `/login` | Public | Password login (+ optional Google / dev switcher) |
 | `/coordinator` | Coordinator | Tabs: accounts, students, faculty, subjects, assignments |
 | `/coordinator/marks/:assignmentId/:assessmentId` | Coordinator | NE flags, lock, unlock, publish, unpublish |
 | `/teacher` | Teacher | Assigned subjects â†’ marks entry links |
@@ -110,7 +110,7 @@ imms-frontend/
 
 | Role | Shell | Notes |
 |---|---|---|
-| Student | `StudentShell` | Student Portal header, sidebar (desktop) / bottom nav (mobile), no profile photo |
+| Student | `StudentShell` | Sidebar flush-left on desktop (matches staff layout); mobile bottom nav |
 | Coordinator / Teacher | `StaffShell` | Left-aligned fixed sidebar (desktop) / slide-in drawer (mobile) with `StaffSidebar`. User info + Logout pinned to bottom |
 | Marks grid | `StaffShell` (wide) | Shared by coordinator and teacher at `/â€¦/marks/:assignmentId/:assessmentId` |
 
@@ -146,7 +146,7 @@ cd imms-frontend
 npm run dev
 ```
 
-Open http://localhost:5173 — sign in via **Continue with Google** or dev role switcher (`DEV_AUTH_ENABLED=true` on backend). Backend must be running on port 3000.
+Open http://localhost:5173 — sign in with test credentials (see Dev sign-in below) or dev role switcher.
 
 Copy `.env.example` â†’ `.env` and set `VITE_API_BASE_URL=http://localhost:3000/api/v1`.
 
@@ -223,15 +223,22 @@ API highlights:
 
 ## Dev sign-in (after seed)
 
-| Role | Google email | Local dev |
-|------|--------------|-----------|
-| Coordinator | coordinator@charusat.ac.in | Google OAuth or dev switcher on `/login` |
-| Teacher | test.it@charusat.ac.in | Google OAuth or dev switcher |
-| Student | 24it093@charusat.edu.in | Google OAuth or dev switcher |
+| Role | Login | Password |
+|------|-------|----------|
+| Coordinator | coordinator@charusat.ac.in | password123 |
+| Teacher | test.it@charusat.ac.in | password123@ |
+| Student | 24IT093 or 24it093@charusat.edu.in | password123@ |
 
-Backend `.env`: `DEV_AUTH_ENABLED=true`. Production: `DEV_AUTH_ENABLED=false`.
+**Google OAuth (later):** backend `GOOGLE_*` env + frontend `VITE_GOOGLE_AUTH=true`.
+
+**Single session:** signing in elsewhere redirects old browser to `/login?error=session_superseded` (cookies cleared, no reload loop).
 
 ## Last Updated
+
+**Auth + session UX** (2026-08-11):
+- Password login restored for 3 seeded test accounts; Google optional via `VITE_GOOGLE_AUTH`.
+- Superseded-session fix: skip `/auth/me` on `/login`, single redirect via `session-expired.ts`.
+- `StudentShell`: sidebar pinned to viewport left edge (no empty margin on wide screens).
 
 **Exam & Assignments action buttons + marks grid tab order** (2026-08-11):
 - `AssignmentsManagement.tsx`: **Open Marks**, **Backlog students**, **Manage roster**, and **Delete** use filled/outlined button styles (aligned with teacher dashboard CIE exam links) instead of plain text links.

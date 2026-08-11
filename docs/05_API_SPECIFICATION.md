@@ -10,15 +10,43 @@
 
 ## 1. Authentication
 
-Google OAuth only — no password login, activation, or reset endpoints.
+Primary: **Google OAuth** (when configured). **Password login** for seeded test accounts only (`User.passwordHash` set). No activation or reset flows.
 
-### 1.1 Google Sign-In
+### 1.1 Password Login (test accounts)
+```
+POST /auth/login
+```
+**Body:**
+```json
+{ "loginId": "coordinator@charusat.ac.in", "password": "password123" }
+```
+
+Students may use roll number: `{ "loginId": "24IT093", "password": "password123@" }`
+
+**Response 200:** Sets httpOnly cookies. Body:
+```json
+{
+  "user": {
+    "id": "cuid123",
+    "email": "coordinator@charusat.ac.in",
+    "name": "Test Coordinator",
+    "role": "COORDINATOR",
+    "lastLoginAt": "2026-08-11T09:00:00.000Z"
+  }
+}
+```
+
+**Response 401:** `{ "message": "Invalid credentials" }` — account has no `passwordHash` (use Google) or wrong password.
+
+Uses `establishSession` (bumps `tokenVersion`, single concurrent session).
+
+### 1.2 Google Sign-In
 ```
 GET /auth/google
 ```
 Redirects browser to Google OAuth consent. Requires `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL` on the server.
 
-### 1.2 Google Callback
+### 1.3 Google Callback
 ```
 GET /auth/google/callback
 ```
@@ -32,7 +60,7 @@ On failure redirects to `{FRONTEND_URL}/login?error=` with one of: `not_whitelis
 - Profile `name` and `profilePic` synced from Google on each sign-in
 - New sign-in bumps `tokenVersion` — only one active session per user
 
-### 1.3 Dev Role Switcher (local only)
+### 1.4 Dev Role Switcher (local only)
 ```
 GET /auth/dev/login?role=COORDINATOR|TEACHER|STUDENT
 ```
@@ -40,7 +68,7 @@ Blocked unless `NODE_ENV !== production` and `DEV_AUTH_ENABLED=true`. Issues ses
 
 ---
 
-### 1.4 Refresh Session
+### 1.5 Refresh Session
 ```
 POST /auth/refresh
 ```
@@ -52,7 +80,7 @@ Uses `imms_refresh_token` cookie. Refreshes `imms_access_token` cookie.
 
 ---
 
-### 1.5 Logout
+### 1.6 Logout
 ```
 POST /auth/logout
 ```
@@ -62,7 +90,7 @@ No access token required. Revokes session via `imms_refresh_token` cookie (`toke
 
 ---
 
-### 1.6 Get Current User
+### 1.7 Get Current User
 ```
 GET /auth/me
 ```
@@ -93,7 +121,7 @@ For non-student roles, `studentState` is `null`.
 
 ---
 
-### 1.7 Health Check
+### 1.8 Health Check
 ```
 GET /health
 ```
@@ -177,7 +205,7 @@ Roles: COORDINATOR
 }
 ```
 
-`hasSignedIn` is `true` when `User.lastLoginAt` is set (user has completed at least one Google sign-in).
+`hasSignedIn` is `true` when `User.lastLoginAt` is set (user has completed at least one sign-in).
 
 ---
 

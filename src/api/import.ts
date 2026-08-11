@@ -11,9 +11,10 @@ const downloadBlob = (blob: Blob, filename: string) => {
 };
 
 export type StudentImportOptions = {
-  department: string
-  semester: number
-  batch?: string
+  /** Optional fallback for blank Department cells — defaults to IT. */
+  department?: string
+  /** Optional fallback for blank Semester cells — the sheet's Semester column is the source of truth. */
+  semester?: number
 }
 
 export type FacultyImportOptions = {
@@ -39,9 +40,9 @@ export const importStudents = async (
   const { data } = await apiClient.post<ImportResult>('/students/import', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
     params: {
-      department: options.department,
-      semester: options.semester,
-      ...(options.batch ? { batch: options.batch } : {}),
+      ...(options.department ? { department: options.department } : {}),
+      // Never send a NaN/invalid semester — the backend rejects it. The sheet drives it.
+      ...(Number.isInteger(options.semester) ? { semester: options.semester } : {}),
     },
   });
   return data;

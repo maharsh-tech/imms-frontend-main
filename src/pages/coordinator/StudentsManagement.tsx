@@ -24,7 +24,6 @@ const StudentsManagement = () => {
   const [name, setName] = useState('')
   const [department, setDepartment] = useState('')
   const [semester, setSemester] = useState('')
-  const [batch, setBatch] = useState('')
 
   const invalidateStudents = useStudentsInvalidator()
   const { data, isLoading, isFetching, error: queryError } = useStudents({ page, limit: pageSize })
@@ -83,7 +82,6 @@ const StudentsManagement = () => {
     const roll = normalizeRollInput(value)
     setRollNumber(roll)
     if (!isValidRollNumber(roll)) return
-    setBatch(deriveBatchFromRollNumber(roll))
     setDepartment(deriveDepartmentFromRollNumber(roll))
   }
 
@@ -100,7 +98,7 @@ const StudentsManagement = () => {
       name: name.trim(),
       department: department.trim() || deriveDepartmentFromRollNumber(roll),
       semester: Number.parseInt(semester, 10),
-      batch: batch.trim() || deriveBatchFromRollNumber(roll),
+      batch: deriveBatchFromRollNumber(roll),
     })
   }
 
@@ -148,14 +146,6 @@ const StudentsManagement = () => {
           onChange={(e) => setSemester(e.target.value)}
           className="px-3 py-2 border border-outline-variant rounded-md text-sm"
           aria-label="Semester"
-        />
-        <input
-          type="text"
-          placeholder="Batch (auto from roll)"
-          value={batch}
-          onChange={(e) => setBatch(e.target.value)}
-          className="px-3 py-2 border border-outline-variant rounded-md text-sm"
-          aria-label="Batch"
         />
         <button
           type="submit"
@@ -206,50 +196,25 @@ const StudentsManagement = () => {
 
       {showImport && (
         <div className="space-y-4">
-          <div className="bg-surface-container-low border border-outline-variant rounded-lg p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="bg-surface-container-low border border-outline-variant rounded-lg p-4 max-w-xs">
             <label className="text-sm">
-              <span className="block text-xs font-medium text-on-surface-variant mb-1">Department (import default)</span>
+              <span className="block text-xs font-medium text-on-surface-variant mb-1">Department (fallback when blank in sheet — defaults to IT)</span>
               <input
                 type="text"
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
                 className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
-                aria-label="Import department default"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="block text-xs font-medium text-on-surface-variant mb-1">Semester (import default)</span>
-              <input
-                type="number"
-                min={1}
-                max={12}
-                value={semester}
-                onChange={(e) => setSemester(e.target.value)}
-                className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
-                aria-label="Import semester default"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="block text-xs font-medium text-on-surface-variant mb-1">Batch override (optional)</span>
-              <input
-                type="text"
-                placeholder="Auto from roll if empty"
-                value={batch}
-                onChange={(e) => setBatch(e.target.value)}
-                className="w-full px-3 py-2 border border-outline-variant rounded-md text-sm"
-                aria-label="Import batch override"
+                aria-label="Import department fallback"
               />
             </label>
           </div>
           <ExcelImportCard
             title="Student Import"
-            description="Upload CSPIT roster (.xlsx): Roll No + Student Name columns. Supports regular (24IT…) and diploma (D25IT…) rolls. Account must exist in Account Management first."
+            description="Upload CSPIT roster (.xlsx): Roll No, Student Name, Student Email, Department, Semester, Academic Year. Blank Department defaults to IT; Semester and Academic Year come from the sheet (Academic Year required, written as-is). Supports regular (24IT…) and diploma (D25IT…) rolls. Account must exist in Account Management first."
             onDownloadTemplate={downloadStudentTemplate}
             onImport={(file) =>
               importStudents(file, {
-                department: department.trim(),
-                semester: Number.parseInt(semester, 10),
-                ...(batch.trim() ? { batch: batch.trim() } : {}),
+                ...(department.trim() ? { department: department.trim() } : {}),
               })
             }
             onImportComplete={handleImportComplete}

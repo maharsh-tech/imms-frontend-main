@@ -189,7 +189,7 @@ const FacultyManagement = () => {
           </div>
           <ExcelImportCard
             title="Faculty Import"
-            description="Upload CSPIT staff list (.xlsx): single-column names (DR./MR./MS.) matched to Account Management, or structured sheet with Teacher Code. Account must exist first."
+            description="Upload CSPIT staff list (.xlsx): single-column names (DR./MR./MS.) matched to Account Management, or structured sheet with Email, Full Name, Department (blank Department defaults to IT). Account must exist first."
             onDownloadTemplate={downloadFacultyTemplate}
             onImport={(file) => importFaculty(file, { department: department.trim() })}
             onImportComplete={invalidateFaculty}

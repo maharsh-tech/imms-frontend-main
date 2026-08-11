@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Download, Upload, FileSpreadsheet } from 'lucide-react';
 import type { ImportResult } from '../../types';
+import { apiErrorMessage } from '../../utils/api-errors';
 
 type ExcelImportCardProps = {
   title: string
@@ -50,11 +51,7 @@ const ExcelImportCard = ({
         onImportComplete?.()
       }
     } catch (err: unknown) {
-      const message =
-        err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-          : undefined;
-      setError(message || 'Import failed.');
+      setError(apiErrorMessage(err, 'Import failed.'));
     } finally {
       setLoading(false);
     }

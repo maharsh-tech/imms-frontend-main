@@ -1,24 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getMyMarksheet } from '../../api/marks'
 import apiClient from '../../api/client'
-import { StudentIdentity, CIECard } from '../../components/student'
+import { StudentIdentity, CIECard, CIEMarksheetModal } from '../../components/student'
+import type { CieRound } from '../../components/student'
 
 interface MarksheetData {
   semester: number | null
   studentName: string
   rollNumber: string
-  hasPublished: boolean
-  cieRounds: {
-    name: string
-    sequence: number
-    subjects: { code: string; name: string; maxMarks: number; display: string }[]
-  }[]
+  cieRounds: CieRound[]
 }
 
 const StudentMarksheet = () => {
   const [data, setData] = useState<MarksheetData | null>(null)
   const [loading, setLoading] = useState(true)
   const [studentState, setStudentState] = useState<string | null>(null)
+  const [selectedSemester, setSelectedSemester] = useState<number | null>(null)
+  const [selectedRound, setSelectedRound] = useState<CieRound | null>(null)
 
   const loadMarksheet = async (silent = false) => {
     if (!silent) setLoading(true)
@@ -63,6 +61,30 @@ const StudentMarksheet = () => {
     }
   }, [])
 
+  // Semesters that have at least one published round, newest first.
+  const semesters = useMemo(
+    () => [...new Set((data?.cieRounds ?? []).map((round) => round.semester))].sort((a, b) => b - a),
+    [data]
+  )
+
+  // Default view = the student's current semester; fall back to the newest
+  // semester that actually has rounds when the record has no semester.
+  const activeSemester = selectedSemester ?? data?.semester ?? semesters[0] ?? null
+
+  // Show the switcher when there is more than one semester, or when the only
+  // semester with rounds differs from the current one (backlog-only case).
+  const showSemesterSwitcher =
+    semesters.length > 1 ||
+    (semesters.length === 1 && semesters[0] !== data?.semester)
+
+  const roundsForSemester = useMemo(
+    () =>
+      activeSemester == null
+        ? []
+        : (data?.cieRounds ?? []).filter((round) => round.semester === activeSemester),
+    [data, activeSemester]
+  )
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24" role="status" aria-live="polite">
@@ -84,8 +106,6 @@ const StudentMarksheet = () => {
     )
   }
 
-  const hasResults = Boolean(data?.hasPublished && data.cieRounds.length > 0)
-
   return (
     <>
       <StudentIdentity
@@ -94,7 +114,35 @@ const StudentMarksheet = () => {
         semester={data?.semester ?? null}
       />
 
-      {!hasResults && (
+      {showSemesterSwitcher && (
+        <div
+          className="mb-6 flex flex-wrap items-center gap-2"
+          role="tablist"
+          aria-label="Semester"
+        >
+          {semesters.map((semester) => {
+            const isActive = semester === activeSemester
+            return (
+              <button
+                key={semester}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setSelectedSemester(semester)}
+                className={`inline-flex cursor-pointer items-center justify-center rounded-full px-4 py-2 text-label-md font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                  isActive
+                    ? 'bg-primary text-on-primary'
+                    : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+                }`}
+              >
+                Semester {semester}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {roundsForSemester.length === 0 ? (
         <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-6 shadow-[var(--shadow-card)]">
           <div className="flex flex-col items-center py-xl text-center">
             <svg
@@ -114,24 +162,31 @@ const StudentMarksheet = () => {
             </svg>
             <p className="text-label-md text-on-surface-variant">Results Awaited</p>
             <p className="mt-2 max-w-sm text-body-md text-on-surface-variant">
-              No published results are visible yet. Contact the Exam Coordinator if you think this
-              is wrong.
+              No published results are visible {activeSemester != null && `for semester ${activeSemester} `}
+              yet. Contact the Exam Coordinator if you think this is wrong.
             </p>
           </div>
         </div>
-      )}
-
-      {hasResults && data && (
+      ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {data.cieRounds.map((round) => (
+          {roundsForSemester.map((round) => (
             <CIECard
-              key={`${round.sequence}-${round.name}`}
+              key={`${round.academicYear}-${round.semester}-${round.sequence}-${round.name}`}
               name={round.name}
               sequence={round.sequence}
               subjects={round.subjects}
+              onOpen={() => setSelectedRound(round)}
             />
           ))}
         </div>
+      )}
+
+      {selectedRound && (
+        <CIEMarksheetModal
+          round={selectedRound}
+          rollNumber={data?.rollNumber || '—'}
+          onClose={() => setSelectedRound(null)}
+        />
       )}
     </>
   )

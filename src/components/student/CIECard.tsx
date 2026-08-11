@@ -9,6 +9,8 @@ type CIECardProps = {
   name: string
   sequence: number
   subjects: SubjectRow[]
+  /** When provided, the whole card becomes a clickable button that calls this. */
+  onOpen?: () => void
 }
 
 const isStatusFlag = (display: string): boolean => {
@@ -17,12 +19,33 @@ const isStatusFlag = (display: string): boolean => {
 }
 
 /** CIE round card — subjects listed with marks for one exam round. */
-const CIECard = ({ name, sequence, subjects }: CIECardProps) => {
+const CIECard = ({ name, sequence, subjects, onOpen }: CIECardProps) => {
   const subjectCount = subjects.length
   const subjectLabel = subjectCount === 1 ? '1 subject' : `${subjectCount} subjects`
+  const clickable = typeof onOpen === 'function'
 
   return (
-    <article className="flex flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface-container-lowest shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-card-hover)]">
+    <article
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      aria-label={clickable ? `Open marksheet for ${name}` : undefined}
+      onClick={clickable ? onOpen : undefined}
+      onKeyDown={
+        clickable
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                onOpen?.()
+              }
+            }
+          : undefined
+      }
+      className={`flex flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface-container-lowest shadow-[var(--shadow-card)] transition-shadow hover:shadow-[var(--shadow-card-hover)] ${
+        clickable
+          ? 'cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary'
+          : ''
+      }`}
+    >
       <div className="flex items-start justify-between gap-3 border-b border-surface-variant p-4">
         <div className="min-w-0">
           <h2 className="text-title-lg leading-tight text-primary">{name}</h2>

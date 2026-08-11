@@ -165,6 +165,11 @@ export const getOfferings = (params?: { academicYear?: string; semester?: number
 
 export type MarksEntrySubject = Pick<Subject, 'id' | 'code' | 'name'>;
 
+export const getMarksEntryYears = () =>
+  apiClient
+    .get<string[]>('/subject-offerings/marks-entry/years')
+    .then((r) => r.data);
+
 export const getMarksEntrySubjects = (academicYear: string) =>
   apiClient
     .get<MarksEntrySubject[]>('/subject-offerings/marks-entry/subjects', {

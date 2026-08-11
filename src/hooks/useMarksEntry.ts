@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
+  getMarksEntryYears,
   getMarksEntrySubjects,
   getMarksEntrySemesters,
   getMarksEntryExams,
@@ -7,6 +8,13 @@ import {
 
 /** User asked for no cache — refetch every time a step is selected. */
 const NO_CACHE = { staleTime: 0, gcTime: 0 } as const
+
+export const useMarksEntryYears = () =>
+  useQuery({
+    queryKey: ['marksEntry', 'years'],
+    queryFn: () => getMarksEntryYears(),
+    ...NO_CACHE,
+  })
 
 export const useMarksEntrySubjects = (academicYear: string) =>
   useQuery({

@@ -1,25 +1,18 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { ClipboardList } from 'lucide-react'
 import ExcelImportCard from '../../components/shared/ExcelImportCard'
 import { downloadMarksTemplate, importMarks } from '../../api/marks'
 import {
+  useMarksEntryYears,
   useMarksEntrySubjects,
   useMarksEntrySemesters,
   useMarksEntryExams,
 } from '../../hooks/useMarksEntry'
 import type { ImportResult } from '../../types'
 
-/** Recent academic years — client-side only, no API. */
-const buildYearOptions = (): string[] => {
-  const y = new Date().getFullYear()
-  const m = new Date().getMonth()
-  const base = m >= 6 ? y : y - 1
-  return Array.from({ length: 5 }, (_, i) => `${base - i}-${base - i + 1}`)
-}
-
 /**
  * Coordinator Marks Entry — Excel upload that bypasses teachers.
- * Fetches one step at a time: year (local) → subjects → semesters → exams.
+ * Fetches one step at a time: years → subjects → semesters → exams.
  */
 const MarksEntry = () => {
   const [academicYear, setAcademicYear] = useState('')
@@ -27,7 +20,11 @@ const MarksEntry = () => {
   const [semester, setSemester] = useState('')
   const [cieRoundName, setCieRoundName] = useState('')
 
-  const yearOptions = useMemo(() => buildYearOptions(), [])
+  const {
+    data: yearOptions = [],
+    isLoading: yearsLoading,
+    isFetching: yearsFetching,
+  } = useMarksEntryYears()
 
   const {
     data: subjectOptions = [],
@@ -47,6 +44,7 @@ const MarksEntry = () => {
     isFetching: examsFetching,
   } = useMarksEntryExams(academicYear, subjectId, semester)
 
+  const loadingYears = yearsLoading || yearsFetching
   const loadingSubjects = subjectsLoading || subjectsFetching
   const loadingSemesters = semestersLoading || semestersFetching
   const loadingExams = examsLoading || examsFetching
@@ -123,10 +121,17 @@ const MarksEntry = () => {
           <select
             value={academicYear}
             onChange={(e) => handleYearChange(e.target.value)}
+            disabled={loadingYears || yearOptions.length === 0}
             className={selectClass}
             aria-label="Select academic year"
           >
-            <option value="">Select year</option>
+            <option value="">
+              {loadingYears
+                ? 'Loading…'
+                : yearOptions.length === 0
+                  ? 'No years in system'
+                  : 'Select year'}
+            </option>
             {yearOptions.map((year) => (
               <option key={year} value={year}>
                 {year}

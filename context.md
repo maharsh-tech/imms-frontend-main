@@ -188,7 +188,7 @@ Removing a backlog student clears both `SubjectEnrollment` and any `SubjectAssig
 
 | Step | UI | API |
 |---|---|---|
-| 1. Year | Academic year dropdown (client list) | — |
+| 1. Year | Academic year dropdown | `GET /subject-offerings/marks-entry/years` |
 | 2. Subject | Subject dropdown | `GET /subject-offerings/marks-entry/subjects?academicYear=` |
 | 3. Semester | Semester dropdown | `GET /subject-offerings/marks-entry/semesters?academicYear=&subjectId=` |
 | 4. Exam | CIE round dropdown | `GET /subject-offerings/marks-entry/exams?academicYear=&subjectId=&semester=` |

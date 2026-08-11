@@ -506,6 +506,12 @@ Returns subject offerings that have at least one CIE exam or teacher assignment.
 Used by the coordinator **Marks Entry** tab. Fetches **one step at a time** (no React Query cache). Does not load full offerings with nested assignments.
 
 ```
+GET /subject-offerings/marks-entry/years
+Roles: COORDINATOR
+```
+**Response 200:** `["2026-2027", "2025-2026"]` (distinct years from offerings with exams or assignments)
+
+```
 GET /subject-offerings/marks-entry/subjects?academicYear=2026-2027
 Roles: COORDINATOR
 ```

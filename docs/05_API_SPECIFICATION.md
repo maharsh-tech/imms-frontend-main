@@ -10,64 +10,37 @@
 
 ## 1. Authentication
 
-### 1.1 Login
-```
-POST /auth/login
-```
-**Body:**
-```json
-{ "loginId": "dev.it@charusat.ac.in", "password": "..." }
-```
+Google OAuth only — no password login, activation, or reset endpoints.
 
-Students use roll number: `{ "loginId": "24IT093", "password": "..." }`
-
-**Response 200:** Sets httpOnly cookies. Body:
-```json
-{
-  "user": {
-    "id": "cuid123",
-    "email": "dev.it@charusat.ac.in",
-    "name": "John Doe",
-    "role": "TEACHER",
-    "needsPasswordChange": false
-  }
-}
+### 1.1 Google Sign-In
 ```
-
-**Response 403 (not activated):**
-```json
-{ "statusCode": 403, "message": "Account not activated. Use the activation link from your welcome email." }
+GET /auth/google
 ```
+Redirects browser to Google OAuth consent. Requires `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL` on the server.
+
+### 1.2 Google Callback
+```
+GET /auth/google/callback
+```
+Google redirects here after consent. On success: sets httpOnly cookies and redirects to frontend role dashboard (`/coordinator`, `/teacher`, or `/student`).
+
+On failure redirects to `{FRONTEND_URL}/login?error=` with one of: `not_whitelisted`, `domain_mismatch`, `inactive`, `google_no_email`, `auth_failed`.
+
+**Rules:**
+- Google email must match an existing `User` row (created when coordinator adds the account)
+- Domain must match role (`@charusat.edu.in` students, `@charusat.ac.in` staff)
+- Profile `name` and `profilePic` synced from Google on each sign-in
+- New sign-in bumps `tokenVersion` — only one active session per user
+
+### 1.3 Dev Role Switcher (local only)
+```
+GET /auth/dev/login?role=COORDINATOR|TEACHER|STUDENT
+```
+Blocked unless `NODE_ENV !== production` and `DEV_AUTH_ENABLED=true`. Issues session for seeded dev user by role. **Never enable in production.**
 
 ---
 
-### 1.2 Activate Account (Plan A — from email link)
-```
-POST /auth/activate
-```
-**Body:**
-```json
-{ "token": "<activation-jwt>", "newPassword": "NewPass1234" }
-```
-
-Password rules: minimum 10 characters, at least one letter and one digit.
-
-**Response 200:**
-```json
-{ "message": "Account activated. You can now sign in with your new password." }
-```
-
-Activation links are generated when coordinator creates a user (`POST /allowed-users` or bulk) or explicitly via `POST /allowed-users/:id/regenerate-activation-link`:
-
-`{FRONTEND_URL}/activate#token=<jwt>` (7-day expiry, one-time use)
-
-The JWT lives in the **URL hash fragment** so it is not sent to the server, Referer headers, or access logs. The frontend reads `#token=`, strips it from the address bar, and sends the token in the `POST /auth/activate` JSON body. Listing accounts does **not** return links (only `hasActivationToken`).
-
-**Security note:** `isActivated` is a **read-only API field** computed server-side from `needsPasswordChange`. It is never passed in URLs. Login success messaging after activation uses React Router location state — not query parameters like `?activated=1`.
-
----
-
-### 1.3 Refresh Session
+### 1.4 Refresh Session
 ```
 POST /auth/refresh
 ```
@@ -75,9 +48,11 @@ Uses `imms_refresh_token` cookie. Refreshes `imms_access_token` cookie.
 
 **Response 200:** `{ "message": "Session refreshed" }`
 
+**Response 401 (superseded session):** `{ "message": "Signed in on another device — please sign in again" }`
+
 ---
 
-### 1.4 Logout
+### 1.5 Logout
 ```
 POST /auth/logout
 ```
@@ -87,7 +62,7 @@ No access token required. Revokes session via `imms_refresh_token` cookie (`toke
 
 ---
 
-### 1.5 Get Current User
+### 1.6 Get Current User
 ```
 GET /auth/me
 ```
@@ -101,7 +76,7 @@ Requires valid access cookie.
     "email": "dev.it@charusat.ac.in",
     "name": "John Doe",
     "role": "TEACHER",
-    "needsPasswordChange": false
+    "lastLoginAt": "2026-08-11T09:00:00.000Z"
   },
   "studentState": null
 }
@@ -112,53 +87,13 @@ For role STUDENT, `studentState` is one of:
 - `"UNPUBLISHED"` — student record exists but no visible published results
 - `"PUBLISHED"` — at least one published assessment visible to this student
 
-Visibility matches `GET /marks/my-marksheet`: offerings in the student's current academic year + semester (core dept match, enrolled electives, or marks within that scoped branch), plus any offering with an explicit `SubjectEnrollment` (backlog retake). Past-semester marks are **not** shown after roster upgrade unless enrollment exists. Only **published** submissions appear; response is display-only (`code`, `name`, `maxMarks`, `display` — no mark row IDs or raw `marksObtained`). Student roster is auto-linked on login/activation by email or roll number (`allowedUser.identifier`).
+Visibility matches `GET /marks/my-marksheet`: offerings in the student's current academic year + semester (core dept match, enrolled electives, or marks within that scoped branch), plus any offering with an explicit `SubjectEnrollment` (backlog retake). Past-semester marks are **not** shown after roster upgrade unless enrollment exists. Only **published** submissions appear; response is display-only (`code`, `name`, `maxMarks`, `display` — no mark row IDs or raw `marksObtained`). Student roster is auto-linked on Google sign-in and `GET /auth/me` by email or `allowedUser.identifier` → roll number.
 
 For non-student roles, `studentState` is `null`.
 
 ---
 
-### 1.6 Change Password (authenticated)
-```
-POST /auth/change-password
-```
-**Body:**
-```json
-{
-  "currentPassword": "existing-password",
-  "newPassword": "NewPass123"
-}
-```
-Password rules: minimum 10 characters, at least one letter and one digit. On success, all existing refresh sessions are revoked (`tokenVersion` bump).
-
----
-
-### 1.7 Request Password Reset
-```
-POST /auth/request-password-reset
-```
-**Body:** `{ "email": "student@charusat.edu.in" }`
-
-Always returns `{ "message": "If the email exists, a reset link has been sent." }` (no email enumeration). Issues a single-use token (60 min expiry) stored server-side. **Email delivery not implemented** — token is for future mail integration; coordinators can reset accounts via activation flow in dev.
-
----
-
-### 1.8 Reset Password
-```
-POST /auth/reset-password
-```
-**Body:**
-```json
-{
-  "token": "one-time-reset-token",
-  "newPassword": "NewPass123"
-}
-```
-Consumes the reset token (single-use). Revokes all existing sessions on success.
-
----
-
-### 1.9 Health Check
+### 1.7 Health Check
 ```
 GET /health
 ```
@@ -208,12 +143,12 @@ Domain rules: `STUDENT` → `@charusat.edu.in`; `TEACHER`/`COORDINATOR` → `@ch
   "email": "24it093@charusat.edu.in",
   "role": "STUDENT",
   "identifier": "24IT093",
-  "isActivated": false,
-  "activationLink": "http://localhost:5173/activate#token=...",
-  "hasActivationToken": true,
+  "hasSignedIn": false,
   "rosterLinked": false
 }
 ```
+
+Account is ready immediately — user signs in with Google using their institutional email.
 
 ---
 
@@ -222,7 +157,7 @@ Domain rules: `STUDENT` → `@charusat.edu.in`; `TEACHER`/`COORDINATOR` → `@ch
 GET /allowed-users?page=1&limit=50
 Roles: COORDINATOR
 ```
-**Response 200:** Paginated account rows. Pending users include `hasActivationToken` (whether an unused token exists) but **`activationLink` is always `null`** — links are not rotated on list load.
+**Response 200:** Paginated account rows.
 
 ```json
 {
@@ -232,9 +167,7 @@ Roles: COORDINATOR
       "email": "24it093@charusat.edu.in",
       "role": "STUDENT",
       "identifier": "24IT093",
-      "isActivated": false,
-      "activationLink": null,
-      "hasActivationToken": true,
+      "hasSignedIn": false,
       "rosterLinked": false
     }
   ],
@@ -244,43 +177,11 @@ Roles: COORDINATOR
 }
 ```
 
----
-
-### 2.3 Regenerate Activation Link
-```
-POST /allowed-users/:id/regenerate-activation-link
-Roles: COORDINATOR
-```
-Issues a fresh activation link for a pending account. Invalidates any previous unused activation token for that user.
-
-**Response 200:** Same shape as create response, with `activationLink` populated.
+`hasSignedIn` is `true` when `User.lastLoginAt` is set (user has completed at least one Google sign-in).
 
 ---
 
-### 2.3b Regenerate All Pending Activation Links
-```
-POST /allowed-users/regenerate-all-pending
-Roles: COORDINATOR
-```
-Issues fresh activation links for **all** pending accounts in one transaction. Replaces N per-row regenerate calls.
-
-**Response 200:**
-```json
-{
-  "links": [
-    {
-      "id": "cuid123",
-      "identifier": "24IT093",
-      "email": "24it093@charusat.edu.in",
-      "activationLink": "https://app.example.com/activate#token=..."
-    }
-  ]
-}
-```
-
----
-
-### 2.4 Remove Allowed User
+### 2.3 Remove Allowed User
 ```
 DELETE /allowed-users/:id
 Roles: COORDINATOR

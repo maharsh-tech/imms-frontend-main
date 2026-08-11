@@ -1,4 +1,4 @@
-import { Copy, Check, Trash2, UserPlus } from 'lucide-react'
+import { Trash2, UserPlus } from 'lucide-react'
 import type { AccountInvite } from '../../../types'
 import type { RoleFilter } from './account-invite-utils'
 
@@ -9,11 +9,8 @@ type InviteTableProps = {
   totalPages: number
   totalInvites: number
   loading: boolean
-  linkLoadingId: string | null
-  copiedKey: string | null
   onRoleFilterChange: (role: RoleFilter) => void
   onPageChange: (page: number) => void
-  onCopyActivationLink: (invite: AccountInvite) => void
   onDelete: (id: string) => void
   onOpenRoster: (invite: AccountInvite) => void
 }
@@ -25,11 +22,8 @@ const InviteTable = ({
   totalPages,
   totalInvites,
   loading,
-  linkLoadingId,
-  copiedKey,
   onRoleFilterChange,
   onPageChange,
-  onCopyActivationLink,
   onDelete,
   onOpenRoster,
 }: InviteTableProps) => (
@@ -59,7 +53,7 @@ const InviteTable = ({
             <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Email</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Role</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Roster</th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Account</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Signed in</th>
             <th className="px-4 py-3 text-right text-xs font-medium text-on-surface-variant uppercase">Actions</th>
           </tr>
         </thead>
@@ -100,10 +94,10 @@ const InviteTable = ({
                   )}
                 </td>
                 <td className="px-4 py-3 text-sm">
-                  {invite.isActivated ? (
-                    <span className="text-green-700 font-medium">Active</span>
+                  {invite.hasSignedIn ? (
+                    <span className="text-green-700 font-medium">Yes</span>
                   ) : (
-                    <span className="text-amber-700 font-medium">Pending activation</span>
+                    <span className="text-on-surface-variant">Not yet</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-right text-sm space-x-2">
@@ -115,28 +109,6 @@ const InviteTable = ({
                     >
                       <UserPlus className="w-4 h-4 mr-1" />
                       Add to roster
-                    </button>
-                  )}
-                  {!invite.isActivated && (
-                    <button
-                      type="button"
-                      onClick={() => onCopyActivationLink(invite)}
-                      disabled={linkLoadingId === invite.id}
-                      className="inline-flex items-center text-primary hover:text-primary text-xs disabled:opacity-60"
-                    >
-                      {copiedKey === invite.id ? (
-                        <>
-                          <Check className="w-4 h-4 mr-1" />
-                          Copied
-                        </>
-                      ) : linkLoadingId === invite.id ? (
-                        'Generating...'
-                      ) : (
-                        <>
-                          <Copy className="w-4 h-4 mr-1" />
-                          {invite.hasActivationToken ? 'Copy new link' : 'Copy activation link'}
-                        </>
-                      )}
                     </button>
                   )}
                   <button

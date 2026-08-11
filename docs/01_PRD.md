@@ -76,12 +76,12 @@ Academic institutions currently manage examination marks through disconnected Ex
 ### 6.1 Authentication and Authorization
 | ID | Requirement | Priority |
 |---|---|---|
-| AUTH-01 | Email/password login with **Plan A activation link** onboarding | P0 |
+| AUTH-01 | **Google OAuth** sign-in only (no password login) | P0 |
 | AUTH-02 | **Domain restriction by role**: staff `@charusat.ac.in`, students `@charusat.edu.in` | P0 |
 | AUTH-03 | Role assigned when coordinator pre-registers email in AllowedUser whitelist | P0 |
-| AUTH-04 | Session via **httpOnly JWT cookies** (15min access / 7d refresh) — not in localStorage | P0 |
+| AUTH-04 | Session via **httpOnly JWT cookies** (15min access / 7d refresh) — not in localStorage; **single concurrent session** per user | P0 |
 | AUTH-05 | Role-based route guards (Coordinator / Teacher / Student) — backend RBAC is authoritative | P0 |
-| AUTH-06 | Coordinator adds users → system returns activation link for welcome email | P0 |
+| AUTH-06 | Coordinator adds users → account ready for Google sign-in (no activation link) | P0 |
 | AUTH-07 | **Student identity matching**: after login, system looks up student record by email. If no record found → show "Your account is not linked to any student record. Contact the Coordinator." instead of empty dashboard | P0 |
 | AUTH-08 | If results not yet published for student's semester → show "Results have not been published yet" (not a blank page) | P0 |
 
@@ -143,7 +143,7 @@ Academic institutions currently manage examination marks through disconnected Ex
 - As a Teacher, I want to submit marks in one click so I do not accidentally leave them in draft.
 
 ### Student
-- As a Student, I want to log in with my institutional email and password and see my current semester's marks immediately after publication.
+- As a Student, I want to sign in with Google using my institutional email and see my current semester's marks immediately after publication.
 - As a Student, I want to download my marksheet as a PDF for visa and job applications.
 
 ---
@@ -154,7 +154,7 @@ Academic institutions currently manage examination marks through disconnected Ex
 |---|---|
 | Performance | Page load under 2s; PDF generation under 5s for individual marksheets |
 | Scalability | Support 500-800 concurrent users at semester end |
-| Security | HTTPS enforced; JWT in httpOnly cookies; activation tokens in URL hash only; login blocked until server confirms activation; no cross-role data leakage |
+| Security | HTTPS enforced; JWT in httpOnly cookies; Google OAuth whitelist; single concurrent session; no cross-role data leakage |
 | Availability | 99.5% uptime SLA; graceful error handling for Supabase outages |
 | Accessibility | WCAG 2.1 AA — keyboard navigable, screen reader friendly |
 | Browser Support | Chrome, Firefox, Edge (latest 2 versions each) |

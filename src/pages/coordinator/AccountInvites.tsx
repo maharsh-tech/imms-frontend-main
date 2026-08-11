@@ -1,11 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { createStudent } from '../../api/students'
 import {
   accountInviteMutations,
   useAccountInvites,
   useAccountInvitesInvalidator,
-  ACCOUNT_INVITES_KEY,
 } from '../../hooks/useAccountInvites'
 import type { AccountInvite, BulkCreateResult } from '../../types'
 import { apiErrorMessage } from '../../utils/api-errors'
@@ -26,8 +25,6 @@ const AccountInvites = () => {
   const pageSize = 50
   const [error, setError] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('STUDENT')
-  const [copiedKey, setCopiedKey] = useState<string | null>(null)
-  const [linkLoadingId, setLinkLoadingId] = useState<string | null>(null)
   const [bulkText, setBulkText] = useState('')
   const [bulkRole, setBulkRole] = useState('STUDENT')
   const [bulkResult, setBulkResult] = useState<BulkCreateResult | null>(null)
@@ -42,7 +39,6 @@ const AccountInvites = () => {
   const [rosterSemester, setRosterSemester] = useState('')
   const [rosterBatch, setRosterBatch] = useState('')
 
-  const queryClient = useQueryClient()
   const invalidateInvites = useAccountInvitesInvalidator()
 
   useEffect(() => {
@@ -95,27 +91,6 @@ const AccountInvites = () => {
     onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to delete invite')),
   })
 
-  const regenerateMutation = useMutation({
-    mutationFn: accountInviteMutations.regenerateLink,
-    onSuccess: (updated, inviteId) => {
-      queryClient.setQueriesData<{ data: AccountInvite[]; total: number; page: number; limit: number }>(
-        { queryKey: [ACCOUNT_INVITES_KEY] },
-        (old) => {
-          if (!old) return old
-          return {
-            ...old,
-            data: old.data.map((i) =>
-              i.id === inviteId
-                ? { ...i, hasActivationToken: true, activationLink: updated.activationLink }
-                : i,
-            ),
-          }
-        },
-      )
-    },
-    onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to generate activation link')),
-  })
-
   const rosterMutation = useMutation({
     mutationFn: createStudent,
     onSuccess: () => {
@@ -151,29 +126,6 @@ const AccountInvites = () => {
     [invites],
   )
 
-  const handleCopy = async (value: string, key: string) => {
-    await navigator.clipboard.writeText(value)
-    setCopiedKey(key)
-    setTimeout(() => setCopiedKey(null), 2000)
-  }
-
-  const handleCopyActivationLink = async (invite: AccountInvite) => {
-    setLinkLoadingId(invite.id)
-    setError('')
-    try {
-      const updated = await regenerateMutation.mutateAsync(invite.id)
-      if (!updated.activationLink) {
-        setError('Failed to generate activation link')
-        return
-      }
-      await handleCopy(updated.activationLink, invite.id)
-    } catch {
-      // onError handler sets message
-    } finally {
-      setLinkLoadingId(null)
-    }
-  }
-
   const handleBulkAdd = () => {
     const entries = parseBulkLines(bulkText, bulkRole)
     if (entries.length === 0) {
@@ -207,7 +159,7 @@ const AccountInvites = () => {
   }
 
   const handleDelete = (id: string) => {
-    if (!window.confirm('Revoke this account? They will not be able to activate.')) return
+    if (!window.confirm('Revoke this account? They will not be able to sign in.')) return
     deleteMutation.mutate(id)
   }
 
@@ -245,8 +197,7 @@ const AccountInvites = () => {
         <div>
           <h2 className="text-2xl font-bold text-on-surface">Account Management</h2>
           <p className="text-sm text-on-surface-variant mt-1">
-            Students sign in with their roll number. Teachers and coordinators sign in with their
-            institutional email.
+            Accounts are ready immediately — users sign in with Google using their institutional email.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -330,11 +281,8 @@ const AccountInvites = () => {
         totalPages={totalPages}
         totalInvites={totalInvites}
         loading={loading}
-        linkLoadingId={linkLoadingId}
-        copiedKey={copiedKey}
         onRoleFilterChange={setRoleFilter}
         onPageChange={setPage}
-        onCopyActivationLink={handleCopyActivationLink}
         onDelete={handleDelete}
         onOpenRoster={handleOpenRoster}
       />

@@ -4,7 +4,6 @@ import {
   createAccountInvite,
   bulkCreateAccountInvites,
   deleteAccountInvite,
-  regenerateActivationLink,
 } from '../api/allowedUsers'
 import type { PaginationParams } from '../types/pagination'
 
@@ -27,5 +26,4 @@ export const accountInviteMutations = {
   create: createAccountInvite,
   bulkCreate: bulkCreateAccountInvites,
   delete: deleteAccountInvite,
-  regenerateLink: regenerateActivationLink,
 }

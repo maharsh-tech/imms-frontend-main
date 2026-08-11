@@ -57,6 +57,14 @@ JWT_EXPIRES_IN=15m
 REFRESH_TOKEN_SECRET=<another-strong-secret>
 REFRESH_TOKEN_EXPIRES_IN=7d
 
+# Google OAuth (production sign-in)
+GOOGLE_CLIENT_ID=<google-oauth-client-id>
+GOOGLE_CLIENT_SECRET=<google-oauth-client-secret>
+GOOGLE_CALLBACK_URL=https://api.imms.yourdomain.com/api/v1/auth/google/callback
+
+# Local dev role switcher — MUST be false in production
+DEV_AUTH_ENABLED=false
+
 # App
 NODE_ENV=production
 PORT=3000
@@ -219,12 +227,14 @@ Mitigations already in place:
 Run after every production deployment:
 
 **Authentication and Domain Restriction**
-- [ ] Coordinator logs in with institutional email/password → coordinator dashboard
-- [ ] Teacher logs in → sees only assigned subjects
-- [ ] Student logs in → sees marksheet or appropriate state message (NOT blank screen)
-- [ ] Login with non-institutional email (e.g. @gmail.com) → domain blocked error shown
-- [ ] Institutional email not in whitelist → access denied message shown (NOT blank screen)
+- [ ] Coordinator signs in with Google (institutional @charusat.ac.in email) → coordinator dashboard
+- [ ] Teacher signs in with Google → sees only assigned subjects
+- [ ] Student signs in with Google → sees marksheet or appropriate state message (NOT blank screen)
+- [ ] Google account with non-institutional email → domain blocked error on login page
+- [ ] Institutional email not whitelisted → `not_whitelisted` error on login page (NOT blank screen)
+- [ ] Second device sign-in → first device gets `session_superseded` on refresh
 - [ ] Logout clears session and redirects to login page
+- [ ] `DEV_AUTH_ENABLED=false` in production — `/auth/dev/login` returns 404
 
 **Student State Screens**
 - [ ] Student email NOT in Student table → shows "Your account is not linked to any student record. Contact the Coordinator."

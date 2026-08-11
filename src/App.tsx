@@ -6,12 +6,9 @@ import RoleRoute from './routes/RoleRoute'
 import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { Role } from './types'
 
-// Auth pages — small, load eagerly (needed before JS finishes, on login screen)
 import Login from './pages/Login'
-import ActivateAccount from './pages/ActivateAccount'
 import NotFound from './pages/NotFound'
 
-// Role-specific bundles — lazy loaded, only downloaded when the user's role matches
 const CoordinatorDashboard = lazy(() => import('./pages/coordinator/Dashboard'))
 const TeacherDashboard = lazy(() => import('./pages/teacher/Dashboard'))
 const MarksGridPage = lazy(() => import('./pages/shared/MarksGridPage'))
@@ -34,7 +31,6 @@ export default function App() {
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route path="/activate" element={<ActivateAccount />} />
 
               <Route element={<PrivateRoute />}>
                 <Route element={<RoleRoute allowedRoles={[Role.COORDINATOR]} />}>

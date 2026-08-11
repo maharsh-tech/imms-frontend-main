@@ -41,7 +41,7 @@ export interface User {
   name: string;
   role: Role;
   profilePic?: string;
-  needsPasswordChange: boolean;
+  lastLoginAt?: string | null;
 }
 
 export interface AccountInvite {
@@ -51,9 +51,7 @@ export interface AccountInvite {
   name?: string | null;
   identifier?: string | null;
   createdAt: string;
-  isActivated: boolean;
-  activationLink: string | null;
-  hasActivationToken?: boolean;
+  hasSignedIn: boolean;
   rosterLinked?: boolean | null;
 }
 

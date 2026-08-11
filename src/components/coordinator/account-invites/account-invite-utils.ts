@@ -41,11 +41,11 @@ export const downloadInviteLinksExcel = async (
 ) => {
   const ExcelJS = (await import('exceljs')).default
   const workbook = new ExcelJS.Workbook()
-  const worksheet = workbook.addWorksheet('Activation Links')
+  const worksheet = workbook.addWorksheet('Accounts')
 
   worksheet.columns = [
     { header: 'Student/Faculty/Coordinator ID', key: 'idOrEmail', width: 35 },
-    { header: 'Activation Link', key: 'link', width: 60 },
+    { header: 'Email', key: 'email', width: 40 },
   ]
 
   const headerRow = worksheet.getRow(1)
@@ -70,7 +70,7 @@ export const downloadInviteLinksExcel = async (
     const idOrEmail = invite.identifier || invite.email
     const addedRow = worksheet.addRow({
       idOrEmail,
-      link: invite.activationLink || '—',
+      email: invite.email,
     })
     addedRow.eachCell((cell) => {
       cell.border = {
@@ -91,7 +91,7 @@ export const downloadInviteLinksExcel = async (
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `activation_links_${bulkRole.toLowerCase()}s.xlsx`
+  link.download = `accounts_${bulkRole.toLowerCase()}s.xlsx`
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)

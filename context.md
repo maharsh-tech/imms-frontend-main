@@ -14,7 +14,7 @@
 | Server State | React Query (`src/hooks/`, 5 min staleTime on coordinator dashboard) |
 | HTTP Client | Axios with `withCredentials: true` (httpOnly cookies) |
 | Routing | React Router v7 |
-| Auth | Plan A: activation link â†’ set password â†’ login |
+| Auth | Google OAuth sign-in; httpOnly cookie session; dev role switcher in local builds |
 | Git Remote | https://github.com/maharsh-tech/imms-frontend-main.git (branch: main) |
 
 ## Architecture Principle â€” UI/UX Only
@@ -38,12 +38,9 @@
 
 | File | Route | Purpose |
 |---|---|---|
-| `src/pages/Login.tsx` | `/login` | Sign-in form. Posts `{ loginId, password }` to `POST /auth/login`. Students use **roll number**; staff use **@charusat.ac.in** email. Redirects by role after success. Post-activation success banner uses **router state only** (`auth-flash.ts`) â€” never URL query params. |
-| `src/pages/ActivateAccount.tsx` | `/activate#token=â€¦` | First-time password setup from coordinator activation link. Reads token from URL **hash** (`activation-token.ts`), strips it from the address bar, posts `{ token, newPassword }` to `POST /auth/activate`, then redirects to `/login` with router flash state. Password: min 10 chars, letter + digit. |
+| `src/pages/Login.tsx` | `/login` | **Continue with Google** only. Redirects to `GET /auth/google`. In Vite dev, shows dev role switcher buttons (`GET /auth/dev/login?role=...`). Handles `?error=` query params (`not_whitelisted`, `session_superseded`, etc.). |
 
-> **Not yet in UI:** `POST /auth/request-password-reset` and `POST /auth/reset-password` exist on the backend but have no frontend pages yet. `GET /audit` (coordinator audit log viewer) is also backend-only.
-
-Shared layout/components: `src/components/auth/` (`AuthShell`, `AuthCard`, `PasswordField`, `AuthAlert`).
+Shared layout/components: `src/components/auth/` (`AuthShell`, `AuthCard`, `AuthAlert`).
 
 ## Project Structure
 
@@ -61,17 +58,15 @@ imms-frontend/
 â”‚   â”‚   â”œâ”€â”€ subject-assignment-roster.ts  # Per-teacher roster (mirrors elective enrollment API)
 â”‚   â”‚   â””â”€â”€ marks.ts
 â”‚   â”œâ”€â”€ hooks/
-â”‚   â”‚   â”œâ”€â”€ useAccountInvites.ts   # List + create/delete/regenerate mutations
+â”‚   â”‚   â”œâ”€â”€ useAccountInvites.ts   # List + create/delete mutations
 â”‚   â”‚   â”œâ”€â”€ useStudents.ts, useFaculty.ts, useSubjects.ts, useAssignments.ts
 â”‚   â”‚   â”œâ”€â”€ useAssignmentRoster.ts # Per-teacher roster query + bulk/import/remove mutations
 â”‚   â”‚   â””â”€â”€ usePageTitle.ts
 â”‚   â”œâ”€â”€ utils/
 â”‚   â”‚   â”œâ”€â”€ identifier-patterns.ts # Roll validation; deriveBatch/deriveDepartment from roll
-â”‚   â”‚   â”œâ”€â”€ activation-token.ts    # Consume #token= from hash; strip URL
-â”‚   â”‚   â””â”€â”€ auth-flash.ts          # One-time login messages via router state
 â”‚   â”œâ”€â”€ components/
 â”‚   â”‚   â”œâ”€â”€ AuthBootstrap.tsx
-â”‚   â”‚   â”œâ”€â”€ auth/                    # Login + activate shared UI
+â”‚   â”‚   â”œâ”€â”€ auth/                    # Login shared UI
 â”‚   â”‚   â”œâ”€â”€ coordinator/
 â”‚   â”‚   â”‚   â”œâ”€â”€ account-invites/     # BulkInviteForm, SingleInviteForm, InviteTable, RosterDialog
 â”‚   â”‚   â”‚   â””â”€â”€ subjects/            # AddSubjectForm, AddAssessmentForm, ElectiveRosterModal, BacklogStudentForm
@@ -80,7 +75,6 @@ imms-frontend/
 â”‚   â”‚   â””â”€â”€ shared/                  # SubmissionStatusBadge, ExcelImportCard
 â”‚   â”œâ”€â”€ pages/
 â”‚   â”‚   â”œâ”€â”€ Login.tsx
-â”‚   â”‚   â”œâ”€â”€ ActivateAccount.tsx
 â”‚   â”‚   â”œâ”€â”€ coordinator/
 â”‚   â”‚   â”‚   â”œâ”€â”€ Dashboard.tsx
 â”‚   â”‚   â”‚   â”œâ”€â”€ AccountInvites.tsx
@@ -103,8 +97,7 @@ imms-frontend/
 
 | Path | Role | Purpose |
 |---|---|---|
-| `/login` | Public | Email/roll-number + password login |
-| `/activate#token=â€¦` | Public | Set password from activation link (hash consumed client-side) |
+| `/login` | Public | Google OAuth sign-in (+ dev role switcher locally) |
 | `/coordinator` | Coordinator | Tabs: accounts, students, faculty, subjects, assignments |
 | `/coordinator/marks/:assignmentId/:assessmentId` | Coordinator | NE flags, lock, unlock, publish, unpublish |
 | `/teacher` | Teacher | Assigned subjects â†’ marks entry links |
@@ -124,7 +117,7 @@ imms-frontend/
 ## Implemented Features
 
 - [x] Epic 1.1 â€” Project Scaffolding
-- [x] Epic 1.3 â€” Authentication (Plan A + cookie session)
+- [x] Epic 1.3 — Authentication (Google OAuth + cookie session + single concurrent session)
 - [x] Epic 1.4 â€” Allowed User Management UI
 - [x] Epic 1.5 â€” Excel Import UI
 - [x] Epic 2.1 â€” Subject & Assessment management UI (full CRUD, search/filter)
@@ -153,7 +146,7 @@ cd imms-frontend
 npm run dev
 ```
 
-Open http://localhost:5173 â€” login fails with "Check credentials" if backend is not running (`ERR_CONNECTION_REFUSED` on port 3000).
+Open http://localhost:5173 — sign in via **Continue with Google** or dev role switcher (`DEV_AUTH_ENABLED=true` on backend). Backend must be running on port 3000.
 
 Copy `.env.example` â†’ `.env` and set `VITE_API_BASE_URL=http://localhost:3000/api/v1`.
 
@@ -190,9 +183,9 @@ Removing a backlog student clears both `SubjectEnrollment` and any `SubjectAssig
 
 ## Coordinator: Account Management
 
-Create student/teacher/coordinator accounts, bulk paste IDs, filter by role, copy activation links (manual delivery â€” no automated email UI). **Copy activation link** / **Copy all pending links** call `POST /allowed-users/:id/regenerate-activation-link`. Bulk creation button renamed to **Create accounts & download Excel**, which automatically generates and triggers a download of a native `.xlsx` sheet containing Student/Faculty/Coordinator IDs and activation links using `exceljs`. Listing accounts does not expose links â€” only `hasActivationToken`. **`isActivated` is server-computed** (from `needsPasswordChange`) â€” never trusted from URL params.
+Create student/teacher/coordinator accounts, bulk paste IDs, filter by role. Bulk creation button **Create accounts & download Excel** downloads a native `.xlsx` sheet with IDs and emails (no activation links). **`hasSignedIn`** column shows whether the user has completed at least one Google sign-in.
 
-**Add to roster** (student accounts not yet in master roster): department and batch **auto-derive from roll number** (`deriveDepartmentFromRollNumber`, `deriveBatchFromRollNumber`); semester must be entered manually. Activation not required before roster add.
+**Add to roster** (student accounts not yet in master roster): department and batch **auto-derive from roll number** (`deriveDepartmentFromRollNumber`, `deriveBatchFromRollNumber`); semester must be entered manually.
 
 **Student Excel:** CSPIT `Roll No` + `Student Name` (regular `24ITâ€¦` and diploma `D25ITâ€¦`). Set semester in import panel; department/batch auto from roll when omitted.
 
@@ -228,13 +221,15 @@ API highlights:
 - Backlog enrollment (CORE): same enrollment endpoints; student must have advanced past the offering's semester
 - Assignment roster: `GET/POST /subject-assignments/:id/roster/*` (bulk, import, template, delete)
 
-## Dev logins (after seed)
+## Dev sign-in (after seed)
 
-| Role | Login | Password |
-|------|-------|----------|
-| Coordinator | coordinator@charusat.ac.in | password123 |
-| Teacher | test.it@charusat.ac.in | password123@ |
-| Student | 24IT093 or 24it093@charusat.edu.in | password123@ |
+| Role | Google email | Local dev |
+|------|--------------|-----------|
+| Coordinator | coordinator@charusat.ac.in | Google OAuth or dev switcher on `/login` |
+| Teacher | test.it@charusat.ac.in | Google OAuth or dev switcher |
+| Student | 24it093@charusat.edu.in | Google OAuth or dev switcher |
+
+Backend `.env`: `DEV_AUTH_ENABLED=true`. Production: `DEV_AUTH_ENABLED=false`.
 
 ## Last Updated
 

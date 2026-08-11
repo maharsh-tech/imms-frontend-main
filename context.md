@@ -176,6 +176,15 @@ Database seed runs in **backend only**: `cd imms-backend && npx prisma db seed`
 
 Subjects tab is catalog-only. **CIE exams, teacher assignment, backlog students, and per-assignment roster** live on **Exam & Assignments** (`AssignmentsManagement.tsx`).
 
+**Lazy load (no cache):** tab open fetches **years only** → pick year → **semesters** → pick semester → **offerings for that scope**. Subjects/faculty for forms load **only when** Assign Teacher or Add CIE Exam is opened (`useAssignmentFormCatalog`). Same `staleTime: 0`, `gcTime: 0` pattern as Marks Entry.
+
+| Step | API |
+|------|-----|
+| Years | `GET /subject-offerings/marks-entry/years` |
+| Semesters | `GET /subject-offerings/assignments/semesters?academicYear=` |
+| Offerings table | `GET /subject-offerings?academicYear=&semester=` |
+| Form catalogs | `GET /subjects`, `GET /faculty` (on demand) |
+
 | Action | UI | API |
 |---|---|---|
 | Open Marks | Primary filled button in expanded CIE row | `/coordinator/marks/:assignmentId/:assessmentId` |

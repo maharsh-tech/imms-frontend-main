@@ -17,7 +17,10 @@ export {
   SUBJECT_ENROLLMENTS_KEY,
 } from './useSubjects'
 export {
-  useAssignmentsBundle,
+  useAssignmentYears,
+  useAssignmentSemesters,
+  useAssignmentOfferings,
+  useAssignmentFormCatalog,
   useAssignmentsInvalidator,
   assignmentMutations,
   ASSIGNMENTS_KEY,

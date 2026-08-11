@@ -1,21 +1,60 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getOfferings, getSubjects, getFaculty, createAssignment, deleteAssignment } from '../api/subjects'
+import {
+  getOfferings,
+  getSubjects,
+  getFaculty,
+  getMarksEntryYears,
+  getAssignmentSemesters,
+  createAssignment,
+  deleteAssignment,
+} from '../api/subjects'
 
-export const ASSIGNMENTS_KEY = 'assignments'
+const NO_CACHE = { staleTime: 0, gcTime: 0 } as const
 
-export const useAssignmentsBundle = () =>
+export const useAssignmentYears = () =>
   useQuery({
-    queryKey: [ASSIGNMENTS_KEY],
-    staleTime: 0,
+    queryKey: ['assignments', 'years'],
+    queryFn: () => getMarksEntryYears(),
+    ...NO_CACHE,
+  })
+
+export const useAssignmentSemesters = (academicYear: string) =>
+  useQuery({
+    queryKey: ['assignments', 'semesters', academicYear.trim()],
+    queryFn: () => getAssignmentSemesters(academicYear.trim()),
+    enabled: Boolean(academicYear.trim()),
+    ...NO_CACHE,
+  })
+
+export const useAssignmentOfferings = (academicYear: string, semester: string) =>
+  useQuery({
+    queryKey: ['assignments', 'offerings', academicYear.trim(), semester],
+    queryFn: () =>
+      getOfferings({
+        academicYear: academicYear.trim(),
+        semester: Number(semester),
+      }),
+    enabled: Boolean(academicYear.trim() && semester),
+    ...NO_CACHE,
+  })
+
+/** Subjects + faculty for assign-teacher / add-exam forms — only when a form is open. */
+export const useAssignmentFormCatalog = (enabled: boolean) =>
+  useQuery({
+    queryKey: ['assignments', 'formCatalog'],
     queryFn: async () => {
-      const [offerings, subjects, faculty] = await Promise.all([
-        getOfferings(),
+      const [subjects, faculty] = await Promise.all([
         getSubjects({ limit: 500 }),
         getFaculty({ limit: 500 }),
       ])
-      return { offerings, subjects: subjects.data, faculty: faculty.data }
+      return { subjects: subjects.data, faculty: faculty.data }
     },
+    enabled,
+    ...NO_CACHE,
   })
+
+/** @deprecated Use scoped hooks above — kept for invalidator key compatibility */
+export const ASSIGNMENTS_KEY = 'assignments'
 
 export const useAssignmentsInvalidator = () => {
   const queryClient = useQueryClient()

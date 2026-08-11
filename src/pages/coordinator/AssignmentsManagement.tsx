@@ -14,7 +14,10 @@ import BacklogStudentForm from '../../components/coordinator/subjects/BacklogStu
 import ElectiveRosterModal from '../../components/coordinator/subjects/ElectiveRosterModal';
 import { apiErrorMessage } from '../../utils/api-errors';
 import {
-  useAssignmentsBundle,
+  useAssignmentYears,
+  useAssignmentSemesters,
+  useAssignmentOfferings,
+  useAssignmentFormCatalog,
   useAssignmentsInvalidator,
   assignmentMutations,
 } from '../../hooks/useAssignments';
@@ -63,8 +66,8 @@ const AssignmentsManagement = () => {
   const [error, setError] = useState('');
 
   const [search, setSearch] = useState('');
-  const [filterYear, setFilterYear] = useState('');
-  const [filterSemester, setFilterSemester] = useState('');
+  const [listAcademicYear, setListAcademicYear] = useState('');
+  const [listSemester, setListSemester] = useState('');
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showAssignTeacher, setShowAssignTeacher] = useState(false);
@@ -89,11 +92,33 @@ const AssignmentsManagement = () => {
   const { createAssessment } = useSubjectMutations();
   const { data: rosterRows = [] } = useAssignmentRoster(rosterAssignment?.id);
   const { bulkAdd: bulkAddRoster, remove: removeFromRoster, invalidateRoster } = useAssignmentRosterMutations();
-  const { data, isLoading, isFetching, error: queryError } = useAssignmentsBundle();
-  const offerings = data?.offerings ?? [];
-  const subjects = data?.subjects ?? [];
-  const faculty = data?.faculty ?? [];
-  const loading = isLoading || isFetching;
+
+  const formOpen = showAssignTeacher || showAddAssessment;
+  const { data: formCatalog } = useAssignmentFormCatalog(formOpen);
+  const subjects = formCatalog?.subjects ?? [];
+  const faculty = formCatalog?.faculty ?? [];
+
+  const {
+    data: yearOptions = [],
+    isLoading: yearsLoading,
+    isFetching: yearsFetching,
+  } = useAssignmentYears();
+  const {
+    data: semesterOptions = [],
+    isLoading: semestersLoading,
+    isFetching: semestersFetching,
+  } = useAssignmentSemesters(listAcademicYear);
+  const {
+    data: offerings = [],
+    isLoading: offeringsLoading,
+    isFetching: offeringsFetching,
+    error: queryError,
+  } = useAssignmentOfferings(listAcademicYear, listSemester);
+
+  const loadingYears = yearsLoading || yearsFetching;
+  const loadingSemesters = semestersLoading || semestersFetching;
+  const loadingOfferings = offeringsLoading || offeringsFetching;
+  const listReady = Boolean(listAcademicYear.trim() && listSemester);
 
   const createMutation = useMutation({
     mutationFn: assignmentMutations.create,
@@ -118,17 +143,7 @@ const AssignmentsManagement = () => {
   });
 
   const actionLoading =
-    loading || createMutation.isPending || deleteMutation.isPending || createAssessment.isPending;
-
-  const academicYears = useMemo(
-    () => [...new Set(offerings.map((o) => o.academicYear))].sort(),
-    [offerings],
-  );
-
-  const semesters = useMemo(
-    () => [...new Set(offerings.map((o) => o.semester))].sort((a, b) => a - b),
-    [offerings],
-  );
+    loadingOfferings || createMutation.isPending || deleteMutation.isPending || createAssessment.isPending;
 
   const selectedAssessmentSubject = useMemo(
     () => subjects.find((s) => s.id === selectedSubjectId),
@@ -157,14 +172,26 @@ const AssignmentsManagement = () => {
   const filteredOfferings = useMemo(() => {
     const q = search.trim().toLowerCase();
     return offerings.filter((o) => {
-      if (filterYear && o.academicYear !== filterYear) return false;
-      if (filterSemester && o.semester !== Number(filterSemester)) return false;
       if (!q) return true;
       const teachers = o.assignments.map((a) => a.faculty.name).join(' ');
       const haystack = `${o.subject.code} ${o.subject.name} ${teachers}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [offerings, search, filterYear, filterSemester]);
+  }, [offerings, search]);
+
+  const handleListYearChange = (value: string) => {
+    setListAcademicYear(value);
+    setListSemester('');
+    setExpandedId(null);
+  };
+
+  const handleListSemesterChange = (value: string) => {
+    setListSemester(value);
+    setExpandedId(null);
+  };
+
+  const selectClass =
+    'border border-outline-variant rounded-md px-3 py-2 text-sm bg-surface-container-lowest disabled:opacity-50';
 
   const handleSubjectChange = (id: string) => {
     setSubjectId(id);
@@ -448,6 +475,9 @@ const AssignmentsManagement = () => {
       {showAssignTeacher && (
       <div className="bg-surface-container-lowest rounded-lg shadow p-6 border border-outline-variant">
         <h3 className="text-lg font-semibold mb-4">Assign Teacher to Subject</h3>
+        {!formCatalog && (
+          <p className="mb-4 text-sm text-on-surface-variant">Loading subjects and faculty…</p>
+        )}
         <form onSubmit={handleCreate} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <select
             required
@@ -537,7 +567,7 @@ const AssignmentsManagement = () => {
           maxMarks={maxMarks}
           examDate={examDate}
           examTime={examTime}
-          isPending={actionLoading}
+          isPending={actionLoading || (formOpen && !formCatalog)}
           onSubjectChange={handleAssessmentSubjectChange}
           onAcademicYearChange={setAssessmentAcademicYear}
           onSemesterChange={setAssessmentSemester}
@@ -550,29 +580,69 @@ const AssignmentsManagement = () => {
       )}
 
       <div className="bg-surface-container-lowest rounded-lg shadow p-4 border border-outline-variant flex flex-wrap gap-3">
-        <input
-          placeholder="Search subject or teacher"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border rounded px-3 py-2 flex-1 min-w-[180px]"
-        />
-        <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="border rounded px-3 py-2">
-          <option value="">All years</option>
-          {academicYears.map((y) => (
-            <option key={y} value={y}>{y}</option>
-          ))}
-        </select>
-        <select value={filterSemester} onChange={(e) => setFilterSemester(e.target.value)} className="border rounded px-3 py-2">
-          <option value="">All semesters</option>
-          {semesters.map((s) => (
-            <option key={s} value={s}>Semester {s}</option>
-          ))}
-        </select>
+        <label className="block min-w-[160px] flex-1">
+          <span className="mb-1 block text-xs font-semibold text-on-surface-variant">Academic year</span>
+          <select
+            value={listAcademicYear}
+            onChange={(e) => handleListYearChange(e.target.value)}
+            disabled={loadingYears || yearOptions.length === 0}
+            className={selectClass}
+            aria-label="Select academic year"
+          >
+            <option value="">
+              {loadingYears
+                ? 'Loading…'
+                : yearOptions.length === 0
+                  ? 'No years in system'
+                  : 'Select year'}
+            </option>
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </label>
+        <label className="block min-w-[140px] flex-1">
+          <span className="mb-1 block text-xs font-semibold text-on-surface-variant">Semester</span>
+          <select
+            value={listSemester}
+            onChange={(e) => handleListSemesterChange(e.target.value)}
+            disabled={!listAcademicYear || loadingSemesters}
+            className={selectClass}
+            aria-label="Select semester"
+          >
+            <option value="">
+              {!listAcademicYear
+                ? 'Select year first'
+                : loadingSemesters
+                  ? 'Loading…'
+                  : semesterOptions.length === 0
+                    ? 'No semesters'
+                    : 'Select semester'}
+            </option>
+            {semesterOptions.map((s) => (
+              <option key={s} value={String(s)}>Semester {s}</option>
+            ))}
+          </select>
+        </label>
+        <label className="block min-w-[180px] flex-[2]">
+          <span className="mb-1 block text-xs font-semibold text-on-surface-variant">Search</span>
+          <input
+            placeholder="Subject or teacher"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            disabled={!listReady}
+            className={selectClass}
+          />
+        </label>
       </div>
 
       <div className="bg-surface-container-lowest rounded-lg shadow border border-outline-variant overflow-x-auto">
-        {loading && offerings.length === 0 ? (
-          <p className="p-6 text-center text-on-surface-variant">Loading...</p>
+        {!listReady ? (
+          <p className="p-6 text-center text-on-surface-variant">
+            Select academic year and semester to load offerings.
+          </p>
+        ) : loadingOfferings && offerings.length === 0 ? (
+          <p className="p-6 text-center text-on-surface-variant">Loading offerings…</p>
         ) : (
           <table className="min-w-full divide-y divide-surface-variant">
             <thead className="bg-surface-container-low">
@@ -712,7 +782,7 @@ const AssignmentsManagement = () => {
                         they are created, even before a teacher is assigned.
                       </>
                     ) : (
-                      'No offerings match your search or filters.'
+                      'No offerings match your search.'
                     )}
                   </td>
                 </tr>

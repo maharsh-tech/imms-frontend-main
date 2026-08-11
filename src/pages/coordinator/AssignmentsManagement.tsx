@@ -45,6 +45,13 @@ const formatRange = (assignment: OfferingAssignment) => {
   return 'All Students';
 };
 
+const actionBtnBase =
+  'inline-flex w-fit items-center justify-center gap-1 rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+const openMarksBtn = `${actionBtnBase} border-primary bg-primary text-white hover:bg-primary-container`;
+const backlogBtn = `${actionBtnBase} border-purple-300 bg-purple-50 text-purple-800 hover:bg-purple-100`;
+const rosterBtn = `${actionBtnBase} border-outline-variant bg-surface-container-low text-primary hover:bg-surface-container`;
+const deleteBtn = `${actionBtnBase} border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50`;
+
 const AssignmentsManagement = () => {
   const [subjectId, setSubjectId] = useState('');
   const [facultyId, setFacultyId] = useState('');
@@ -297,19 +304,19 @@ const AssignmentsManagement = () => {
       return (
         <Link
           to={`/coordinator/marks/${assignments[0].id}/${assessmentId}`}
-          className="text-sm text-primary hover:underline inline-flex items-center gap-1 shrink-0"
+          className={openMarksBtn}
         >
           Open Marks ↗
         </Link>
       );
     }
     return (
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1.5">
         {assignments.map((assignment) => (
           <Link
             key={assignment.id}
             to={`/coordinator/marks/${assignment.id}/${assessmentId}`}
-            className="text-sm text-primary hover:underline inline-flex items-center gap-1 shrink-0"
+            className={openMarksBtn}
           >
             Open Marks ({assignment.faculty.name}) ↗
           </Link>
@@ -629,16 +636,16 @@ const AssignmentsManagement = () => {
                         <button
                           type="button"
                           onClick={() => setBacklogOffering(offering)}
-                          className="text-purple-700 hover:underline text-left"
+                          className={backlogBtn}
                         >
                           Backlog students
                         </button>
                         {offering.assignments.map((assignment) => (
-                          <div key={assignment.id} className="flex flex-col gap-1 border-t border-outline-variant/60 pt-1.5 first:border-t-0 first:pt-0">
+                          <div key={assignment.id} className="flex flex-col gap-1.5 border-t border-outline-variant/60 pt-1.5 first:border-t-0 first:pt-0">
                             <button
                               type="button"
                               onClick={() => handleOpenRoster(assignment, offering.subject.code)}
-                              className="text-primary hover:underline text-left"
+                              className={rosterBtn}
                             >
                               Manage roster {offering.assignments.length > 1 ? `(${assignment.faculty.name})` : ''}
                             </button>
@@ -646,7 +653,7 @@ const AssignmentsManagement = () => {
                               type="button"
                               onClick={() => handleDelete(assignment, offering.subject.code)}
                               disabled={actionLoading}
-                              className="text-red-600 hover:underline disabled:opacity-50 text-left"
+                              className={deleteBtn}
                             >
                               Delete {offering.assignments.length > 1 ? `(${assignment.faculty.name})` : ''}
                             </button>

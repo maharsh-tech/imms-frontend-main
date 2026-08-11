@@ -173,6 +173,20 @@ Database seed runs in **backend only**: `cd imms-backend && npx prisma db seed`
 - PUBLISHED coordinator view: unpublish available; info banner for students
 - All workflow actions show backend error messages via `apiErrorMessage`
 - Marksheet uses `hasPublished` from API (not only `/auth/me` studentState)
+- Tab order: NE/AB checkboxes are skipped when tabbing between mark inputs (`MarksGridRow.tsx`, `tabIndex={-1}` on flag controls)
+
+## Coordinator: Exam & Assignments
+
+Subjects tab is catalog-only. **CIE exams, teacher assignment, backlog students, and per-assignment roster** live on **Exam & Assignments** (`AssignmentsManagement.tsx`).
+
+| Action | UI | API |
+|---|---|---|
+| Open Marks | Primary filled button in expanded CIE row | `/coordinator/marks/:assignmentId/:assessmentId` |
+| Backlog students | Purple outlined button | `POST/DELETE /subjects/:id/enrollments/*` (single roll via `BacklogStudentForm`) |
+| Manage roster | Neutral outlined button per teacher | `GET/POST /subject-assignments/:id/roster/*` via `ElectiveRosterModal` |
+| Delete assignment | Red outlined button per teacher | `DELETE /subject-assignments/:id` |
+
+Removing a backlog student clears both `SubjectEnrollment` and any `SubjectAssignmentRoster` row on that offering (backend sync). Removing the last roster row for a student also drops the offering enrollment.
 
 ## Coordinator: Account Management
 
@@ -223,6 +237,10 @@ API highlights:
 | Student | 24IT093 or 24it093@charusat.edu.in | password123@ |
 
 ## Last Updated
+
+**Exam & Assignments action buttons + marks grid tab order** (2026-08-11):
+- `AssignmentsManagement.tsx`: **Open Marks**, **Backlog students**, **Manage roster**, and **Delete** use filled/outlined button styles (aligned with teacher dashboard CIE exam links) instead of plain text links.
+- `MarksGridRow.tsx`: NE/AB checkboxes use `tabIndex={-1}` so keyboard Tab moves mark input → mark input only (skips flag toggles).
 
 **Backlog students + per-teacher Excel roster** (2026-08-11):
 - New `BacklogStudentForm.tsx` (single roll-number add/remove, no Excel) opened per subject-offering row in Exam & Assignments ("Backlog students" action) â€” reuses the existing `bulkEnrollStudents`/`removeSubjectEnrollment` API + `useSubjectMutations` hooks with a 1-element roll-number array.

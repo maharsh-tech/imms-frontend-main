@@ -452,6 +452,7 @@ POST   /subjects/:id/enrollments/import?academicYear=2026-2027&semester=5   mult
 DELETE /subjects/:id/enrollments/:studentId?academicYear=2026-2027&semester=5
 Roles: COORDINATOR
 ```
+Also removes any `SubjectAssignmentRoster` rows for that student on assignments under the same offering (keeps marks grid and backlog enrollment in sync).
 Enrollments are scoped to a **subject offering** (`subject + academicYear + semester`), not the catalog subject alone.
 
 - **Elective:** student must exist in master roster with matching department and semester.
@@ -569,7 +570,7 @@ Only allowed before marks entry begins.
 GET /subject-offerings?academicYear=2026-2027&semester=5
 Roles: COORDINATOR
 ```
-Returns subject offerings that have at least one CIE exam or teacher assignment. Used by the coordinator Exam & Assignments table so CIE exams appear even when no teacher is assigned yet. Each row includes nested `subject.assessments` and `assignments[]` (each assignment includes `rosterCount`).
+Returns subject offerings that have at least one CIE exam or teacher assignment. Used by the coordinator Exam & Assignments table so CIE exams appear even when no teacher is assigned yet. Each row includes nested `subject.assessments` and `assignments[]` (each assignment includes `rosterCount`). UI actions (Open Marks, Backlog students, Manage roster, Delete) render as button-styled controls in the expanded CIE row and Actions column.
 
 ### 8.6 Per-Assignment Roster (explicit roll list)
 
@@ -582,7 +583,7 @@ DELETE /subject-assignments/:id/roster/:studentId
 Roles: COORDINATOR
 ```
 
-Explicit roll-number roster for one teacher's assignment — alternative to typed `startRollNumber`/`endRollNumber`. When roster rows exist, the marks grid uses this list instead of cohort/range logic. Adding a student also creates a `SubjectEnrollment` for the offering (backlog override). Removal blocked if marks exist for that student under the assignment. A student cannot appear on two teachers' rosters/ranges for the same offering.
+Explicit roll-number roster for one teacher's assignment — alternative to typed `startRollNumber`/`endRollNumber`. When roster rows exist, the marks grid uses this list instead of cohort/range logic. Adding a student also creates a `SubjectEnrollment` for the offering (backlog override). Removal blocked if marks exist for that student under the assignment. A student cannot appear on two teachers' rosters/ranges for the same offering. Deleting the last roster row for a student on the offering also removes their `SubjectEnrollment`.
 
 ---
 

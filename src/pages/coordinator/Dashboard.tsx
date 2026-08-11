@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
 import AccountInvites from './AccountInvites'
 import StudentsManagement from './StudentsManagement'
@@ -8,21 +9,28 @@ import AssignmentsManagement from './AssignmentsManagement'
 import MarksEntry from './MarksEntry'
 import MarksReports from './MarksReports'
 import { StaffShell } from '../../components/staff'
-import { Users, GraduationCap, BookOpen, Layers, Link2, ClipboardList, FileSpreadsheet } from 'lucide-react'
+import {
+  COORDINATOR_TABS,
+  isCoordinatorTab,
+  type CoordinatorTabId,
+} from '../../components/staff/staff-nav'
 import apiClient from '../../api/client'
-
-type Tab =
-  | 'subjects'
-  | 'assignments'
-  | 'marks'
-  | 'faculty'
-  | 'students'
-  | 'marksReports'
-  | 'invites'
 
 export default function CoordinatorDashboard() {
   const { user, logout } = useAuthStore()
-  const [tab, setTab] = useState<Tab>('subjects')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Support deep links like /coordinator?tab=marks (also used by the marks-page sidebar).
+  const [tab, setTab] = useState<CoordinatorTabId>(() => {
+    const fromUrl = searchParams.get('tab')
+    return isCoordinatorTab(fromUrl) ? fromUrl : 'subjects'
+  })
+
+  // Keep the URL in sync with the live section so refresh/deep links land correctly.
+  const handleTabChange = (id: CoordinatorTabId) => {
+    setTab(id)
+    setSearchParams({ tab: id }, { replace: true })
+  }
 
   const handleLogout = async () => {
     try {
@@ -32,25 +40,15 @@ export default function CoordinatorDashboard() {
     }
   }
 
-  const tabs = [
-    { id: 'subjects' as const, label: 'Subject', icon: Layers },
-    { id: 'assignments' as const, label: 'Exam & Assignments', icon: Link2 },
-    { id: 'marks' as const, label: 'Marks Entry', icon: ClipboardList },
-    { id: 'faculty' as const, label: 'Manage Faculty', icon: BookOpen },
-    { id: 'students' as const, label: 'Manage Student', icon: GraduationCap },
-    { id: 'marksReports' as const, label: 'Marks', icon: FileSpreadsheet },
-    { id: 'invites' as const, label: 'Account Management', shortLabel: 'Accounts', icon: Users },
-  ]
-
   return (
     <StaffShell
       title="Coordinator Portal"
       userLabel={user?.name || user?.email}
       onLogout={handleLogout}
       wide
-      tabs={tabs}
+      tabs={COORDINATOR_TABS}
       activeTab={tab}
-      onTabChange={setTab}
+      onTabChange={handleTabChange}
     >
       <header className="mb-md">
         <h1 className="text-headline-lg-mobile font-semibold text-primary lg:text-headline-lg">

@@ -5,6 +5,7 @@ import { getMyAssignments } from '../../api/subjects'
 import type { SubjectAssignment } from '../../api/subjects'
 import apiClient from '../../api/client'
 import { StaffShell } from '../../components/staff'
+import { TEACHER_TABS } from '../../components/staff/staff-nav'
 import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge'
 
 const sortAssessments = (assessments: SubjectAssignment['subject']['assessments']) =>
@@ -33,6 +34,8 @@ export default function TeacherDashboard() {
       title="Teacher Portal"
       userLabel={user?.name || user?.email}
       onLogout={handleLogout}
+      tabs={TEACHER_TABS}
+      activeTab="home"
     >
       <header className="mb-xl">
         <h1 className="text-headline-lg-mobile font-semibold text-primary lg:text-headline-lg">

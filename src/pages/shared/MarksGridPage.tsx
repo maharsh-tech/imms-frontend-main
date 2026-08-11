@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
 import {
   getMarksGrid,
@@ -16,6 +16,7 @@ import type { MarksGrid } from '../../api/marks'
 import { FlagType } from '../../types'
 import SubmissionStatusBadge from '../../components/shared/SubmissionStatusBadge'
 import { StaffShell } from '../../components/staff'
+import { COORDINATOR_TABS, TEACHER_TABS } from '../../components/staff/staff-nav'
 import apiClient from '../../api/client'
 import { FileText, FileSpreadsheet } from 'lucide-react'
 import { MarksGridRow, MARKS_GRID_COLUMNS, type MarksGridRowState } from './MarksGridRow'
@@ -31,9 +32,20 @@ const MarksGridPage = () => {
   usePageTitle('Marks Grid')
   const { assignmentId, assessmentId } = useParams<{ assignmentId: string; assessmentId: string }>()
   const { user, logout } = useAuthStore()
+  const navigate = useNavigate()
   const isCoordinator = user?.role === 'COORDINATOR'
   const isTeacher = user?.role === 'TEACHER'
   const invalidateAssignments = useAssignmentsInvalidator()
+
+  // Sidebar navigation — quick jump back to the portal's dashboard sections.
+  const staffTabs = isCoordinator ? COORDINATOR_TABS : TEACHER_TABS
+  const handleTabChange = (id: string) => {
+    if (isCoordinator) {
+      navigate(`/coordinator?tab=${encodeURIComponent(id)}`)
+    } else {
+      navigate('/teacher')
+    }
+  }
 
   const [grid, setGrid] = useState<MarksGrid | null>(null)
   const [rows, setRows] = useState<RowState[]>([])
@@ -464,6 +476,8 @@ const MarksGridPage = () => {
         userLabel={user?.name || user?.email}
         onLogout={handleLogout}
         wide
+        tabs={staffTabs}
+        onTabChange={handleTabChange}
       >
         <p className="py-12 text-center text-body-md text-on-surface-variant">Loading...</p>
       </StaffShell>
@@ -477,6 +491,8 @@ const MarksGridPage = () => {
         userLabel={user?.name || user?.email}
         onLogout={handleLogout}
         wide
+        tabs={staffTabs}
+        onTabChange={handleTabChange}
       >
         <p className="py-12 text-center text-body-md text-error">{error || 'Not found'}</p>
       </StaffShell>
@@ -491,6 +507,8 @@ const MarksGridPage = () => {
       userLabel={user?.name || user?.email}
       onLogout={handleLogout}
       wide
+      tabs={staffTabs}
+      onTabChange={handleTabChange}
     >
       <div className="md:pr-52 pb-20 md:pb-0 relative">
         <Link to={backLink} className="text-label-md text-primary hover:underline">

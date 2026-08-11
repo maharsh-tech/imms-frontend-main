@@ -6,8 +6,9 @@ import FacultyManagement from './FacultyManagement'
 import SubjectsManagement from './SubjectsManagement'
 import AssignmentsManagement from './AssignmentsManagement'
 import MarksEntry from './MarksEntry'
+import MarksReports from './MarksReports'
 import { StaffShell } from '../../components/staff'
-import { Users, GraduationCap, BookOpen, Layers, Link2, ClipboardList } from 'lucide-react'
+import { Users, GraduationCap, BookOpen, Layers, Link2, ClipboardList, FileSpreadsheet } from 'lucide-react'
 import apiClient from '../../api/client'
 
 type Tab =
@@ -16,6 +17,7 @@ type Tab =
   | 'marks'
   | 'faculty'
   | 'students'
+  | 'marksReports'
   | 'invites'
 
 export default function CoordinatorDashboard() {
@@ -36,6 +38,7 @@ export default function CoordinatorDashboard() {
     { id: 'marks' as const, label: 'Marks Entry', icon: ClipboardList },
     { id: 'faculty' as const, label: 'Manage Faculty', icon: BookOpen },
     { id: 'students' as const, label: 'Manage Student', icon: GraduationCap },
+    { id: 'marksReports' as const, label: 'Marks', icon: FileSpreadsheet },
     { id: 'invites' as const, label: 'Account Management', shortLabel: 'Accounts', icon: Users },
   ]
 
@@ -63,6 +66,7 @@ export default function CoordinatorDashboard() {
       {tab === 'marks' && <MarksEntry />}
       {tab === 'faculty' && <FacultyManagement />}
       {tab === 'students' && <StudentsManagement />}
+      {tab === 'marksReports' && <MarksReports />}
       {tab === 'invites' && <AccountInvites />}
     </StaffShell>
   )

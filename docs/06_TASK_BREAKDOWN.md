@@ -303,16 +303,37 @@ est new imms-backend) | 1h | Backend |
 
 ---
 
-### Epic 3.2 — Reports API
+### Epic 3.2 — Reports API (Excel v1 — coordinator Marks tab)
+
+### Status (2026-08-11)
+
+**Epic 3.2: Complete (Excel v1)**
+
+| # | Task | Status |
+|---|---|---|
+| 3.2.1 | `reports` module: cascade endpoints | ✅ Done |
+| 3.2.2 | `GET /reports/batch/students` — paginated roster | ✅ Done |
+| 3.2.3 | `GET /reports/marksheet/:studentId` | ✅ Done |
+| 3.2.4 | `GET /reports/students/search` | ✅ Done |
+| 3.2.5 | Batch + single-student Excel export | ✅ Done |
+| 3.2.6 | Shared `build-student-marksheet.ts` | ✅ Done |
+| 3.2.7 | Security: COORDINATOR-only + controller spec | ✅ Done |
+| 3.2.8 | Security: published-only filter | ✅ Done |
 
 | # | Task | Est. Hours | Owner |
 |---|---|---|---|
-| 3.2.1 | GET /reports/marksheet/:studentId — JSON marksheet | 2h | Backend |
-| 3.2.2 | GET /reports/semester — semester-wide report JSON | 2h | Backend |
-| 3.2.3 | GET /reports/subject/:id — subject-wise report JSON | 1.5h | Backend |
-| 3.2.4 | Student IDOR guard: students can only query their own ID | 1h | Backend |
+| 3.2.1 | `reports` module: cascade (`/reports/years`, `/semesters`, `/batches`) | 1.5h | Backend |
+| 3.2.2 | `GET /reports/batch/students` — paginated roster, no marks | 1.5h | Backend |
+| 3.2.3 | `GET /reports/marksheet/:studentId` — coordinator marksheet (published only, explicit year/sem) | 2h | Backend |
+| 3.2.4 | `GET /reports/students/search` — roll prefix search | 1h | Backend |
+| 3.2.5 | `GET /reports/batch/export` + `GET /reports/marksheet/:id/export` — server XLSX | 2h | Backend |
+| 3.2.6 | Extract shared marksheet builder (`build-student-marksheet.ts`) from `getStudentMarksheet` | 1h | Backend |
+| 3.2.7 | **Security:** `@Roles(COORDINATOR)` on all routes; `reports.controller.spec.ts` — 403 for STUDENT/TEACHER on every route | 1.5h | Backend |
+| 3.2.8 | **Security:** Published-only filter in all report queries; no draft mark leak | 0.5h | Backend |
 
-**Total: ~6.5h**
+**Total: ~11h**
+
+> PDF endpoints (`/reports/*/pdf`, semester-wide JSON) deferred to Epic 3.3. Student self-access on `/reports/marksheet/:id` deferred — students keep `GET /marks/my-marksheet` only.
 
 ---
 
@@ -332,17 +353,35 @@ est new imms-backend) | 1h | Backend |
 
 ---
 
-### Epic 3.4 — Coordinator Report UI
+### Epic 3.4 — Coordinator Marks tab (view + Excel export)
+
+### Status (2026-08-11)
+
+**Epic 3.4: Complete (Excel v1 — PDF deferred to 3.3)**
+
+| # | Task | Status |
+|---|---|---|
+| 3.4.1 | **Marks** sidebar tab (`marksReports`) | ✅ Done |
+| 3.4.2 | `MarksReports.tsx` — By Batch / By Student | ✅ Done |
+| 3.4.3 | Paginated batch table + marksheet panel | ✅ Done |
+| 3.4.4 | Roll search + `CIECard` preview | ✅ Done |
+| 3.4.5 | Excel export buttons | ✅ Done |
+| 3.4.6 | `useMarksReports` hooks (no cache) | ✅ Done |
+| 3.4.7 | Docs §10 + context.md | ✅ Done |
 
 | # | Task | Est. Hours | Owner |
 |---|---|---|---|
-| 3.4.1 | PATCH /subject-assignments/:id/publish — publish results | 0.5h | Backend |
-| 3.4.2 | Frontend: Report generation dashboard (coordinator) | 3h | Frontend |
-| 3.4.3 | Frontend: Student search + individual marksheet preview | 2h | Frontend |
-| 3.4.4 | Frontend: PDF download buttons | 1h | Frontend |
-| 3.4.5 | Frontend: Semester-wise report view + PDF download | 2h | Frontend |
+| 3.4.1 | Frontend: **Marks** sidebar tab above Account Management (`marksReports` id) | 0.5h | Frontend |
+| 3.4.2 | Frontend: `MarksReports.tsx` — By Batch / By Student modes, lazy cascade | 3h | Frontend |
+| 3.4.3 | Frontend: Paginated batch student table + per-row marksheet panel | 2h | Frontend |
+| 3.4.4 | Frontend: Roll search + marksheet preview (reuse `CIECard`) | 1.5h | Frontend |
+| 3.4.5 | Frontend: Excel export buttons (`reports.ts` blob download) | 1h | Frontend |
+| 3.4.6 | Frontend: `useMarksReports` hooks — `staleTime: 0`, `gcTime: 0`, step `enabled` | 1h | Frontend |
+| 3.4.7 | Docs: `05_API_SPECIFICATION.md` §10, `context.md` both repos | 0.5h | Both |
 
-**Total: ~8.5h**
+**Total: ~9.5h**
+
+> PDF download buttons deferred to Epic 3.3. Route guards: tab only rendered inside coordinator dashboard (`RoleRoute`); API enforces COORDINATOR role.
 
 ---
 

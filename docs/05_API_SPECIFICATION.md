@@ -707,84 +707,191 @@ Past-year / past-semester marks are hidden after roster upgrade unless an enroll
 
 ---
 
-## 10. Reports (Milestone 3 — not yet implemented)
+## 10. Reports (Milestone 3 — Excel v1 implemented)
 
-### 10.1 Get Student Marksheet
-`
-GET /reports/marksheet/:studentId?semester=3&academicYear=2025-2026
-Roles: COORDINATOR (any student), STUDENT (self only)
-`
+Coordinator **Marks** tab (read-only viewing/export). Separate from **Marks Entry** (Excel upload). PDF endpoints deferred to §10.8.
+
+### 10.1 Cascade selectors (lightweight)
+
+All routes: **COORDINATOR only** · `@UseGuards(JwtAuthGuard, RolesGuard)`.
+
+```
+GET /reports/years
+GET /reports/semesters?academicYear=2025-2026
+GET /reports/batches?academicYear=2025-2026&semester=5
+```
+
+**`GET /reports/batches` response 200:**
+```json
+[
+  { "batch": "2024-2028", "department": "IT", "label": "24IT (2024-2028)" }
+]
+```
+
+Distinct batch+department groups for students who have **published** marks in offerings for that year+semester. Includes inactive/graduated students (`isActive: false` allowed).
+
+---
+
+### 10.2 Batch student list (paginated — no marks in response)
+
+```
+GET /reports/batch/students?academicYear=2025-2026&semester=5&batch=2024-2028&department=IT&page=1&limit=50
+Roles: COORDINATOR
+```
+
 **Response 200:**
-`json
+```json
 {
-  "student": {
-    "rollNumber": "2023CS001",
-    "name": "Jane Doe",
-    "department": "CS",
-    "semester": 3
-  },
-  "subjects": [
+  "data": [
     {
-      "code": "CS301",
-      "name": "Data Structures",
-      "maxMarks": 100,
-      "marksObtained": 78,
-      "passMarks": 40,
-      "flag": "NONE",
-      "result": "PASS"
+      "id": "cuid_student",
+      "rollNumber": "24IT093",
+      "name": "Jane Doe",
+      "batch": "2024-2028",
+      "department": "IT",
+      "isActive": true
     }
   ],
-  "summary": {
-    "totalMaxMarks": 500,
-    "totalMarksObtained": 390,
-    "percentage": 78.00,
-    "overallResult": "PASS"
-  }
+  "total": 120,
+  "page": 1,
+  "limit": 50
 }
-`
+```
+
+Students must have at least one **published** mark in the scoped year+semester. Marks are **not** included — fetch per student via §10.3.
 
 ---
 
-### 10.2 Download Marksheet PDF
-`
-GET /reports/marksheet/:studentId/pdf?semester=3&academicYear=2025-2026
-Roles: COORDINATOR, STUDENT (self only)
-`
-**Response:** Binary PDF stream with Content-Disposition: attachment; filename="marksheet_2023CS001.pdf"
+### 10.3 Individual student marksheet (coordinator)
 
----
-
-### 10.3 Semester Report
-`
-GET /reports/semester?semester=3&department=CS&academicYear=2025-2026
+```
+GET /reports/marksheet/:studentId?academicYear=2025-2026&semester=5
 Roles: COORDINATOR
-`
-Returns all students with all subject marks for the semester.
+```
+
+**Published submissions only** (same rule as student portal). Scope uses explicit `academicYear` + `semester` query params (not the student's current roster semester) so coordinators can view historical semester marks.
+
+**Response 200:**
+```json
+{
+  "student": {
+    "rollNumber": "24IT093",
+    "name": "Jane Doe",
+    "department": "IT",
+    "semester": 5,
+    "batch": "2024-2028",
+    "isActive": true
+  },
+  "hasPublished": true,
+  "cieRounds": [
+    {
+      "name": "CIE-1",
+      "sequence": 1,
+      "subjects": [
+        {
+          "code": "CS301",
+          "name": "Data Structures",
+          "maxMarks": 20,
+          "display": "18",
+          "marksObtained": 18,
+          "flag": "NONE"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Coordinator response includes raw `marksObtained` + `flag` (students never get these via `/marks/my-marksheet`).
+
+**Response 404:** Unknown `studentId`.
 
 ---
 
-### 10.4 Semester Report PDF
-`
-GET /reports/semester/pdf?semester=3&department=CS&academicYear=2025-2026
+### 10.4 Roll search (lazy)
+
+```
+GET /reports/students/search?q=24IT&academicYear=2025-2026&semester=5&limit=10
 Roles: COORDINATOR
-`
-**Response:** PDF binary stream.
+```
+
+Prefix match on `rollNumber` or `name`. Min 3 characters enforced server-side. Only students with published marks in scope. **No marks** in response — `{ id, rollNumber, name, batch, department }[]`.
 
 ---
 
-### 10.5 Subject-wise Report
-`
+### 10.5 Excel export (server-side)
+
+```
+GET /reports/batch/export?academicYear=2025-2026&semester=5&batch=2024-2028&department=IT
+GET /reports/marksheet/:studentId/export?academicYear=2025-2026&semester=5
+Roles: COORDINATOR
+```
+
+**Response:** Binary `.xlsx` stream. `Content-Disposition: attachment; filename="marks_24IT_2025-2026_sem5.xlsx"`.
+
+- **Batch export:** wide matrix (students × subject+CIE columns). Generated on server — browser never receives full batch as JSON first.
+- **Single student:** long format (CIE, code, name, max, marks, flag).
+
+Published marks only. NE stored values included for coordinator (not student display masking).
+
+---
+
+### 10.6 Security (mandatory)
+
+| Threat | Control |
+|--------|---------|
+| Unauthenticated access | `JwtAuthGuard` on entire `ReportsController` — **401** without valid session cookie |
+| Inactive account | `JwtStrategy` + `AuthService` reject `User.isActive === false` — **401** |
+| Student fetches another student's marks | All `/reports/*` routes **`@Roles(Role.COORDINATOR)` only** — students get **403**. Students use `GET /marks/my-marksheet` (self, display-only, current-sem visibility rules) |
+| Teacher fetches batch/other students | Teachers get **403** on all `/reports/*`. Teachers use `GET /marks/grid` for **own** assignments only (service-level IDOR check) |
+| IDOR via `studentId` | v1: only coordinators may call `/reports/marksheet/:studentId`. No student self-access on this path (defer self + PDF to later milestone) |
+| Draft/unpublished mark leak | Reports query **`SubmissionStatus.PUBLISHED`** only — DRAFT/SUBMITTED marks never returned |
+| Bulk scrape | Paginated list (§10.2); no single endpoint returns all students' marks as JSON. Batch export requires coordinator role + audit-friendly scope params |
+| CSRF | httpOnly cookie session; CORS restricted to frontend origin with `credentials: true` |
+
+**Implementation requirements:**
+- Controller-level `@Roles(Role.COORDINATOR)` on **every** handler (no class-level role with exceptions).
+- Unit tests in `reports.controller.spec.ts`: student and teacher receive **403** on each route; unauthenticated **401**.
+- Do **not** reuse `GET /marks/my-marksheet` for coordinator cross-student lookup — separate code path with explicit year/sem scope.
+
+**Existing marks endpoints (verified):**
+
+| Endpoint | Roles | Notes |
+|----------|-------|-------|
+| `GET /marks/my-marksheet` | STUDENT | Display-only; own record via `resolveStudentForUser` |
+| `GET /marks/grid` | COORDINATOR, TEACHER | Teacher IDOR blocked in service |
+| `GET /marks/import/template` | COORDINATOR | Prefilled template may include marks — coordinator-only |
+| `GET /subject-offerings/marks-entry/*` | COORDINATOR | Cascade metadata only, no marks |
+
+---
+
+### 10.7 Frontend (coordinator Marks tab)
+
+New sidebar tab **Marks** (above Account Management). Tab id `marksReports` — distinct from **Marks Entry** (`marks`).
+
+| Mode | Lazy flow |
+|------|-----------|
+| By batch | Year → Semester → Batch → paginated student table → click row loads §10.3 |
+| By student | Year + Semester + roll search (≥3 chars) → §10.3 |
+| Export | §10.5 blob download buttons |
+
+React Query: `staleTime: 0`, `gcTime: 0`, `enabled` per cascade step (same pattern as Marks Entry).
+
+---
+
+### 10.8 Deferred (PDF / full Milestone 3)
+
+Not in Excel v1:
+
+```
+GET /reports/marksheet/:studentId/pdf?semester=&academicYear=
+GET /reports/semester?semester=&department=&academicYear=
+GET /reports/semester/pdf?...
 GET /reports/subject/:subjectAssignmentId
-Roles: COORDINATOR
-`
-
----
-
-### 10.6 Subject-wise Report PDF
-`
 GET /reports/subject/:subjectAssignmentId/pdf
-Roles: COORDINATOR
-`
+```
+
+When added, same **COORDINATOR-only** rules apply unless explicitly documented otherwise (student self PDF would require `studentId === self` guard).
 
 ---
 

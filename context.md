@@ -56,7 +56,8 @@ imms-frontend/
 â”‚   â”‚   â”œâ”€â”€ import.ts
 â”‚   â”‚   â”œâ”€â”€ subjects.ts
 â”‚   â”‚   â”œâ”€â”€ subject-assignment-roster.ts  # Per-teacher roster (mirrors elective enrollment API)
-â”‚   â”‚   â””â”€â”€ marks.ts
+â”‚   â”‚   â”œâ”€â”€ marks.ts
+â”‚   â”‚   â””â”€â”€ reports.ts                 # Coordinator marks view + Excel export
 â”‚   â”œâ”€â”€ hooks/
 â”‚   â”‚   â”œâ”€â”€ useAccountInvites.ts   # List + create/delete mutations
 â”‚   â”‚   â”œâ”€â”€ useStudents.ts, useFaculty.ts, useSubjects.ts, useAssignments.ts
@@ -82,7 +83,8 @@ imms-frontend/
 â”‚   â”‚   â”‚   â”œâ”€â”€ FacultyManagement.tsx
 â”‚   â”‚   â”‚   â”œâ”€â”€ SubjectsManagement.tsx
 â”‚   â”‚   â”‚   â”œâ”€â”€ AssignmentsManagement.tsx
-â”‚   â”‚   â”‚   â””â”€â”€ MarksEntry.tsx               # Exam â†’ Subject â†’ Semester â†’ Excel upload
+â”‚   â”‚   â”‚   â”œâ”€â”€ MarksEntry.tsx               # Year → Subject → Semester → Exam → Excel upload
+â”‚   â”‚   â”‚   â””â”€â”€ MarksReports.tsx             # Batch/student marks view + Excel export
 â”‚   â”‚   â”œâ”€â”€ teacher/Dashboard.tsx
 â”‚   â”‚   â”œâ”€â”€ student/
 â”‚   â”‚   â”‚   â”œâ”€â”€ Marksheet.tsx
@@ -99,7 +101,7 @@ imms-frontend/
 | Path | Role | Purpose |
 |---|---|---|
 | `/login` | Public | Password login (+ optional Google / dev switcher) |
-| `/coordinator` | Coordinator | Tabs: Subject, Exam & Assignments, **Marks Entry**, Manage Faculty, Manage Student, Account Management |
+| `/coordinator` | Coordinator | Tabs: Subject, Exam & Assignments, **Marks Entry**, Manage Faculty, Manage Student, **Marks**, Account Management |
 | `/coordinator/marks/:assignmentId/:assessmentId` | Coordinator | NE flags, lock, unlock, publish, unpublish |
 | `/teacher` | Teacher | Assigned subjects â†’ marks entry links |
 | `/teacher/marks/:assignmentId/:assessmentId` | Teacher | Enter marks, AB, submit |
@@ -125,6 +127,7 @@ imms-frontend/
 - [x] Epic 2.2 â€” Subject Assignment UI (semester auto-fill, academic year, search/filter, status badges)
 - [x] Epic 2.3 â€” Marks grid UI (NE / AB / save draft, search, summary, status badge, read-only banners, coordinator Excel marks import tab)
 - [x] Epic 2.4 â€” Submit / lock / unlock / publish / unpublish with confirm dialogs + API error feedback
+- [x] Epic 3.2/3.4 (partial) â€” Coordinator **Marks** tab (batch/student view, Excel export, lazy cascade)
 - [x] Student portal UI â€” marksheet cards, profile, auth pages (Academic Core design)
 
 ## Environment Variables
@@ -194,7 +197,25 @@ Removing a backlog student clears both `SubjectEnrollment` and any `SubjectAssig
 | 4. Exam | CIE round dropdown | `GET /subject-offerings/marks-entry/exams?academicYear=&subjectId=&semester=` |
 | 5. Excel | Template download + upload | `GET /marks/import/template`, `POST /marks/import` |
 
-Columns: **Student ID**, **Marks** (number or `AB`). NE flags remain in Exam & Assignments. Sidebar order: Subject → Exam & Assignments → **Marks Entry** → Manage Faculty → Manage Student → Account Management.
+Columns: **Student ID**, **Marks** (number or `AB`). NE flags remain in Exam & Assignments. Sidebar order: Subject → Exam & Assignments → **Marks Entry** → Manage Faculty → Manage Student → **Marks** → Account Management.
+
+## Coordinator: Marks (view + export)
+
+**Marks** tab (`MarksReports.tsx`) — read-only batch and individual marks viewing + Excel export. Distinct from **Marks Entry** (upload). Above Account Management; tab id `marksReports`.
+
+| Mode | Lazy flow | API |
+|------|-----------|-----|
+| By batch | Year → Semester → Batch → paginated student table → click row loads marksheet | `GET /reports/years`, `/semesters`, `/batches`, `/batch/students`, `/marksheet/:id` |
+| By student | Year + Semester + roll search (≥3 chars) → marksheet panel | `/students/search`, `/marksheet/:id` |
+| Export | Server XLSX blob download | `/batch/export`, `/marksheet/:id/export` |
+
+React Query: `staleTime: 0`, `gcTime: 0`, step-gated `enabled` (same as Marks Entry). Includes inactive/graduated students in batch lists for historical marks.
+
+**Security (frontend UX + backend enforcement):**
+- Tab only reachable under `/coordinator` (`RoleRoute`). No reports API calls from student/teacher pages.
+- Backend enforces `@Roles(COORDINATOR)` on all `/reports/*` — students/teachers get 403 even if they craft requests.
+- Students continue using `GET /marks/my-marksheet` (display-only, own record). Coordinators get raw `marksObtained` + flags via `/reports/marksheet/:id`.
+- Spec: `docs/05_API_SPECIFICATION.md` §10.6.
 
 ## Coordinator: Account Management
 
@@ -249,6 +270,10 @@ API highlights:
 **Single session:** signing in elsewhere redirects old browser to `/login?error=session_superseded` (cookies cleared, no reload loop).
 
 ## Last Updated
+
+**Coordinator Marks reports** (2026-08-11):
+- **Marks** tab shipped: `MarksReports.tsx`, `useMarksReports.ts`, `api/reports.ts`. By batch (paginated table + export) and by student (roll search + marksheet panel).
+- Backend `/reports/*` — COORDINATOR-only; students/teachers get 403.
 
 **Auth + session UX** (2026-08-11):
 - Password login restored for 3 seeded test accounts; Google optional via `VITE_GOOGLE_AUTH`.

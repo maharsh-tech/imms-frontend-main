@@ -501,9 +501,21 @@ Roles: COORDINATOR
 ```
 Returns subject offerings that have at least one CIE exam or teacher assignment. Used by the coordinator Exam & Assignments table so CIE exams appear even when no teacher is assigned yet. Each row includes nested `subject.assessments` and `assignments[]` (each assignment includes `rosterCount`). UI actions (Open Marks, Backlog students, Manage roster, Delete) render as button-styled controls in the expanded CIE row and Actions column.
 
-### 8.5a Marks Entry cascade (lightweight)
+**UI defaults:** On tab open, year = current academic year (Jul–Jun); semester = highest semester available for that year in DB. User can still change either selector.
 
-Used by the coordinator **Marks Entry** tab. Fetches **one step at a time** (no React Query cache). Does not load full offerings with nested assignments.
+### 8.5a Exam & Assignments cascade (semesters)
+
+```
+GET /subject-offerings/assignments/semesters?academicYear=2026-2027
+Roles: COORDINATOR
+```
+**Response 200:** `[5, 3]` (distinct semester numbers for offerings with exams or assignments in that year)
+
+Years list reuses `GET /subject-offerings/marks-entry/years` (same distinct years source).
+
+### 8.5b Marks Entry cascade (lightweight)
+
+Used by the coordinator **Marks Entry** tab. Fetches **one step at a time** (no React Query cache). Does not load full offerings with nested assignments. **Year dropdown defaults to current academic year** on tab open.
 
 ```
 GET /subject-offerings/marks-entry/years
@@ -729,6 +741,8 @@ GET /reports/batches?academicYear=2025-2026&semester=5
 ```
 
 Distinct batch+department groups for students who have **published** marks in offerings for that year+semester. Includes inactive/graduated students (`isActive: false` allowed).
+
+**UI defaults:** Year = current academic year; semester = latest available for that year (same Jul–Jun calendar as Exam & Assignments).
 
 ---
 

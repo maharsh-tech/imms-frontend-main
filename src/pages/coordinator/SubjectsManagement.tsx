@@ -13,12 +13,7 @@ import {
 } from '../../api/subjects';
 import AddSubjectForm from '../../components/coordinator/subjects/AddSubjectForm';
 import ElectiveRosterModal from '../../components/coordinator/subjects/ElectiveRosterModal';
-
-const defaultAcademicYear = () => {
-  const y = new Date().getFullYear();
-  const m = new Date().getMonth();
-  return m >= 6 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
-};
+import { getDefaultAcademicYear } from '../../utils/academic-year';
 
 const SubjectsManagement = () => {
   const [message, setMessage] = useState('');
@@ -47,7 +42,7 @@ const SubjectsManagement = () => {
   const [isElective, setIsElective] = useState(false);
 
   const [rosterSubject, setRosterSubject] = useState<Subject | null>(null);
-  const [rosterAcademicYear, setRosterAcademicYear] = useState(defaultAcademicYear);
+  const [rosterAcademicYear, setRosterAcademicYear] = useState(getDefaultAcademicYear);
   const rosterScope = useMemo(
     () =>
       rosterSubject

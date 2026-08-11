@@ -24,12 +24,8 @@ import {
 import { useSubjectMutations } from '../../hooks/useSubjects';
 import { useCieRounds } from '../../hooks/useCieRounds';
 import { useAssignmentRoster, useAssignmentRosterMutations } from '../../hooks/useAssignmentRoster';
-
-const defaultAcademicYear = () => {
-  const y = new Date().getFullYear();
-  const m = new Date().getMonth();
-  return m >= 6 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
-};
+import { getDefaultAcademicYear } from '../../utils/academic-year';
+import { useDefaultAcademicYear, useDefaultSemester } from '../../hooks/useAcademicScopeDefaults';
 
 type OfferingAssignment = SubjectOfferingRow['assignments'][number];
 
@@ -59,21 +55,21 @@ const AssignmentsManagement = () => {
   const [subjectId, setSubjectId] = useState('');
   const [facultyId, setFacultyId] = useState('');
   const [semester, setSemester] = useState(5);
-  const [academicYear, setAcademicYear] = useState(defaultAcademicYear);
+  const [academicYear, setAcademicYear] = useState(getDefaultAcademicYear);
   const [startRollNumber, setStartRollNumber] = useState('');
   const [endRollNumber, setEndRollNumber] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
   const [search, setSearch] = useState('');
-  const [listAcademicYear, setListAcademicYear] = useState('');
+  const [listAcademicYear, setListAcademicYear] = useState(getDefaultAcademicYear);
   const [listSemester, setListSemester] = useState('');
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showAssignTeacher, setShowAssignTeacher] = useState(false);
   const [showAddAssessment, setShowAddAssessment] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
-  const [assessmentAcademicYear, setAssessmentAcademicYear] = useState(defaultAcademicYear);
+  const [assessmentAcademicYear, setAssessmentAcademicYear] = useState(getDefaultAcademicYear);
   const [assessmentSemester, setAssessmentSemester] = useState(5);
   const [cieRoundName, setCieRoundName] = useState('CIE-1');
   const [maxMarks, setMaxMarks] = useState<number | ''>(50);
@@ -114,6 +110,9 @@ const AssignmentsManagement = () => {
     isFetching: offeringsFetching,
     error: queryError,
   } = useAssignmentOfferings(listAcademicYear, listSemester);
+
+  useDefaultAcademicYear(yearOptions, listAcademicYear, setListAcademicYear);
+  useDefaultSemester(semesterOptions, listAcademicYear, listSemester, setListSemester);
 
   const loadingYears = yearsLoading || yearsFetching;
   const loadingSemesters = semestersLoading || semestersFetching;

@@ -9,13 +9,15 @@ import {
   useMarksEntryExams,
 } from '../../hooks/useMarksEntry'
 import type { ImportResult } from '../../types'
+import { getDefaultAcademicYear } from '../../utils/academic-year'
+import { useDefaultAcademicYear } from '../../hooks/useAcademicScopeDefaults'
 
 /**
  * Coordinator Marks Entry — Excel upload that bypasses teachers.
  * Fetches one step at a time: years → subjects → semesters → exams.
  */
 const MarksEntry = () => {
-  const [academicYear, setAcademicYear] = useState('')
+  const [academicYear, setAcademicYear] = useState(getDefaultAcademicYear)
   const [subjectId, setSubjectId] = useState('')
   const [semester, setSemester] = useState('')
   const [cieRoundName, setCieRoundName] = useState('')
@@ -25,6 +27,8 @@ const MarksEntry = () => {
     isLoading: yearsLoading,
     isFetching: yearsFetching,
   } = useMarksEntryYears()
+
+  useDefaultAcademicYear(yearOptions, academicYear, setAcademicYear)
 
   const {
     data: subjectOptions = [],

@@ -176,7 +176,7 @@ Database seed runs in **backend only**: `cd imms-backend && npx prisma db seed`
 
 Subjects tab is catalog-only. **CIE exams, teacher assignment, backlog students, and per-assignment roster** live on **Exam & Assignments** (`AssignmentsManagement.tsx`).
 
-**Lazy load (no cache):** tab open fetches **years only** → pick year → **semesters** → pick semester → **offerings for that scope**. Subjects/faculty for forms load **only when** Assign Teacher or Add CIE Exam is opened (`useAssignmentFormCatalog`). Same `staleTime: 0`, `gcTime: 0` pattern as Marks Entry.
+**Lazy load (no cache):** tab open fetches **years only** → **defaults to current academic year** (Jul–Jun calendar via `getDefaultAcademicYear`) → **semesters** → **auto-selects latest semester** for that year → **offerings for that scope**. Subjects/faculty for forms load **only when** Assign Teacher or Add CIE Exam is opened (`useAssignmentFormCatalog`). Same `staleTime: 0`, `gcTime: 0` pattern as Marks Entry. Shared defaults: `utils/academic-year.ts`, `hooks/useAcademicScopeDefaults.ts`.
 
 | Step | API |
 |------|-----|
@@ -196,7 +196,7 @@ Removing a backlog student clears both `SubjectEnrollment` and any `SubjectAssig
 
 ## Coordinator: Marks Entry
 
-**Marks Entry** tab (`MarksEntry.tsx`) — when teachers have not entered marks on the website, coordinator uploads Excel directly (bypasses teachers). Cascade fetches **one step at a time** (no cache): year → subjects → semesters → exams via `GET /subject-offerings/marks-entry/*`.
+**Marks Entry** tab (`MarksEntry.tsx`) — when teachers have not entered marks on the website, coordinator uploads Excel directly (bypasses teachers). Cascade fetches **one step at a time** (no cache): year → subjects → semesters → exams via `GET /subject-offerings/marks-entry/*`. **Year defaults to current academic year** on tab open (falls back to newest DB year if current year has no offerings).
 
 | Step | UI | API |
 |---|---|---|
@@ -218,7 +218,7 @@ Columns: **Student ID**, **Marks** (number or `AB`). NE flags remain in Exam & A
 | By student | Year + Semester + roll search (≥3 chars) → marksheet panel | `/students/search`, `/marksheet/:id` |
 | Export | Server XLSX blob download | `/batch/export`, `/marksheet/:id/export` |
 
-React Query: `staleTime: 0`, `gcTime: 0`, step-gated `enabled` (same as Marks Entry). Includes inactive/graduated students in batch lists for historical marks.
+React Query: `staleTime: 0`, `gcTime: 0`, step-gated `enabled` (same as Marks Entry). Includes inactive/graduated students in batch lists for historical marks. **Defaults:** current academic year + latest semester for that year on tab open.
 
 **Security (frontend UX + backend enforcement):**
 - Tab only reachable under `/coordinator` (`RoleRoute`). No reports API calls from student/teacher pages.
@@ -279,6 +279,10 @@ API highlights:
 **Single session:** signing in elsewhere redirects old browser to `/login?error=session_superseded` (cookies cleared, no reload loop).
 
 ## Last Updated
+
+**Coordinator cascade defaults** (2026-08-11):
+- Exam & Assignments, Marks Entry, and Marks tabs **default to current academic year** on open; Exam & Assignments and Marks also **auto-select latest semester** for that year.
+- Shared helpers: `utils/academic-year.ts` (`getDefaultAcademicYear`, `resolveAcademicYearFromOptions`, `pickLatestSemester`), `hooks/useAcademicScopeDefaults.ts`.
 
 **Coordinator Marks reports** (2026-08-11):
 - **Marks** tab shipped: `MarksReports.tsx`, `useMarksReports.ts`, `api/reports.ts`. By batch (paginated table + export) and by student (roll search + marksheet panel).

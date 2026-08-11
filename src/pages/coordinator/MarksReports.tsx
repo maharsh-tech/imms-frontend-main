@@ -16,6 +16,8 @@ import {
   type ReportsStudentRow,
 } from '../../api/reports'
 import { apiErrorMessage } from '../../utils/api-errors'
+import { getDefaultAcademicYear } from '../../utils/academic-year'
+import { useDefaultAcademicYear, useDefaultSemester } from '../../hooks/useAcademicScopeDefaults'
 
 type ViewMode = 'batch' | 'student'
 
@@ -24,7 +26,7 @@ const selectClass =
 
 const MarksReports = () => {
   const [mode, setMode] = useState<ViewMode>('batch')
-  const [academicYear, setAcademicYear] = useState('')
+  const [academicYear, setAcademicYear] = useState(getDefaultAcademicYear)
   const [semester, setSemester] = useState('')
   const [batchOption, setBatchOption] = useState<ReportsBatchOption | null>(null)
   const [page, setPage] = useState(1)
@@ -37,6 +39,10 @@ const MarksReports = () => {
     useReportsYears()
   const { data: semesterOptions = [], isLoading: semLoading, isFetching: semFetching } =
     useReportsSemesters(academicYear)
+
+  useDefaultAcademicYear(yearOptions, academicYear, setAcademicYear)
+  useDefaultSemester(semesterOptions, academicYear, semester, setSemester)
+
   const { data: batchOptions = [], isLoading: batchLoading, isFetching: batchFetching } =
     useReportsBatches(academicYear, semester)
 

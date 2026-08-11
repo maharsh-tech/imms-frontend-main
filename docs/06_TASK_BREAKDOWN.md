@@ -27,7 +27,7 @@
 | Item | Status | Notes |
 |------|--------|-------|
 | Activation token security | ✅ Done | Hash fragment `#token=`; POST body consumption; strip from URL |
-| React Query coordinator dashboard | ✅ Done | `useAccountInvites`, `useStudents`, `useFaculty`, `useSubjects`, `useAssignmentsBundle` + mutations |
+| React Query coordinator dashboard | ✅ Done | `useAccountInvites`, `useStudents`, `useFaculty`, `useSubjects`, `useAssignments` cascade hooks + mutations |
 | Component split (AccountInvites, Subjects) | ✅ Done | `account-invites/*`, `subjects/*` subcomponents |
 | Roll-derived roster defaults | ✅ Done | `deriveBatchFromRollNumber`, `deriveDepartmentFromRollNumber` — no hardcoded batch/dept |
 | Login activation flash | ✅ Done | Router state via `auth-flash.ts` — not `?activated=1` URL param |
@@ -230,6 +230,7 @@ est new imms-backend) | 1h | Backend |
 | 2.3.12 | GET/POST /marks/import — coordinator Excel marks upload (bypass teachers) | ✅ Done (2026-08-11) |
 | 2.3.13 | Frontend: Marks Entry tab (Year → Subject → Semester → Exam → Excel) | ✅ Done (2026-08-11) |
 | 2.3.14 | Marks Entry cascade API + lazy step fetch (no cache) | ✅ Done (2026-08-11) |
+| 2.3.15 | Coordinator cascade UI defaults (current academic year + latest semester) | ✅ Done (2026-08-11) |
 
 > Enhancements shipped: cohort validation on bulk/NE writes, assessment-assignment linkage checks, NE authority (coordinator-only), transactional bulk save, no side-effect on GET grid, search/filter UI, entry summary counts, NE row highlight for teachers, read-only banners, shared status badge, **coordinator Excel import bypassing teacher workflow**, **marks-entry cascade endpoints (subjects/semesters/exams)**.
 

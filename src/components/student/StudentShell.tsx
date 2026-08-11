@@ -12,13 +12,11 @@ type NavItem = {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/student', label: 'Marks', end: true, icon: BarChart3 },
+  { to: '/student', label: 'Marksheet', end: true, icon: BarChart3 },
   { to: '/student/schedule', label: 'Schedule', icon: CalendarDays },
   { to: '/student/profile', label: 'Profile', icon: User },
 ]
 
-// Desktop sidebar nav item styling — mirrors StaffSidebar's active-tab language
-// (left border bar, surface-container-low fill) for cross-role design parity.
 const desktopNavClassName = ({ isActive }: { isActive: boolean }): string =>
   `flex w-full items-center gap-3 rounded-lg px-4 py-3 text-label-md font-semibold transition-colors border-l-4 cursor-pointer ${
     isActive
@@ -26,17 +24,11 @@ const desktopNavClassName = ({ isActive }: { isActive: boolean }): string =>
       : 'border-transparent text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface'
   }`
 
-// Mobile bottom nav item styling — intentional student pattern (per context.md),
-// kept as-is with its rounded-pill active state.
 const mobileNavClassName = ({ isActive }: { isActive: boolean }): string =>
   isActive
     ? 'flex flex-col items-center justify-center gap-1 rounded-full bg-primary-container px-4 py-1 text-on-primary-container transition-colors'
     : 'flex flex-col items-center justify-center gap-1 rounded-xl p-2 text-on-secondary-container transition-colors hover:bg-surface-container'
 
-/**
- * Student portal chrome: sticky mobile header, desktop sidebar (parity with
- * StaffSidebar), mobile bottom nav (intentional student pattern), no profile photo.
- */
 const StudentShell = () => {
   const { user, logout } = useAuthStore()
 
@@ -49,18 +41,12 @@ const StudentShell = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background text-on-background">
-      {/* Mobile top header — hidden on desktop where branding lives in the sidebar */}
-      <header className="sticky top-0 z-50 flex h-16 items-center border-b border-surface-variant bg-surface-container-lowest px-md shadow-sm lg:hidden">
-        <span className="text-title-lg font-bold text-primary">Student Portal</span>
-      </header>
-
-      <div className="mx-auto flex w-full max-w-[1200px]">
-        <aside
-          className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col justify-between border-r border-surface-variant bg-surface-container-lowest p-md lg:flex"
-          aria-label="Student navigation"
-        >
-          {/* Top Section: Logo Branding and Nav Tabs */}
+    <div className="min-h-screen bg-background text-on-background lg:flex">
+      <aside
+        className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-surface-variant bg-surface-container-lowest p-md lg:flex lg:flex-col"
+        aria-label="Student navigation"
+      >
+        <div className="flex h-full flex-col">
           <div className="flex flex-col gap-lg">
             <div className="flex items-center gap-sm px-2 py-1">
               <GraduationCap className="h-7 w-7 shrink-0 text-primary" aria-hidden="true" />
@@ -85,9 +71,7 @@ const StudentShell = () => {
                           aria-hidden="true"
                           strokeWidth={isActive ? 2.5 : 2}
                         />
-                        <span className="truncate">
-                          {item.label === 'Marks' ? 'Marksheet' : item.label}
-                        </span>
+                        <span className="truncate">{item.label}</span>
                       </>
                     )}
                   </NavLink>
@@ -96,8 +80,7 @@ const StudentShell = () => {
             </nav>
           </div>
 
-          {/* Bottom Section: User Identity and Logout Control */}
-          <div className="border-t border-surface-variant/50 pt-md">
+          <div className="mt-auto border-t border-surface-variant/50 pt-md">
             {user && (
               <div
                 className="mb-sm truncate px-4 text-label-md font-semibold text-on-surface-variant"
@@ -116,9 +99,16 @@ const StudentShell = () => {
               <span>Logout</span>
             </button>
           </div>
-        </aside>
+        </div>
+      </aside>
 
-        <main className="min-w-0 flex-1 px-md pb-32 pt-6 lg:px-lg lg:pb-xl">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center border-b border-surface-variant bg-surface-container-lowest px-md shadow-sm lg:hidden">
+          <GraduationCap className="mr-2 h-6 w-6 text-primary" aria-hidden="true" />
+          <span className="text-title-lg font-bold text-primary">Student Portal</span>
+        </header>
+
+        <main className="mx-auto w-full max-w-[1200px] flex-1 px-md pb-32 pt-6 lg:px-lg lg:pb-xl">
           <Outlet />
         </main>
       </div>
@@ -145,7 +135,7 @@ const StudentShell = () => {
                     strokeWidth={isActive ? 2.5 : 2}
                   />
                   <span className={`mt-1 text-label-sm ${isActive ? 'font-bold' : ''}`}>
-                    {item.label}
+                    {item.label === 'Marksheet' ? 'Marks' : item.label}
                   </span>
                 </>
               )}

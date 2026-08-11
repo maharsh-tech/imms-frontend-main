@@ -120,7 +120,7 @@ src/
 ├── pages/
 │   ├── Login.tsx                  # /login
 │   ├── ActivateAccount.tsx        # /activate#token=… (first-time password)
-│   ├── coordinator/               # Dashboard tabs + marks grid (NE/unlock/publish)
+│   ├── coordinator/               # Dashboard tabs + MarksEntry + marks grid (NE/unlock/publish)
 │   ├── teacher/                   # Assignment list → marks entry
 │   ├── student/                   # Marksheet, Schedule (placeholder), Profile
 │   └── shared/MarksGridPage.tsx

@@ -81,7 +81,8 @@ imms-frontend/
 â”‚   â”‚   â”‚   â”œâ”€â”€ StudentsManagement.tsx
 â”‚   â”‚   â”‚   â”œâ”€â”€ FacultyManagement.tsx
 â”‚   â”‚   â”‚   â”œâ”€â”€ SubjectsManagement.tsx
-â”‚   â”‚   â”‚   â””â”€â”€ AssignmentsManagement.tsx
+â”‚   â”‚   â”‚   â”œâ”€â”€ AssignmentsManagement.tsx
+â”‚   â”‚   â”‚   â””â”€â”€ MarksEntry.tsx               # Exam â†’ Subject â†’ Semester â†’ Excel upload
 â”‚   â”‚   â”œâ”€â”€ teacher/Dashboard.tsx
 â”‚   â”‚   â”œâ”€â”€ student/
 â”‚   â”‚   â”‚   â”œâ”€â”€ Marksheet.tsx
@@ -98,7 +99,7 @@ imms-frontend/
 | Path | Role | Purpose |
 |---|---|---|
 | `/login` | Public | Password login (+ optional Google / dev switcher) |
-| `/coordinator` | Coordinator | Tabs: accounts, students, faculty, subjects, assignments |
+| `/coordinator` | Coordinator | Tabs: Subject, Exam & Assignments, **Marks Entry**, Manage Faculty, Manage Student, Account Management |
 | `/coordinator/marks/:assignmentId/:assessmentId` | Coordinator | NE flags, lock, unlock, publish, unpublish |
 | `/teacher` | Teacher | Assigned subjects â†’ marks entry links |
 | `/teacher/marks/:assignmentId/:assessmentId` | Teacher | Enter marks, AB, submit |
@@ -122,7 +123,7 @@ imms-frontend/
 - [x] Epic 1.5 â€” Excel Import UI
 - [x] Epic 2.1 â€” Subject & Assessment management UI (full CRUD, search/filter)
 - [x] Epic 2.2 â€” Subject Assignment UI (semester auto-fill, academic year, search/filter, status badges)
-- [x] Epic 2.3 â€” Marks grid UI (NE / AB / save draft, search, summary, status badge, read-only banners)
+- [x] Epic 2.3 â€” Marks grid UI (NE / AB / save draft, search, summary, status badge, read-only banners, coordinator Excel marks import tab)
 - [x] Epic 2.4 â€” Submit / lock / unlock / publish / unpublish with confirm dialogs + API error feedback
 - [x] Student portal UI â€” marksheet cards, profile, auth pages (Academic Core design)
 
@@ -180,6 +181,19 @@ Subjects tab is catalog-only. **CIE exams, teacher assignment, backlog students,
 | Delete assignment | Red outlined button per teacher | `DELETE /subject-assignments/:id` |
 
 Removing a backlog student clears both `SubjectEnrollment` and any `SubjectAssignmentRoster` row on that offering (backend sync). Removing the last roster row for a student also drops the offering enrollment.
+
+## Coordinator: Marks Entry
+
+**Marks Entry** tab (`MarksEntry.tsx`) — when teachers have not entered marks on the website, coordinator uploads Excel directly (bypasses teachers).
+
+| Step | UI | API |
+|---|---|---|
+| 1. Exam | CIE round dropdown | — |
+| 2. Subject | Subject with that exam | — |
+| 3. Semester | Semester offering | — |
+| 4. Excel | Template download + upload | `GET /marks/import/template`, `POST /marks/import` |
+
+Columns: **Student ID**, **Name** (optional), **Marks Obtained** (number or `AB`). NE flags remain in Exam & Assignments. Sidebar order: Subject → Exam & Assignments → **Marks Entry** → Manage Faculty → Manage Student → Account Management.
 
 ## Coordinator: Account Management
 

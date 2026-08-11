@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { FlagType } from '../types';
+import type { FlagType, ImportResult } from '../types';
 
 export interface MarksGridStudent {
   id: string;
@@ -27,6 +27,22 @@ export interface MarksGrid {
   submission: { status: string; submittedAt?: string | null; publishedAt?: string | null };
   students: MarksGridStudent[];
 }
+
+export type MarksImportScope = {
+  subjectId: string;
+  academicYear: string;
+  semester: number;
+  cieRoundName: string;
+};
+
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+};
 
 export const getMarksGrid = (subjectAssignmentId: string, assessmentId: string) =>
   apiClient
@@ -67,3 +83,24 @@ export const setNEVisibility = (data: {
 }) => apiClient.patch('/marks/ne-visibility', data).then((r) => r.data);
 
 export const getMyMarksheet = () => apiClient.get('/marks/my-marksheet').then((r) => r.data);
+
+export const downloadMarksTemplate = async (scope?: MarksImportScope): Promise<void> => {
+  const { data } = await apiClient.get<Blob>('/marks/import/template', {
+    responseType: 'blob',
+    params: scope,
+  });
+  downloadBlob(data, 'marks-template.xlsx');
+};
+
+export const importMarks = async (
+  file: File,
+  scope: MarksImportScope,
+): Promise<ImportResult> => {
+  const form = new FormData();
+  form.append('file', file);
+  const { data } = await apiClient.post<ImportResult>('/marks/import', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    params: scope,
+  });
+  return data;
+};

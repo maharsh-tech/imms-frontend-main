@@ -5,11 +5,18 @@ import StudentsManagement from './StudentsManagement'
 import FacultyManagement from './FacultyManagement'
 import SubjectsManagement from './SubjectsManagement'
 import AssignmentsManagement from './AssignmentsManagement'
+import MarksEntry from './MarksEntry'
 import { StaffShell } from '../../components/staff'
-import { Users, GraduationCap, BookOpen, Layers, Link2 } from 'lucide-react'
+import { Users, GraduationCap, BookOpen, Layers, Link2, ClipboardList } from 'lucide-react'
 import apiClient from '../../api/client'
 
-type Tab = 'invites' | 'students' | 'faculty' | 'subjects' | 'assignments'
+type Tab =
+  | 'subjects'
+  | 'assignments'
+  | 'marks'
+  | 'faculty'
+  | 'students'
+  | 'invites'
 
 export default function CoordinatorDashboard() {
   const { user, logout } = useAuthStore()
@@ -26,6 +33,7 @@ export default function CoordinatorDashboard() {
   const tabs = [
     { id: 'subjects' as const, label: 'Subject', icon: Layers },
     { id: 'assignments' as const, label: 'Exam & Assignments', icon: Link2 },
+    { id: 'marks' as const, label: 'Marks Entry', icon: ClipboardList },
     { id: 'faculty' as const, label: 'Manage Faculty', icon: BookOpen },
     { id: 'students' as const, label: 'Manage Student', icon: GraduationCap },
     { id: 'invites' as const, label: 'Account Management', shortLabel: 'Accounts', icon: Users },
@@ -50,11 +58,12 @@ export default function CoordinatorDashboard() {
         </p>
       </header>
 
-      {tab === 'invites' && <AccountInvites />}
-      {tab === 'students' && <StudentsManagement />}
-      {tab === 'faculty' && <FacultyManagement />}
       {tab === 'subjects' && <SubjectsManagement />}
       {tab === 'assignments' && <AssignmentsManagement />}
+      {tab === 'marks' && <MarksEntry />}
+      {tab === 'faculty' && <FacultyManagement />}
+      {tab === 'students' && <StudentsManagement />}
+      {tab === 'invites' && <AccountInvites />}
     </StaffShell>
   )
 }

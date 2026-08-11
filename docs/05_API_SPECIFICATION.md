@@ -547,6 +547,37 @@ Roles: TEACHER (assigned only, DRAFT status)
 
 ---
 
+### 9.2a Download Marks Import Template (Coordinator)
+```
+GET /marks/import/template?subjectId={id}&academicYear=2025-2026&semester=5&cieRoundName=CIE-1
+Roles: COORDINATOR
+```
+Without query params: empty template (Student ID, Name, Marks Obtained). With scope: prefilled with cohort rolls and existing marks for that exam/subject/semester.
+
+**Response:** `.xlsx` binary stream.
+
+---
+
+### 9.2b Import Marks from Excel (Coordinator)
+```
+POST /marks/import?subjectId={id}&academicYear=2025-2026&semester=5&cieRoundName=CIE-1
+Roles: COORDINATOR
+Content-Type: multipart/form-data — field `file` (.xlsx)
+```
+Coordinator-only bulk marks upload. **Bypasses teachers** — writes while submission is DRAFT or SUBMITTED (rejects if PUBLISHED). Each roll is routed to the correct teacher assignment under the offering. Excel accepts numeric marks or `AB`; `NE` is rejected (set via Exam & Assignments).
+
+**Response 200:**
+```json
+{
+  "imported": 12,
+  "updated": 3,
+  "skipped": 2,
+  "errors": [{ "row": 5, "reason": "Roll 24IT999 is not in any teacher cohort for this subject" }]
+}
+```
+
+---
+
 ### 9.3 Flag NE Students (Coordinator)
 ```
 PATCH /marks/flag-ne

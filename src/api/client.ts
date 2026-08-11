@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
-
-const SESSION_SUPERSEDED = 'Signed in on another device';
+import {
+  handleSessionSuperseded,
+  isSessionSupersededMessage,
+} from './session-expired';
 
 /** Thin HTTP client — all validation and business rules live in the backend. */
 const apiClient = axios.create({
@@ -17,17 +19,9 @@ apiClient.interceptors.response.use(
     const isAuthRoute = originalRequest?.url?.includes('/auth/');
     const message = error.response?.data?.message as string | undefined;
 
-    if (
-      message?.includes(SESSION_SUPERSEDED) ||
-      (error.response?.status === 401 &&
-        typeof window !== 'undefined' &&
-        !window.location.pathname.startsWith('/login'))
-    ) {
-      if (message?.includes(SESSION_SUPERSEDED)) {
-        useAuthStore.getState().logout();
-        window.location.href = '/login?error=session_superseded';
-        return Promise.reject(error);
-      }
+    if (isSessionSupersededMessage(message)) {
+      void handleSessionSuperseded();
+      return Promise.reject(error);
     }
 
     if (
@@ -40,7 +34,18 @@ apiClient.interceptors.response.use(
         await apiClient.post('/auth/refresh');
         return apiClient(originalRequest);
       } catch (refreshError) {
-        useAuthStore.getState().logout();
+        const refreshMessage =
+          axios.isAxiosError(refreshError) &&
+          typeof refreshError.response?.data === 'object' &&
+          refreshError.response?.data !== null &&
+          'message' in refreshError.response.data
+            ? String((refreshError.response.data as { message: unknown }).message)
+            : undefined;
+        if (isSessionSupersededMessage(refreshMessage)) {
+          void handleSessionSuperseded();
+        } else {
+          useAuthStore.getState().logout();
+        }
         return Promise.reject(refreshError);
       }
     }

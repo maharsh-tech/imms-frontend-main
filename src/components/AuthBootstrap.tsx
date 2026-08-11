@@ -1,13 +1,21 @@
 import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import apiClient from '../api/client';
+import { isPublicAuthPath } from '../api/session-expired';
 
 /** Restore session from httpOnly cookies on page load. */
 const AuthBootstrap = ({ children }: { children: React.ReactNode }) => {
   const { setUser, setBootstrapped, isBootstrapped } = useAuthStore();
+  const { pathname } = useLocation();
 
   useEffect(() => {
     const bootstrap = async () => {
+      if (isPublicAuthPath(pathname)) {
+        setBootstrapped(true);
+        return;
+      }
+
       try {
         const { data } = await apiClient.get('/auth/me');
         setUser(data.user);
@@ -18,7 +26,7 @@ const AuthBootstrap = ({ children }: { children: React.ReactNode }) => {
       }
     };
     bootstrap();
-  }, [setUser, setBootstrapped]);
+  }, [pathname, setUser, setBootstrapped]);
 
   if (!isBootstrapped) {
     return (

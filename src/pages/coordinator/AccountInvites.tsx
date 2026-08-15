@@ -5,6 +5,7 @@ import {
   accountInviteMutations,
   useAccountInvites,
   useAccountInvitesInvalidator,
+  useStudentPrefixes,
 } from '../../hooks/useAccountInvites'
 import type { AccountInvite, BulkCreateResult } from '../../types'
 import { apiErrorMessage } from '../../utils/api-errors'
@@ -24,6 +25,7 @@ const AccountInvites = () => {
   const pageSize = 50
   const [error, setError] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('STUDENT')
+  const [prefixFilter, setPrefixFilter] = useState<string | null>(null)
   const [bulkText, setBulkText] = useState('')
   const [bulkRole, setBulkRole] = useState('STUDENT')
   const [bulkResult, setBulkResult] = useState<BulkCreateResult | null>(null)
@@ -42,22 +44,33 @@ const AccountInvites = () => {
 
   useEffect(() => {
     setPage(1)
+    setPrefixFilter(null)
   }, [roleFilter])
+
+  const listEnabled = roleFilter !== 'STUDENT' || prefixFilter !== null
 
   const inviteParams = useMemo(
     () => ({
       page,
       limit: pageSize,
       ...(roleFilter !== 'ALL' ? { role: roleFilter } : {}),
+      ...(roleFilter === 'STUDENT' && prefixFilter && prefixFilter !== 'ALL'
+        ? { prefix: prefixFilter }
+        : {}),
     }),
-    [page, roleFilter, pageSize],
+    [page, roleFilter, prefixFilter, pageSize],
   )
 
-  const { data, isLoading, isFetching, error: queryError } = useAccountInvites(inviteParams)
+  const { data, isLoading, isFetching, error: queryError } = useAccountInvites(
+    inviteParams,
+    listEnabled,
+  )
+  const { data: prefixesData } = useStudentPrefixes(roleFilter === 'STUDENT')
+  const prefixes = prefixesData?.prefixes ?? []
   const invites = data?.data ?? []
   const totalInvites = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(totalInvites / pageSize))
-  const loading = isLoading || isFetching
+  const listBusy = listEnabled && (isLoading || isFetching)
 
   const bulkCreateMutation = useMutation({
     mutationFn: accountInviteMutations.bulkCreate,
@@ -87,6 +100,12 @@ const AccountInvites = () => {
     onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to revoke account')),
   })
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: accountInviteMutations.bulkDelete,
+    onSuccess: () => invalidateInvites(),
+    onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to revoke accounts')),
+  })
+
   const rosterMutation = useMutation({
     mutationFn: createStudent,
     onSuccess: () => {
@@ -106,10 +125,12 @@ const AccountInvites = () => {
 
   const pendingRosterCount = useMemo(
     () =>
-      invites.filter(
-        (i) => (i.role === 'STUDENT' || i.role === 'TEACHER') && i.rosterLinked === false,
-      ).length,
-    [invites],
+      listBusy
+        ? 0
+        : invites.filter(
+            (i) => (i.role === 'STUDENT' || i.role === 'TEACHER') && i.rosterLinked === false,
+          ).length,
+    [invites, listBusy],
   )
 
   const filteredInvites = useMemo(
@@ -150,8 +171,29 @@ const AccountInvites = () => {
   }
 
   const handleDelete = (id: string) => {
-    if (!window.confirm('Revoke this account? They will not be able to sign in.')) return
+    if (!window.confirm('Revoke this account? They will not be able to sign in. Roster rows stay.')) return
     deleteMutation.mutate(id)
+  }
+
+  const handleRoleFilterChange = (role: RoleFilter) => {
+    setRoleFilter(role)
+  }
+
+  const handlePrefixFilterChange = (prefix: string) => {
+    setPrefixFilter(prefix)
+    setPage(1)
+  }
+
+  const handleBulkDelete = () => {
+    if (!prefixFilter || prefixFilter === 'ALL') return
+    if (
+      !window.confirm(
+        `Revoke all ${totalInvites} student accounts in ${prefixFilter}? They will not be able to sign in. Roster rows stay.`,
+      )
+    ) {
+      return
+    }
+    bulkDeleteMutation.mutate(prefixFilter)
   }
 
   const handleOpenRoster = (invite: AccountInvite) => {
@@ -182,10 +224,6 @@ const AccountInvites = () => {
       semester: Number.parseInt(rosterSemester, 10),
       batch: rosterBatch.trim() || deriveBatchFromRollNumber(roll),
     })
-  }
-
-  if (loading) {
-    return <div className="p-8 text-center text-on-surface-variant animate-pulse">Loading accounts...</div>
   }
 
   return (
@@ -274,13 +312,18 @@ const AccountInvites = () => {
       <InviteTable
         invites={filteredInvites}
         roleFilter={roleFilter}
+        prefixes={prefixes}
+        selectedPrefix={prefixFilter}
         page={page}
         totalPages={totalPages}
         totalInvites={totalInvites}
-        loading={loading}
-        onRoleFilterChange={setRoleFilter}
+        listBusy={listBusy}
+        bulkDeletePending={bulkDeleteMutation.isPending}
+        onRoleFilterChange={handleRoleFilterChange}
+        onPrefixFilterChange={handlePrefixFilterChange}
         onPageChange={setPage}
         onDelete={handleDelete}
+        onBulkDelete={handleBulkDelete}
         onOpenRoster={handleOpenRoster}
       />
 

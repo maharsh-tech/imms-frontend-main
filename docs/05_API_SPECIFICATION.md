@@ -184,9 +184,11 @@ Account is ready immediately — user signs in with Google using their instituti
 
 ### 2.2 List Allowed Users
 ```
-GET /allowed-users?page=1&limit=50
+GET /allowed-users?page=1&limit=50&role=STUDENT&prefix=24IT
 Roles: COORDINATOR
 ```
+Optional query: `role` (`STUDENT` | `TEACHER` | `COORDINATOR`), `prefix` (`24IT` or `D25IT`). `prefix` implies students (`identifier` starts with the prefix). Invalid prefixes such as `2` are `400`. Limit stays 50.
+
 **Response 200:** Paginated account rows.
 
 ```json
@@ -220,6 +222,32 @@ DELETE /allowed-users/:id
 Roles: COORDINATOR
 ```
 **Response 200:** `{ "success": true }`
+
+Revokes sign-in only: deletes `User` + `AllowedUser`. Roster `Student`/`Faculty` rows stay (`userId` set null). Marks, assessments, enrollments, and other academic rows are not deleted.
+
+---
+
+### 2.4 Student Roll Prefixes
+```
+GET /allowed-users/student-prefixes
+Roles: COORDINATOR
+```
+**Response 200:** `{ "prefixes": ["24IT", "25IT", "D25IT"] }`
+
+Distinct roll prefixes derived from student identifiers only (not every account row).
+
+---
+
+### 2.5 Bulk Delete by Student Prefix
+```
+POST /allowed-users/bulk-delete
+Roles: COORDINATOR
+```
+**Body:** `{ "prefix": "24IT" }`
+
+Same revoke semantics as single delete, scoped to `STUDENT` + `identifier` starts with the validated prefix. Prefix must match `24IT` or `D25IT`. More than 500 matching accounts is `400` (nothing is deleted).
+
+**Response 200:** `{ "deleted": 120 }`
 
 ---
 

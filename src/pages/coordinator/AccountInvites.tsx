@@ -156,8 +156,14 @@ const AccountInvites = () => {
 
   const handleOpenRoster = (invite: AccountInvite) => {
     const roll = invite.identifier ?? ''
+    const rawName = invite.name?.trim() ?? ''
+    const nameUpper = rawName.toUpperCase()
+    const isSlug =
+      !rawName ||
+      nameUpper === roll.toUpperCase() ||
+      nameUpper === (invite.email.split('@')[0] ?? '').toUpperCase()
     setRosterInvite(invite)
-    setRosterName('')
+    setRosterName(isSlug ? '' : rawName)
     setRosterDepartment(roll ? deriveDepartmentFromRollNumber(roll) : '')
     setRosterSemester('')
     setRosterBatch(roll ? deriveBatchFromRollNumber(roll) : '')

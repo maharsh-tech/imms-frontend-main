@@ -381,19 +381,19 @@ model AuditLog {
 ## 3. Table Descriptions
 
 ### 3.1 allowed_users
-Pre-registration allowlist. Coordinator pastes student rolls or teacher emails here before anyone can log in. Creates `User` immediately (no password). Role cannot be `COORDINATOR`.
+Pre-registration allowlist. Coordinator pastes student rolls or teacher emails here before anyone can log in. Creates `User` immediately (no password). Role cannot be `COORDINATOR`. `name` at provision is the identifier placeholder (roll or email local-part) and is **not** shown as the person's name. Unique ids are roll / teacher email — display name is not a username.
 
 ### 3.2 users
 Created when the coordinator adds the account in Account Management. Links to `allowed_users` via id.
-**Security invariant:** Google sign-in looks up `User.email`. Role is whatever was provisioned, not what Google says. Domain must match role. `passwordHash` is optional and only the seeded coordinator uses it.
+**Security invariant:** Google sign-in looks up `User.email`. Role is whatever was provisioned, not what Google says. Domain must match role. `passwordHash` is optional and only the seeded coordinator uses it. After Google sign-in, `User.name` (Google display name, roll prefix stripped) is the source of truth for Account Management Name and Add-to-roster Full name.
 
 > **Code status:** Google OAuth is implemented. `passwordHash` remains for coordinator login. `profilePic` is unused.
 
 ### 3.3 students
-Imported via Excel. Linked to User on first login via email match. If the user has not activated yet, userId is null. **`currentAcademicYear`** scopes which offering's assignments and marks appear on the marksheet. On Excel import it is written **verbatim from the `Academic Year` column** (required per row, `YYYY-YYYY`); the single-student create path derives it from batch + semester. Re-import updates the existing row in place (same roll) and never touches `marks`.
+Imported via Excel or added from Account Management **Add to roster**. Linked to User on first login via email match. If the user has not signed in yet, userId is null. Roster `Student.name` is filled from Google `User.name` when the coordinator adds to roster (prefilled, still editable); `loginWithGoogle` also updates `Student.name` if a row already exists. **`currentAcademicYear`** scopes which offering's assignments and marks appear on the marksheet. On Excel import it is written **verbatim from the `Academic Year` column** (required per row, `YYYY-YYYY`); the single-student create path derives it from batch + semester. Re-import updates the existing row in place (same roll) and never touches `marks`.
 
 ### 3.4 faculty
-Imported via Excel. Linked to User on first login. Must exist before subject assignment.
+Imported via Excel. Linked to User on first login. Must exist before subject assignment. `loginWithGoogle` also updates `Faculty.name` from Google `User.name` if a row already exists.
 
 ### 3.5 subjects
 Catalog only (code, name, department, semester slot). CIE exams (`Assessment` rows) and teacher assignments live on **subject offerings**, not the catalog row. Deletion restricted if marks exist.

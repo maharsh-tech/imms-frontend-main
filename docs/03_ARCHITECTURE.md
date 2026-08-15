@@ -146,7 +146,10 @@ Coordinator adds student roll or teacher email (POST /allowed-users)
 Student/teacher opens /login → Continue with Google
   → GET /auth/google → callback
   → User.email must already exist or redirect ?error=not_whitelisted
-  → name from Google displayName (roll prefix stripped); profilePic not saved
+  → User.name from Google displayName (roll prefix stripped); profilePic not saved
+  → Display name is not a username; unique ids are roll / teacher email
+  → After sign-in, Account Management Name and Add-to-roster Full name use User.name
+  → Existing Student/Faculty roster rows have name synced too
 
 Coordinator signs in with email + password (POST /auth/login)
   → 401 unless role is COORDINATOR (same message as bad password)

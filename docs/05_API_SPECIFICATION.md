@@ -58,6 +58,7 @@ On failure redirects to `{FRONTEND_URL}/login?error=` with one of: `not_whitelis
 - Google email must match an existing `User` row (created when coordinator adds the account)
 - Domain must match role (`@charusat.edu.in` students, `@charusat.ac.in` staff)
 - Profile `name` is cleaned from Google `displayName` (leading roll matching the email local-part is stripped). `profilePic` is **not** saved
+- Display name is **not** a username. Unique ids are student roll / teacher email. After Google sign-in, `User.name` is the source of truth for Account Management Name and Add-to-roster Full name. If a `Student`/`Faculty` roster row already exists, its `name` is updated too
 - Roll/id is derived from the email local-part, never from Google name
 - New sign-in bumps `tokenVersion` — only one active session per user
 
@@ -168,11 +169,14 @@ Domain rules: `STUDENT` → `@charusat.edu.in`; `TEACHER`/`COORDINATOR` → `@ch
   "id": "cuid123",
   "email": "24it093@charusat.edu.in",
   "role": "STUDENT",
+  "name": null,
   "identifier": "24IT093",
   "hasSignedIn": false,
   "rosterLinked": false
 }
 ```
+
+`name` is a display name only. At provision it is `null` — `AllowedUser.name` is the identifier placeholder and is not returned as the person's name.
 
 Account is ready immediately — user signs in with Google using their institutional email.
 
@@ -192,6 +196,7 @@ Roles: COORDINATOR
       "id": "cuid123",
       "email": "24it093@charusat.edu.in",
       "role": "STUDENT",
+      "name": null,
       "identifier": "24IT093",
       "hasSignedIn": false,
       "rosterLinked": false
@@ -203,7 +208,9 @@ Roles: COORDINATOR
 }
 ```
 
-`hasSignedIn` is `true` when `User.lastLoginAt` is set. It is **display-only** — assign teacher, Open Marks, and grid writes must not require it.
+`name` is the Google display name from `User.name` after sign-in (roll prefix stripped), or `null` until they have a real name. It is **not** `AllowedUser.name` (the provision-time roll/email-slug placeholder). Display name is not a username — unique ids are `identifier` (roll / teacher email).
+
+`hasSignedIn` is `true` when `User.lastLoginAt` is set. It is **display-only** — assign teacher, Open Marks, and grid writes must not require it. After sign-in, Add-to-roster Full name prefills from `name` (still editable on the roster row as `Student.name`).
 
 ---
 

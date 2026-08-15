@@ -231,7 +231,9 @@ React Query: `staleTime: 0`, `gcTime: 0`, step-gated `enabled` (same as Marks En
 
 Create student/teacher **allowlist** accounts (not coordinators). Paste **student rolls** (`24IT093`, `D25IT131`) or **teacher `@charusat.ac.in` emails**. No activation, invite, or Excel download. **`hasSignedIn`** is display-only (`lastLoginAt`) — Assign / Open Marks still work when it is “Not yet”.
 
-**Add to roster** (student accounts not yet in master roster): department and batch **auto-derive from roll number** (`deriveDepartmentFromRollNumber`, `deriveBatchFromRollNumber`); semester must be entered manually.
+Display name is **not** a username — unique ids are roll / teacher email. The **Name** column is Google `User.name` after sign-in (empty/— until then). `AllowedUser.name` at provision is the identifier placeholder and is not shown as the person's name.
+
+**Add to roster** (student accounts not yet in master roster): Full name prefills from that Google display name when Signed in is Yes (still editable). Department and batch **auto-derive from roll number** (`deriveDepartmentFromRollNumber`, `deriveBatchFromRollNumber`); semester must be entered manually.
 
 **Student Excel:** 6-column template — `Roll No, Student Name, Student Email, Department, Semester, Academic Year`. Blank Department defaults to `IT`; `Semester` (1–12) and `Academic Year` come from the sheet (per-row validation; valid rows import when others error); `Academic Year` required and written verbatim; `Batch` is no longer an input column (always derived from roll). The "Semester (import default)" panel input was removed.
 
@@ -274,6 +276,10 @@ Students and teachers sign in with **Google** (seeded Google-test emails `test.i
 **Single session:** signing in elsewhere redirects old browser to `/login?error=session_superseded` (cookies cleared, no reload loop).
 
 ## Last Updated
+
+**Account Management Name from Google sign-in** (2026-08-16):
+- Display name is not a username. Unique ids are roll / teacher email.
+- After Google sign-in, `User.name` is the source of truth for the Name column and Add-to-roster Full name (prefilled, still editable). Empty/— until they have a real Google name.
 
 **Google OAuth allowlist + hidden coordinator login** (2026-08-15):
 - Public `/login` is Google only (`VITE_GOOGLE_AUTH` gate removed). Coordinator password form is unlisted (not linked from public UI).

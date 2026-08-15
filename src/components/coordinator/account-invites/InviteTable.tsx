@@ -50,6 +50,7 @@ const InviteTable = ({
         <thead className="bg-surface-container-low">
           <tr>
             <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">ID</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Name</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Email</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Role</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant uppercase">Roster</th>
@@ -60,7 +61,7 @@ const InviteTable = ({
         <tbody className="bg-surface-container-lowest divide-y divide-surface-variant">
           {invites.length === 0 ? (
             <tr>
-              <td colSpan={6} className="px-4 py-6 text-center text-sm text-on-surface-variant">
+              <td colSpan={7} className="px-4 py-6 text-center text-sm text-on-surface-variant">
                 No accounts in this category.
               </td>
             </tr>
@@ -69,6 +70,9 @@ const InviteTable = ({
               <tr key={invite.id} className="hover:bg-surface-container-low">
                 <td className="px-4 py-3 text-sm font-mono font-medium text-on-surface">
                   {invite.identifier ?? '—'}
+                </td>
+                <td className="px-4 py-3 text-sm text-on-surface">
+                  {invite.name?.trim() ? invite.name : '—'}
                 </td>
                 <td className="px-4 py-3 text-sm font-mono text-on-surface">{invite.email}</td>
                 <td className="px-4 py-3 text-sm">

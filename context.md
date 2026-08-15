@@ -136,6 +136,7 @@ imms-frontend/
 | Variable | Description |
 |---|---|
 | `VITE_API_BASE_URL` | Backend API (`http://localhost:3000/api/v1`) |
+| `VITE_DEV_AUTH` | Optional. Role switcher on login when `true` (also on in Vite dev) |
 
 ## Local Development
 
@@ -231,6 +232,8 @@ React Query: `staleTime: 0`, `gcTime: 0`, step-gated `enabled` (same as Marks En
 
 Create student/teacher **allowlist** accounts (not coordinators). Paste **student rolls** (`24IT093`, `D25IT131`) or **teacher `@charusat.ac.in` emails**. No activation, invite, or Excel download. **`hasSignedIn`** is display-only (`lastLoginAt`) — Assign / Open Marks still work when it is “Not yet”.
 
+**Students tab:** pick a roll-prefix chip (`24IT`, `25IT`, `D25IT`) or **All** before the table loads (`GET /allowed-users/student-prefixes`, then `GET /allowed-users?role=STUDENT&prefix=`). Page size 50. **Delete 24IT accounts** revokes that prefix only after `window.confirm`; roster rows and marks stay. Teachers have no prefix chips.
+
 Display name is **not** a username — unique ids are roll / teacher email. The **Name** column is Google `User.name` after sign-in (empty/— until then). `AllowedUser.name` at provision is the identifier placeholder and is not shown as the person's name.
 
 **Add to roster** (student accounts not yet in master roster): Full name prefills from that Google display name when Signed in is Yes (still editable). Department and batch **auto-derive from roll number** (`deriveDepartmentFromRollNumber`, `deriveBatchFromRollNumber`); semester must be entered manually.
@@ -276,6 +279,13 @@ Students and teachers sign in with **Google** (seeded Google-test emails `test.i
 **Single session:** signing in elsewhere redirects old browser to `/login?error=session_superseded` (cookies cleared, no reload loop).
 
 ## Last Updated
+
+**Env cleanup** (2026-08-16):
+- Frontend reads `VITE_API_BASE_URL` and optional `VITE_DEV_AUTH` only. `VITE_GOOGLE_AUTH` is gone (public login is always Google).
+
+**Account Management student roll-prefix filters** (2026-08-16):
+- Students tab chips from `GET /allowed-users/student-prefixes`. List loads after a chip (or All) is selected.
+- **Delete {prefix} accounts** → `POST /allowed-users/bulk-delete` after confirm. Login only; roster and marks stay.
 
 **Account Management Name from Google sign-in** (2026-08-16):
 - Display name is not a username. Unique ids are roll / teacher email.

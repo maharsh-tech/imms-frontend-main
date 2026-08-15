@@ -53,9 +53,7 @@ DIRECT_URL=postgresql://USER:PASS@db.supabase.co:5432/postgres
 
 # Auth
 JWT_SECRET=<strong-random-64-chars>
-JWT_EXPIRES_IN=15m
 REFRESH_TOKEN_SECRET=<another-strong-secret>
-REFRESH_TOKEN_EXPIRES_IN=7d
 
 # Google OAuth (production sign-in)
 GOOGLE_CLIENT_ID=<google-oauth-client-id>

@@ -42,9 +42,9 @@ const RosterDialog = ({
             Add to roster
           </h3>
           <p className="text-sm text-on-surface-variant mt-1">
-            Invite exists for{' '}
-            <span className="font-mono font-medium">{invite.identifier}</span> — student does not
-            need to activate first.
+            Allowlisted{' '}
+            <span className="font-mono font-medium">{invite.identifier}</span> — add this student
+            to the roster.
           </p>
         </div>
         <button

@@ -7,6 +7,7 @@ import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { Role } from './types'
 
 import Login from './pages/Login'
+import CoordinatorLogin from './pages/CoordinatorLogin'
 import NotFound from './pages/NotFound'
 
 const CoordinatorDashboard = lazy(() => import('./pages/coordinator/Dashboard'))
@@ -31,6 +32,7 @@ export default function App() {
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/login/c" element={<CoordinatorLogin />} />
 
               <Route element={<PrivateRoute />}>
                 <Route element={<RoleRoute allowedRoles={[Role.COORDINATOR]} />}>

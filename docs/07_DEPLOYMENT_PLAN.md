@@ -76,8 +76,6 @@ CORS_ORIGINS=https://imms.yourdomain.com
 
 ```env
 VITE_API_BASE_URL=https://api.imms.yourdomain.com/api/v1
-# Optional — show Continue with Google on login
-VITE_GOOGLE_AUTH=false
 # Optional — dev role switcher buttons (local/staging only)
 VITE_DEV_AUTH=false
 ```

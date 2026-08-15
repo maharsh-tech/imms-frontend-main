@@ -26,7 +26,7 @@ const SingleInviteForm = ({
   <div className="bg-surface-container-low p-4 rounded-md mb-8 border border-outline-variant">
     <h3 className="text-lg font-medium text-on-surface mb-4 flex items-center">
       <UserPlus className="w-5 h-5 mr-2 text-primary" />
-      Add single account
+      Add account
     </h3>
     <form onSubmit={onSubmit} className="flex flex-col gap-3">
       <div className="flex flex-col sm:flex-row gap-3">
@@ -34,7 +34,7 @@ const SingleInviteForm = ({
           <input
             type="text"
             required
-            placeholder="Roll number (e.g. 24ABC123)"
+            placeholder="Roll number (e.g. 24IT093)"
             className="w-full sm:w-40 px-3 py-2 border border-outline-variant rounded-md text-sm font-mono uppercase"
             value={identifier}
             onChange={(e) => onIdentifierChange(e.target.value.toUpperCase())}
@@ -44,9 +44,7 @@ const SingleInviteForm = ({
           <input
             type="email"
             required
-            placeholder={
-              addRole === 'TEACHER' ? 'teacher@charusat.ac.in' : 'coordinator@charusat.ac.in'
-            }
+            placeholder="nishatshaikh.it@charusat.ac.in"
             className="flex-1 px-3 py-2 border border-outline-variant rounded-md text-sm"
             value={email}
             onChange={(e) => onEmailChange(e.target.value)}
@@ -61,7 +59,6 @@ const SingleInviteForm = ({
         >
           <option value="STUDENT">Student</option>
           <option value="TEACHER">Teacher</option>
-          <option value="COORDINATOR">Coordinator</option>
         </select>
         <button
           type="submit"

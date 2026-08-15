@@ -64,9 +64,9 @@ IMMS follows a **3-tier web architecture** with a clear separation between:
 | Language | TypeScript (full stack) | Type safety, shared types possible |
 | ORM | Prisma | Type-safe DB access, migrations, schema as code |
 | Database | PostgreSQL (Supabase) | Managed Postgres, built-in auth (unused here), storage |
-| Authentication | Email/password + activation link (Plan A); JWT in httpOnly cookies |
+| Authentication | Google OAuth (students/teachers) + coordinator password login; JWT in httpOnly cookies |
 
-> **Google OAuth:** Not implemented in code. No Google OAuth routes, strategies, or env vars are used by the application.
+> **Google OAuth:** Students and teachers sign in with Google. Coordinator password login is unlisted (see backend `context.md`).
 | PDF Generation | @react-pdf/renderer or Puppeteer | PDF marksheets and reports |
 | Excel Parsing | xlsx (SheetJS) | Robust .xlsx parsing in Node.js |
 | Deployment | Vercel (FE) + Railway/Render (BE) | Zero-config, free tier viable for this scale |
@@ -108,10 +108,8 @@ src/
 ├── hooks/                         # React Query — useAccountInvites, useStudents, useFaculty, useSubjects, useAssignmentsBundle, useMarksEntry*
 ├── utils/
 │   ├── identifier-patterns.ts     # Roll validation; deriveBatchFromRollNumber, deriveDepartmentFromRollNumber
-│   ├── activation-token.ts        # Read #token= from URL hash → POST body; strip from address bar
-│   └── auth-flash.ts              # One-time login success via router state (never URL query params)
 ├── components/
-│   ├── auth/                      # AuthShell, AuthCard — login + activate
+│   ├── auth/                      # AuthShell, AuthCard — public Google login
 │   ├── coordinator/
 │   │   ├── account-invites/       # BulkInviteForm, SingleInviteForm, InviteTable, RosterDialog
 │   │   └── subjects/              # AddSubjectForm, AddAssessmentForm, ElectiveRosterModal
@@ -130,38 +128,39 @@ src/
 
 ### Auth UI flow
 
-1. Coordinator creates account → activation link copied manually (`{FRONTEND_URL}/activate#token=…`).
-2. User opens `/activate#token=…` → frontend reads hash, strips URL, posts token in `POST /auth/activate` body.
-3. User signs in at `/login` → `Login.tsx` → `POST /auth/login` → role-based redirect. Post-activation success banner uses **router state only** (not `?activated=1`).
+1. Coordinator creates allowlist accounts (`POST /allowed-users`) — students by roll, teachers by `@charusat.ac.in` email.
+2. Students/teachers sign in at `/login` with Google → backend callback → role-based redirect.
+3. Coordinator signs in with email + password (`POST /auth/login`, COORDINATOR only).
 
 Student portal uses a separate shell (`StudentShell`) with marksheet / schedule / profile tabs. Coordinator and teacher use `StaffShell`.
 
 ---
 
-## 5. Authentication Flow (Plan A — activation link)
+## 5. Authentication Flow (Google allowlist)
 
 ```
-Coordinator adds user (POST /allowed-users)
+Coordinator adds student roll or teacher email (POST /allowed-users)
   → domain validated: staff @charusat.ac.in, students @charusat.edu.in
-  → activation link returned (7-day JWT, one-time use)
+  → AllowedUser + User created (no password; teachers also get Faculty)
 
-College emails student the activation link
+Student/teacher opens /login → Continue with Google
+  → GET /auth/google → callback
+  → User.email must already exist or redirect ?error=not_whitelisted
+  → name from Google displayName (roll prefix stripped); profilePic not saved
 
-Student opens /activate#token=...
-  → frontend consumes hash → POST /auth/activate { token, newPassword }
-  → needsPasswordChange = false (server-side only — never from URL flags)
+Coordinator signs in with email + password (POST /auth/login)
+  → 401 unless role is COORDINATOR (same message as bad password)
 
-Student signs in (POST /auth/login)
-  → httpOnly cookies set (access 15min + refresh 7d)
+httpOnly cookies set (access 15min + refresh 7d)
   → NO tokens in JSON or localStorage
-  → Login blocked with 403 until needsPasswordChange is false (tampering ?activated= or isActivated= in URL has no effect)
 
 Frontend calls GET /auth/me (cookies sent automatically)
   → redirect to role dashboard
 
         | (if role = STUDENT)
         v
-Student record lookup (by email)
+Student record lookup (by JWT user id)
+```
   NO RECORD  → "Contact Coordinator"
   FOUND      → marksheet (when published)
 ```
@@ -254,7 +253,7 @@ All state transitions validated server-side in `MarksService`.
 
 | Concern | Implementation |
 |---|---|
-| Authentication | Email/password + activation link; JWT in httpOnly cookies |
+| Authentication | Google OAuth (students/teachers) + coordinator password; JWT in httpOnly cookies |
 | Domain Restriction | `@charusat.ac.in` (staff) / `@charusat.edu.in` (students) — backend validator |
 | Authorization | NestJS RolesGuard + @Roles() on every endpoint |
 | Token Security | httpOnly + SameSite=Strict cookies; no tokens in client JS |

@@ -147,8 +147,8 @@ const FacultyManagement = () => {
             Faculty
           </h2>
           <p className="text-sm text-on-surface-variant mt-1">
-            All teachers in the database. Sign in with institutional email (
-            <span className="font-mono">firstname.lastname.dept@charusat.ac.in</span>) and password.
+            All teachers in the database. Teachers sign in with Google using their institutional email (
+            <span className="font-mono">firstname.lastname.dept@charusat.ac.in</span>).
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

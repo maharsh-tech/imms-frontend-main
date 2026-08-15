@@ -46,17 +46,17 @@ IMMS operates in three phases per semester:
 
 ### 3.1 Authentication Module
 
-**FR-AUTH-01:** The system shall use **email/password authentication** with **Plan A onboarding**: coordinator registers users, student receives an **activation link**, sets password once, then signs in normally.
+**FR-AUTH-01:** Students and teachers sign in with **Google OAuth**. The coordinator signs in with email + password (`POST /auth/login`, COORDINATOR role only). The coordinator adds students (by roll) and teachers (by staff email) to the Account Management allowlist; Google sign-in succeeds only when a matching `User` row already exists.
 
-> **Code status:** Google OAuth is **not implemented**. Auth is email/password + JWT only (`POST /auth/login`, `POST /auth/activate`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`).
+> **Code status:** Google OAuth is implemented (`GET /auth/google`, callback). Password login is COORDINATOR-only. No activation or reset flows.
 
 **FR-AUTH-02 (Domain Restriction):** Email domain is enforced by role on the backend:
 - `COORDINATOR` and `TEACHER` → `@charusat.ac.in` only
 - `STUDENT` → `@charusat.edu.in` only
 
-**FR-AUTH-03:** Role is assigned when the coordinator adds the user to the AllowedUser whitelist (`POST /allowed-users`).
+**FR-AUTH-03:** Role is assigned when the coordinator adds the user to the AllowedUser allowlist (`POST /allowed-users`). COORDINATOR cannot be provisioned this way (seed-only).
 
-**FR-AUTH-04:** Login is blocked until the user completes activation (`needsPasswordChange === false`). Unactivated accounts receive 403: *"Account not activated. Use the activation link from your welcome email."* Activation status is enforced **only on the server** — URL query parameters or client-side flags cannot bypass this.
+**FR-AUTH-04:** First Google login is not required for teacher assignments or marks. `lastLoginAt` is display-only. Students and teachers cannot use password login.
 
 **FR-AUTH-05:** JWT access token (15 min) and refresh token (7 days) are stored in **httpOnly, SameSite=Strict cookies** — never returned in JSON or client storage.
 

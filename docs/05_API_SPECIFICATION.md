@@ -10,9 +10,9 @@
 
 ## 1. Authentication
 
-Primary: **Google OAuth** (when configured). **Password login** for seeded test accounts only (`User.passwordHash` set). No activation or reset flows.
+Primary: **Google OAuth** for students and teachers. **Password login** (`POST /auth/login`) is **COORDINATOR-only**. Accounts are provisioned in Account Management (allowlist). No activation or reset flows.
 
-### 1.1 Password Login (test accounts)
+### 1.1 Password Login (coordinator only)
 ```
 POST /auth/login
 ```
@@ -21,7 +21,7 @@ POST /auth/login
 { "loginId": "coordinator@charusat.ac.in", "password": "password123" }
 ```
 
-Students may use roll number: `{ "loginId": "24IT093", "password": "password123@" }`
+Teachers and students receive the same generic **401** `{ "message": "Invalid credentials" }` even if a `passwordHash` were present.
 
 **Response 200:** Sets httpOnly cookies. Body:
 ```json
@@ -36,7 +36,7 @@ Students may use roll number: `{ "loginId": "24IT093", "password": "password123@
 }
 ```
 
-**Response 401:** `{ "message": "Invalid credentials" }` — account has no `passwordHash` (use Google) or wrong password.
+**Response 401:** `{ "message": "Invalid credentials" }` — missing/wrong password, or the account is not COORDINATOR.
 
 Uses `establishSession` (bumps `tokenVersion`, single concurrent session).
 
@@ -50,14 +50,15 @@ Redirects browser to Google OAuth consent. Requires `GOOGLE_CLIENT_ID`, `GOOGLE_
 ```
 GET /auth/google/callback
 ```
-Google redirects here after consent. On success: sets httpOnly cookies and redirects to frontend role dashboard (`/coordinator`, `/teacher`, or `/student`).
+Google redirects here after consent. On success: sets httpOnly cookies and redirects to frontend role dashboard (`/teacher` or `/student`; coordinator typically uses password login).
 
 On failure redirects to `{FRONTEND_URL}/login?error=` with one of: `not_whitelisted`, `domain_mismatch`, `inactive`, `google_no_email`, `auth_failed`.
 
 **Rules:**
 - Google email must match an existing `User` row (created when coordinator adds the account)
 - Domain must match role (`@charusat.edu.in` students, `@charusat.ac.in` staff)
-- Profile `name` and `profilePic` synced from Google on each sign-in
+- Profile `name` is cleaned from Google `displayName` (leading roll matching the email local-part is stripped). `profilePic` is **not** saved
+- Roll/id is derived from the email local-part, never from Google name
 - New sign-in bumps `tokenVersion` — only one active session per user
 
 ### 1.4 Dev Role Switcher (local only)
@@ -115,7 +116,7 @@ For role STUDENT, `studentState` is one of:
 - `"UNPUBLISHED"` — student record exists but no visible published results
 - `"PUBLISHED"` — at least one published assessment visible to this student
 
-Visibility matches `GET /marks/my-marksheet`: offerings in the student's current academic year + semester (core dept match, enrolled electives, or marks within that scoped branch), plus any offering with an explicit `SubjectEnrollment` (backlog retake). Past-semester marks are **not** shown after roster upgrade unless enrollment exists. Only **published** submissions appear; response is display-only (`code`, `name`, `maxMarks`, `display` — no mark row IDs or raw `marksObtained`). Student roster is auto-linked on Google sign-in and `GET /auth/me` by email or `allowedUser.identifier` → roll number.
+Visibility matches `GET /marks/my-marksheet`: offerings in the student's current academic year + semester (core dept match, enrolled electives, or marks within that scoped branch). The enrollment OR-branch is also limited to that same year + semester, so past-semester backlog offerings do not appear on the student marksheet (coordinator reports keep explicit year/sem scope). Only **published** submissions appear; response is display-only (`code`, `name`, `maxMarks`, `display` — no mark row IDs or raw `marksObtained`). No `studentId` query. Student roster is auto-linked on Google sign-in and `GET /auth/me` by email or `allowedUser.identifier` → roll number.
 
 For non-student roles, `studentState` is `null`.
 
@@ -157,10 +158,7 @@ Roles: COORDINATOR
 { "role": "TEACHER", "email": "nishatshaikh.it@charusat.ac.in" }
 ```
 
-**Body (coordinator):**
-```json
-{ "email": "coordinator@charusat.ac.in", "role": "COORDINATOR" }
-```
+**Body (coordinator):** rejected. Coordinators are seed-only — do not provision via this endpoint (`400`).
 
 Domain rules: `STUDENT` → `@charusat.edu.in`; `TEACHER`/`COORDINATOR` → `@charusat.ac.in`.
 
@@ -205,7 +203,7 @@ Roles: COORDINATOR
 }
 ```
 
-`hasSignedIn` is `true` when `User.lastLoginAt` is set (user has completed at least one sign-in).
+`hasSignedIn` is `true` when `User.lastLoginAt` is set. It is **display-only** — assign teacher, Open Marks, and grid writes must not require it.
 
 ---
 
@@ -717,13 +715,9 @@ Roles: STUDENT
 ```
 Results are grouped by CIE round (`cieRounds[]`, sorted by `sequence`). `display` is computed server-side: `"NE"`, `"AB"`, numeric string, or `"-"`.
 
-**Visibility rules:** Marks are stored permanently per `SubjectOffering` (year + semester). The marksheet shows only:
-1. Offerings matching the student's `currentAcademicYear` + `semester` (normal cohort path), and
-2. Offerings where the student has an explicit `SubjectEnrollment` (backlog retake override).
+**Visibility rules:** Marks are stored permanently per `SubjectOffering` (year + semester). The student marksheet shows only offerings matching the student's `currentAcademicYear` + `semester` (normal cohort path **and** enrollment override). Past-semester backlog offerings stay in the DB and remain visible on coordinator reports (explicit year/sem). Only assessments with **published** submissions are included. No `?studentId=` query.
 
-Past-year / past-semester marks are hidden after roster upgrade unless an enrollment row exists. Only assessments with **published** submissions are included.
-
-**Security:** Students cannot call grid/bulk/publish endpoints (403). Teachers can only access their own `subjectAssignmentId` (403 on IDOR). The response exposes display strings only — no internal mark row IDs or numeric `marksObtained` alongside `display` (inspect via DevTools Network tab should show the shape above only).
+**Security:** Students cannot call grid/bulk/import/publish/reports endpoints (403). Teachers can only access their own `subjectAssignmentId` (403 on IDOR). The response exposes display strings only — no internal mark row IDs or numeric `marksObtained`.
 
 ---
 

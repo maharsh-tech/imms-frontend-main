@@ -155,7 +155,7 @@ const StudentsManagement = () => {
           {createMutation.isPending ? 'Adding…' : 'Add student'}
         </button>
       </form>
-      <p className="text-xs text-on-surface-variant mt-2">Account must exist in Account Management (activation not required).</p>
+      <p className="text-xs text-on-surface-variant mt-2">Account must exist in Account Management first.</p>
     </div>
   )
 
@@ -168,8 +168,7 @@ const StudentsManagement = () => {
             Students
           </h2>
           <p className="text-sm text-on-surface-variant mt-1">
-            All students in the database, grouped by batch (e.g. 24IT, D25IT diploma). Students sign in with roll
-            number only.
+            All students in the database, grouped by batch (e.g. 24IT, D25IT diploma). Students sign in with Google.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

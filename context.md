@@ -38,7 +38,7 @@
 
 | File | Route | Purpose |
 |---|---|---|
-| `src/pages/Login.tsx` | `/login` | Email/roll + password login. Google button when `VITE_GOOGLE_AUTH=true`. Dev role switcher when `VITE_DEV_AUTH=true` or Vite dev. Handles `?error=session_superseded` etc. |
+| `src/pages/Login.tsx` | `/login` | Public Google sign-in. Dev role switcher when `VITE_DEV_AUTH=true` or Vite dev. Handles `?error=not_whitelisted` etc. |
 
 Shared layout/components: `src/components/auth/` (`AuthShell`, `AuthCard`, `AuthAlert`).
 
@@ -101,12 +101,12 @@ imms-frontend/
 
 | Path | Role | Purpose |
 |---|---|---|
-| `/login` | Public | Password login (+ optional Google / dev switcher) |
+| `/login` | Public | Google sign-in for students and teachers (+ optional local-only dev switcher) |
 | `/coordinator` | Coordinator | Tabs: Subject, Exam & Assignments, **Marks Entry**, Manage Faculty, Manage Student, **Marks**, Account Management |
 | `/coordinator/marks/:assignmentId/:assessmentId` | Coordinator | NE flags, lock, unlock, publish, unpublish |
 | `/teacher` | Teacher | Assigned subjects â†’ marks entry links |
 | `/teacher/marks/:assignmentId/:assessmentId` | Teacher | Enter marks, AB, submit |
-| `/student` | Student | Marksheet — exam cards per CIE round (semester switcher); click a card → marksheet modal + PDF |
+| `/student` | Student | View-only marksheet — current semester published rounds only; click a card → marksheet modal + PDF |
 | `/student/schedule` | Student | Schedule placeholder |
 | `/student/profile` | Student | Account info (logout lives in sidebar / mobile bottom nav) |
 
@@ -229,7 +229,7 @@ React Query: `staleTime: 0`, `gcTime: 0`, step-gated `enabled` (same as Marks En
 
 ## Coordinator: Account Management
 
-Create student/teacher/coordinator accounts, bulk paste IDs, filter by role. Bulk creation button **Create accounts & download Excel** downloads a native `.xlsx` sheet with IDs and emails (no activation links). **`hasSignedIn`** column shows whether the user has completed at least one Google sign-in.
+Create student/teacher **allowlist** accounts (not coordinators). Paste **student rolls** (`24IT093`, `D25IT131`) or **teacher `@charusat.ac.in` emails**. No activation, invite, or Excel download. **`hasSignedIn`** is display-only (`lastLoginAt`) — Assign / Open Marks still work when it is “Not yet”.
 
 **Add to roster** (student accounts not yet in master roster): department and batch **auto-derive from roll number** (`deriveDepartmentFromRollNumber`, `deriveBatchFromRollNumber`); semester must be entered manually.
 
@@ -269,23 +269,22 @@ API highlights:
 
 ## Dev sign-in (after seed)
 
-| Role | Login | Password |
-|------|-------|----------|
-| Coordinator | coordinator@charusat.ac.in | password123 |
-| Teacher | test.it@charusat.ac.in | password123@ |
-| Student | 24IT093 or 24it093@charusat.edu.in | password123@ |
-
-**Google OAuth (later):** backend `GOOGLE_*` env + frontend `VITE_GOOGLE_AUTH=true`.
+Students and teachers sign in with **Google** (seeded Google-test emails `test.it@charusat.ac.in` and `24it093@charusat.edu.in`). Coordinator password login is unlisted — see backend `context.md`. Local `VITE_DEV_AUTH` / Vite-dev role switcher still works.
 
 **Single session:** signing in elsewhere redirects old browser to `/login?error=session_superseded` (cookies cleared, no reload loop).
 
 ## Last Updated
 
+**Google OAuth allowlist + hidden coordinator login** (2026-08-15):
+- Public `/login` is Google only (`VITE_GOOGLE_AUTH` gate removed). Coordinator password form is unlisted (not linked from public UI).
+- Account Management: add/allowlist (student rolls, teacher emails); no coordinator role, no Excel invite download.
+- Student marksheet: current semester only — semester switcher removed. Portal remains view-only except logout.
+
 **Persistent sidebar on every page** (2026-08-11):
 - New `src/components/staff/staff-nav.ts` — shared `COORDINATOR_TABS` / `TEACHER_TABS` configs (single source of truth). `coordinator/Dashboard.tsx` opens sections via validated `?tab=` deep links (URL kept in sync with the live tab). `teacher/Dashboard.tsx` sidebar gains a "My Subjects" nav item. `shared/MarksGridPage.tsx` passes the role's tabs to its `StaffShell` so the marks pages keep full sidebar navigation (tab click → `/coordinator?tab=…` or `/teacher`).
 
 **Student portal two-step marksheet** (2026-08-11):
-- `pages/student/Marksheet.tsx` — exam cards per CIE round with a **semester switcher** (defaults to the current semester; only published rounds are returned by the API; per-semester "Results Awaited" empty state). Clicking a card opens `components/student/CIEMarksheetModal.tsx` (exact columns Subject / Marks Obtained / Total Marks) with a **Download PDF** action via new `utils/marksheet-pdf.ts` (`jspdf` + `jspdf-autotable`, filename `{rollNumber}_{examName}.pdf`). `CIECard` is now clickable (`onOpen`).
+- `pages/student/Marksheet.tsx` — exam cards for the **current semester only** (no semester switcher; only published rounds from the API). Clicking a card opens `components/student/CIEMarksheetModal.tsx` (exact columns Subject / Marks Obtained / Total Marks) with a **Download PDF** action via `utils/marksheet-pdf.ts`. `CIECard` is now clickable (`onOpen`).
 
 **Profile logout relocation** (2026-08-11):
 - Removed the "Log out" button from the student Profile card; logout now lives in the desktop sidebar and a new mobile bottom-nav logout (`StudentShell.tsx`).
@@ -302,7 +301,7 @@ API highlights:
 - Backend `/reports/*` — COORDINATOR-only; students/teachers get 403.
 
 **Auth + session UX** (2026-08-11):
-- Password login restored for 3 seeded test accounts; Google optional via `VITE_GOOGLE_AUTH`.
+- Students and teachers sign in with **Google**; coordinator password login is unlisted (see backend `context.md`).
 - Superseded-session fix: skip `/auth/me` on `/login`, single redirect via `session-expired.ts`.
 - `StudentShell`: sidebar pinned to viewport left edge (no empty margin on wide screens).
 

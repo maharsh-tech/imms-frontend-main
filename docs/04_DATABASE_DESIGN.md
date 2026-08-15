@@ -100,7 +100,7 @@ model AllowedUser {
 }
 
 // ─────────────────────────────────────────────
-// USERS (email/password — created on account activation)
+// USERS (Google for students/teachers; passwordHash used by coordinator only)
 // ─────────────────────────────────────────────
 
 model User {
@@ -381,13 +381,13 @@ model AuditLog {
 ## 3. Table Descriptions
 
 ### 3.1 allowed_users
-Pre-registration whitelist. Coordinator adds emails here before anyone can log in. Determines role when the user record is created at activation.
+Pre-registration allowlist. Coordinator pastes student rolls or teacher emails here before anyone can log in. Creates `User` immediately (no password). Role cannot be `COORDINATOR`.
 
 ### 3.2 users
-Created when the user completes activation (`POST /auth/activate`) and sets their password. Links to `allowed_users` via id.
-**Security invariant:** `AuthService` validates that the activation token email matches `allowedUser.email` and that the email domain matches the assigned role before creating the user. Role cannot be changed post-creation without coordinator intervention.
+Created when the coordinator adds the account in Account Management. Links to `allowed_users` via id.
+**Security invariant:** Google sign-in looks up `User.email`. Role is whatever was provisioned, not what Google says. Domain must match role. `passwordHash` is optional and only the seeded coordinator uses it.
 
-> **Code status:** Google OAuth is **not implemented**. There is no `googleId` column; auth uses `passwordHash` and `needsPasswordChange`.
+> **Code status:** Google OAuth is implemented. `passwordHash` remains for coordinator login. `profilePic` is unused.
 
 ### 3.3 students
 Imported via Excel. Linked to User on first login via email match. If the user has not activated yet, userId is null. **`currentAcademicYear`** scopes which offering's assignments and marks appear on the marksheet. On Excel import it is written **verbatim from the `Academic Year` column** (required per row, `YYYY-YYYY`); the single-student create path derives it from batch + semester. Re-import updates the existing row in place (same roll) and never touches `marks`.

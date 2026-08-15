@@ -44,8 +44,7 @@ Living dev context and known issues: **[`context.md`](./context.md)**
 
 | Route | File | What it does |
 |---|---|---|
-| `/login` | `src/pages/Login.tsx` | Sign in with roll number (students) or staff email + password |
-| `/activate#token=…` | `src/pages/ActivateAccount.tsx` | First-time password setup from coordinator activation link (token read from hash, posted in body) |
+| `/login` | `src/pages/Login.tsx` | Google sign-in for students and teachers |
 | `/student` | `src/pages/student/Marksheet.tsx` | Student marksheet (inside `StudentShell`) |
 | `/coordinator` | `src/pages/coordinator/Dashboard.tsx` | Coordinator dashboard |
 | `/teacher` | `src/pages/teacher/Dashboard.tsx` | Teacher dashboard |

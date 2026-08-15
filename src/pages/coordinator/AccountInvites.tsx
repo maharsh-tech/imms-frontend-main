@@ -16,7 +16,6 @@ import RosterDialog from '../../components/coordinator/account-invites/RosterDia
 import {
   buildPreviewEmail,
   parseBulkLines,
-  downloadInviteLinksExcel,
   type RoleFilter,
 } from '../../components/coordinator/account-invites/account-invite-utils'
 
@@ -62,13 +61,10 @@ const AccountInvites = () => {
 
   const bulkCreateMutation = useMutation({
     mutationFn: accountInviteMutations.bulkCreate,
-    onSuccess: async (result) => {
+    onSuccess: (result) => {
       setBulkResult(result)
       setBulkText('')
       invalidateInvites()
-      if (result.invites && result.invites.length > 0) {
-        await downloadInviteLinksExcel(result.invites, bulkRole)
-      }
       setShowBulkForm(false)
     },
     onError: (err: unknown) => setError(apiErrorMessage(err, 'Bulk create failed')),
@@ -88,7 +84,7 @@ const AccountInvites = () => {
   const deleteMutation = useMutation({
     mutationFn: accountInviteMutations.delete,
     onSuccess: () => invalidateInvites(),
-    onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to delete invite')),
+    onError: (err: unknown) => setError(apiErrorMessage(err, 'Failed to revoke account')),
   })
 
   const rosterMutation = useMutation({
@@ -102,7 +98,7 @@ const AccountInvites = () => {
   })
 
   const previewEmail = useMemo(() => {
-    if (addRole === 'COORDINATOR' || addRole === 'TEACHER') {
+    if (addRole === 'TEACHER') {
       return email.trim().toLowerCase()
     }
     return buildPreviewEmail(identifier, addRole)
@@ -130,11 +126,9 @@ const AccountInvites = () => {
     const entries = parseBulkLines(bulkText, bulkRole)
     if (entries.length === 0) {
       setError(
-        bulkRole === 'COORDINATOR'
-          ? 'Add one email per line for coordinators'
-          : bulkRole === 'TEACHER'
-            ? 'Add one teacher email per line (e.g. teacher@charusat.ac.in)'
-            : 'Add one ID per line (e.g. 24ABC123)',
+        bulkRole === 'TEACHER'
+          ? 'Add one teacher email per line (e.g. nishatshaikh.it@charusat.ac.in)'
+          : 'Add one roll per line (e.g. 24IT093)',
       )
       return
     }
@@ -145,16 +139,13 @@ const AccountInvites = () => {
 
   const handleSingleAdd = (e: React.FormEvent) => {
     e.preventDefault()
-    if ((addRole === 'COORDINATOR' || addRole === 'TEACHER') && !email.trim()) return
+    if (addRole === 'TEACHER' && !email.trim()) return
     if (addRole === 'STUDENT' && !identifier.trim()) return
     setError('')
     createMutation.mutate({
       role: addRole,
       identifier: addRole === 'STUDENT' ? identifier.trim().toUpperCase() : undefined,
-      email:
-        addRole === 'COORDINATOR' || addRole === 'TEACHER'
-          ? email.trim().toLowerCase()
-          : undefined,
+      email: addRole === 'TEACHER' ? email.trim().toLowerCase() : undefined,
     })
   }
 
@@ -188,7 +179,7 @@ const AccountInvites = () => {
   }
 
   if (loading) {
-    return <div className="p-8 text-center text-on-surface-variant animate-pulse">Loading invites...</div>
+    return <div className="p-8 text-center text-on-surface-variant animate-pulse">Loading accounts...</div>
   }
 
   return (
@@ -197,7 +188,7 @@ const AccountInvites = () => {
         <div>
           <h2 className="text-2xl font-bold text-on-surface">Account Management</h2>
           <p className="text-sm text-on-surface-variant mt-1">
-            Accounts are ready immediately — users sign in with Google using their institutional email.
+            Allowlist students by roll and teachers by institutional email. They sign in with Google.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -213,7 +204,7 @@ const AccountInvites = () => {
                 : 'bg-surface-container-low text-primary hover:bg-surface-container'
             }`}
           >
-            {showBulkForm ? 'Close Bulk Invite' : 'Bulk Invite'}
+            {showBulkForm ? 'Close bulk add' : 'Add accounts'}
           </button>
           <button
             type="button"
@@ -227,7 +218,7 @@ const AccountInvites = () => {
                 : 'bg-surface-container-low text-primary hover:bg-surface-container'
             }`}
           >
-            {showSingleForm ? 'Close Add Single' : 'Add Single'}
+            {showSingleForm ? 'Close add' : 'Add'}
           </button>
         </div>
       </div>
